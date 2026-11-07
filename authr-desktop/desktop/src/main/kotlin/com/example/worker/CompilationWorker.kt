@@ -1,0 +1,125 @@
+package com.example.worker
+
+import android.content.Context
+import android.util.Log
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import com.example.data.api.LlmOrchestrator
+import com.example.data.local.BookDao
+import com.example.data.local.ChapterDao
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class CompilationWorker(
+    context: Context,
+    params: WorkerParameters,
+    private val bookDao: BookDao,
+    private val chapterDao: ChapterDao
+) : CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val bookId = inputData.getInt("BOOK_ID", -1)
+        if (bookId == -1) return@withContext Result.failure()
+        if (isStopped) return@withContext Result.failure()
+
+        val book = bookDao.getBookById(bookId) ?: return@withContext Result.failure()
+        if (book.currentPhase == "Paused" || book.currentPhase == "Stopped") return@withContext Result.failure()
+        val storyBible = book.storyBible
+
+        try {
+            try {
+                setForeground(createForegroundInfo(applicationContext, "Authr OS Compilation Engine", "Compiling Manuscript for '${book.title}'"))
+            } catch (e: Exception) {
+                Log.w("CompilationWorker", "Could not set foreground info", e)
+            }
+
+            logAgentChat(bookDao, bookId, "👑 [Executive Orchestrator]", "Editorial revision complete. Launching Phase 4 Production compilation...")
+            val bookForCompiling = bookDao.getBookById(bookId) ?: book
+            bookDao.updateBook(bookForCompiling.copy(currentPhase = "Compiling"))
+
+            val finalChapters = chapterDao.getChaptersForBookSync(bookId)
+            val manuscriptBuilder = StringBuilder()
+            manuscriptBuilder.append("# ${book.title}\n")
+            manuscriptBuilder.append("## Genre: ${book.genre} | Format: ${book.format}\n\n")
+            manuscriptBuilder.append("### Series Metadata & Publisher Notes\n")
+            manuscriptBuilder.append("ISBN: 978-6648-507-48-5\n")
+            manuscriptBuilder.append("Copyright © 2026. All Rights Reserved.\n\n")
+            manuscriptBuilder.append("### Synopsis\n${book.synopsis}\n\n")
+            manuscriptBuilder.append("### Comprehensive Story Bible\n$storyBible\n\n")
+            manuscriptBuilder.append("---\n\n")
+
+            for (chapter in finalChapters) {
+                manuscriptBuilder.append("# Chapter ${chapter.chapterNumber}: ${chapter.title}\n\n")
+                manuscriptBuilder.append(chapter.content)
+                manuscriptBuilder.append("\n\n---\n\n")
+            }
+
+            logAgentChat(bookDao, bookId, "📚 [Publishing Agent]", "Full compiled manuscript consolidated with front matter and Series Metadata.")
+
+            logAgentChat(bookDao, bookId, "🎨 [Cover Design Assistant]", "Generating publishing cover design prompts, typography styles, and mood boards...")
+            val coverPromptText = "You are a book cover designer. Generate a book cover design proposal for \"${book.title}\" (Genre: ${book.genre}).\nInclude:\n1. Image Generation Prompt (highly descriptive for Midjourney/Dall-E)\n2. Typography style (font choice, styling, sizing ideas)\n3. Mood Board description (colors, texture, vibe, aesthetic)"
+            val generatedCoverPrompt = retryWithBackoff {
+                LlmOrchestrator.callAgent(applicationContext, LlmOrchestrator.Agent.EXECUTIVE, coverPromptText)
+            }
+
+            logAgentChat(bookDao, bookId, "📢 [Marketing Agent]", "Drafting promotional social media launch package, trailers, and newsletters...")
+            val marketingPromptText = "You are a publishing marketing expert. Write a comprehensive launch package for the novel \"${book.title}\" (${book.genre}).\nInclude:\n1. Launch social media posts (Twitter, Instagram)\n2. Author Newsletter announcement email\n3. 1-Minute Book Trailer audio narration script with background cue indicators"
+            val generatedMktMaterials = retryWithBackoff {
+                LlmOrchestrator.callAgent(applicationContext, LlmOrchestrator.Agent.EXECUTIVE, marketingPromptText)
+            }
+
+            val finalBookState = bookDao.getBookById(bookId) ?: book
+            val finalBook = finalBookState.copy(
+                compiledManuscript = manuscriptBuilder.toString().trim(),
+                coverPrompt = generatedCoverPrompt,
+                marketingMaterials = generatedMktMaterials,
+                currentPhase = "Completed",
+                completionPercentage = 100
+            )
+            bookDao.updateBook(finalBook)
+
+            // AUTO-SAVE: Write metadata and manuscript to book directory
+            val downloads = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+            val sanitizedTitle = finalBook.title.replace(Regex("[^a-zA-Z0-9.-]"), "_")
+            val exportDir = java.io.File(downloads, "Weaver_Studio/$sanitizedTitle")
+            if (!exportDir.exists()) exportDir.mkdirs()
+
+            // 1. metadata.txt
+            java.io.File(exportDir, "metadata.txt").writeText("""
+                TITLE: ${finalBook.title}
+                GENRE: ${finalBook.genre}
+                FORMAT: ${finalBook.format}
+                WORD COUNT TARGET: ${finalBook.targetWordCount}
+                COMPLETION: 100%
+                SYNOPSIS:
+                ${finalBook.synopsis}
+                
+                MARKETING MATERIALS:
+                $generatedMktMaterials
+                
+                COVER PROMPT:
+                $generatedCoverPrompt
+            """.trimIndent())
+
+            // 2. manuscript.txt
+            java.io.File(exportDir, "manuscript.txt").writeText(finalBook.compiledManuscript)
+
+            // 3. metadata.json
+            val metadataJson = org.json.JSONObject().apply {
+                put("id", finalBook.id)
+                put("title", finalBook.title)
+                put("genre", finalBook.genre)
+                put("marketing", generatedMktMaterials)
+                put("cover_prompt", generatedCoverPrompt)
+            }
+            java.io.File(exportDir, "metadata.json").writeText(metadataJson.toString(4))
+
+            logAgentChat(bookDao, bookId, "👑 [Executive Orchestrator]", "🎉 Weaver 2.0 has successfully completed the Autonomous Book Production! All publishing assets saved to Downloads/Weaver_Studio/$sanitizedTitle")
+            Log.d("CompilationWorker", "Compilation completed successfully")
+            return@withContext Result.success()
+        } catch (e: Exception) {
+            Log.e("CompilationWorker", "Error in CompilationWorker", e)
+            return@withContext Result.retry()
+        }
+    }
+}

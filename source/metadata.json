@@ -1,0 +1,8 @@
+{
+  "name": "Authr: The Autonomous Author Operating System v2.3",
+  "description": "An AI-powered creative writing and TTS suite for producing complete audio novels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

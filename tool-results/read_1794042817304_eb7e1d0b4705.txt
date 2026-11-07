@@ -1,0 +1,541 @@
+     1→package com.example.ui.viewmodel
+     2→
+     3→import android.app.Application
+     4→import android.content.Context
+     5→import androidx.lifecycle.AndroidViewModel
+     6→import androidx.lifecycle.viewModelScope
+     7→
+     8→import kotlinx.coroutines.flow.MutableStateFlow
+     9→import kotlinx.coroutines.flow.StateFlow
+    10→import kotlinx.coroutines.flow.asStateFlow
+    11→import kotlinx.coroutines.launch
+    12→
+    13→class SettingsViewModel(
+    14→    application: Application
+    15→) : AndroidViewModel(application) {
+    16→
+    17→    private val sharedPrefs = try {
+    18→        val masterKey = androidx.security.crypto.MasterKey.Builder(application)
+    19→            .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+    20→            .build()
+    21→
+    22→        androidx.security.crypto.EncryptedSharedPreferences.create(
+    23→            application,
+    24→            "secure_studio_settings",
+    25→            masterKey,
+    26→            androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+    27→            androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    28→        )
+    29→    } catch (e: Throwable) {
+    30→        try {
+    31→            application.deleteSharedPreferences("secure_studio_settings")
+    32→        } catch (_: Throwable) {}
+    33→        application.getSharedPreferences("secure_studio_settings_fallback", Context.MODE_PRIVATE)
+    34→    }
+    35→
+    36→    private val _geminiApiKey = MutableStateFlow(sharedPrefs.getString("gemini_key", "") ?: "")
+    37→    val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
+    38→
+    39→    private val _geminiModel = MutableStateFlow(sharedPrefs.getString("gemini_model", "gemini-1.5-flash") ?: "gemini-1.5-flash")
+    40→    val geminiModel: StateFlow<String> = _geminiModel.asStateFlow()
+    41→
+    42→    private val _mistralApiKey = MutableStateFlow(sharedPrefs.getString("mistral_key", "") ?: "")
+    43→    val mistralApiKey: StateFlow<String> = _mistralApiKey.asStateFlow()
+    44→
+    45→    private val _mistralModel = MutableStateFlow(sharedPrefs.getString("mistral_model", "mistral-small-latest") ?: "mistral-small-latest")
+    46→    val mistralModel: StateFlow<String> = _mistralModel.asStateFlow()
+    47→
+    48→    private val _openRouterApiKey = MutableStateFlow(sharedPrefs.getString("openrouter_key", "") ?: "")
+    49→    val openRouterApiKey: StateFlow<String> = _openRouterApiKey.asStateFlow()
+    50→
+    51→    private val _openRouterModel = MutableStateFlow(sharedPrefs.getString("openrouter_model", "google/gemini-2.0-flash-exp:free") ?: "google/gemini-2.0-flash-exp:free")
+    52→    val openRouterModel: StateFlow<String> = _openRouterModel.asStateFlow()
+    53→
+    54→    private val _groqApiKey = MutableStateFlow(sharedPrefs.getString("groq_key", "") ?: "")
+    55→    val groqApiKey: StateFlow<String> = _groqApiKey.asStateFlow()
+    56→
+    57→    private val _groqModel = MutableStateFlow(sharedPrefs.getString("groq_model", "openai/gpt-oss-120b") ?: "openai/gpt-oss-120b")
+    58→    val groqModel: StateFlow<String> = _groqModel.asStateFlow()
+    59→
+    60→    private val _nvidiaApiKey = MutableStateFlow(sharedPrefs.getString("nvidia_key", "") ?: "")
+    61→    val nvidiaApiKey: StateFlow<String> = _nvidiaApiKey.asStateFlow()
+    62→
+    63→    private val _nvidiaModel = MutableStateFlow(sharedPrefs.getString("nvidia_model", "mistralai/mistral-nemotron") ?: "mistralai/mistral-nemotron")
+    64→    val nvidiaModel: StateFlow<String> = _nvidiaModel.asStateFlow()
+    65→
+    66→    private val _customOpenAiApiKey = MutableStateFlow(sharedPrefs.getString("custom_openai_key", "") ?: "")
+    67→    val customOpenAiApiKey: StateFlow<String> = _customOpenAiApiKey.asStateFlow()
+    68→
+    69→    private val _customOpenAiBaseUrl = MutableStateFlow(sharedPrefs.getString("custom_openai_base_url", "https://integrate.api.nvidia.com/v1") ?: "https://integrate.api.nvidia.com/v1")
+    70→    val customOpenAiBaseUrl: StateFlow<String> = _customOpenAiBaseUrl.asStateFlow()
+    71→
+    72→    private val _customOpenAiModel = MutableStateFlow(sharedPrefs.getString("custom_openai_model", "deepseek-ai/deepseek-v4-flash") ?: "deepseek-ai/deepseek-v4-flash")
+    73→    val customOpenAiModel: StateFlow<String> = _customOpenAiModel.asStateFlow()
+    74→
+    75→    private val _ollamaApiKey = MutableStateFlow(sharedPrefs.getString("ollama_key", "") ?: "")
+    76→    val ollamaApiKey: StateFlow<String> = _ollamaApiKey.asStateFlow()
+    77→
+    78→    private val _ollamaModel = MutableStateFlow(sharedPrefs.getString("ollama_model", "gemma4:31b") ?: "gemma4:31b")
+    79→    val ollamaModel: StateFlow<String> = _ollamaModel.asStateFlow()
+    80→
+    81→    private val _ollamaBaseUrl = MutableStateFlow(sharedPrefs.getString("ollama_base_url", "https://api.ollama.com/") ?: "https://api.ollama.com/")
+    82→    val ollamaBaseUrl: StateFlow<String> = _ollamaBaseUrl.asStateFlow()
+    83→
+    84→    private val _hfApiKey = MutableStateFlow(sharedPrefs.getString("hf_key", "") ?: "")
+    85→    val hfApiKey: StateFlow<String> = _hfApiKey.asStateFlow()
+    86→
+    87→    private val _hfModel = MutableStateFlow(sharedPrefs.getString("hf_model", "facebook/mms-tts-eng") ?: "facebook/mms-tts-eng")
+    88→    val hfModel: StateFlow<String> = _hfModel.asStateFlow()
+    89→
+    90→    private val _selectedProvider = MutableStateFlow(sharedPrefs.getString("provider", "Gemini") ?: "Gemini")
+    91→    val selectedProvider: StateFlow<String> = _selectedProvider.asStateFlow()
+    92→
+    93→    private val _ttsEngine = MutableStateFlow(sharedPrefs.getString("tts_engine", "Cloud HuggingFace TTS") ?: "Cloud HuggingFace TTS")
+    94→    val ttsEngine: StateFlow<String> = _ttsEngine.asStateFlow()
+    95→
+    96→    private val _humanizeAudio = MutableStateFlow(sharedPrefs.getBoolean("humanize_audio", true))
+    97→    val humanizeAudio: StateFlow<Boolean> = _humanizeAudio.asStateFlow()
+    98→
+    99→    private val _autoOptimize = MutableStateFlow(sharedPrefs.getBoolean("auto_optimize", false))
+   100→    val autoOptimize: StateFlow<Boolean> = _autoOptimize.asStateFlow()
+   101→
+   102→    private val _appTheme = MutableStateFlow(sharedPrefs.getString("app_theme", "Sepia") ?: "Sepia")
+   103→    val appTheme: StateFlow<String> = _appTheme.asStateFlow()
+   104→
+   105→    private val _authorName = MutableStateFlow(sharedPrefs.getString("author_name", "") ?: "")
+   106→    val authorName: StateFlow<String> = _authorName.asStateFlow()
+   107→
+   108→    private val _authorPenName = MutableStateFlow(sharedPrefs.getString("author_pen_name", "") ?: "")
+   109→    val authorPenName: StateFlow<String> = _authorPenName.asStateFlow()
+   110→
+   111→    private val _authorBio = MutableStateFlow(sharedPrefs.getString("author_bio", "") ?: "")
+   112→    val authorBio: StateFlow<String> = _authorBio.asStateFlow()
+   113→
+   114→    private val _authorPublisher = MutableStateFlow(sharedPrefs.getString("author_publisher", "") ?: "")
+   115→    val authorPublisher: StateFlow<String> = _authorPublisher.asStateFlow()
+   116→
+   117→    private val _authorWebsite = MutableStateFlow(sharedPrefs.getString("author_website", "") ?: "")
+   118→    val authorWebsite: StateFlow<String> = _authorWebsite.asStateFlow()
+   119→
+   120→    private val _authorSocial = MutableStateFlow(sharedPrefs.getString("author_social", "") ?: "")
+   121→    val authorSocial: StateFlow<String> = _authorSocial.asStateFlow()
+   122→
+   123→    private val prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+   124→        when (key) {
+   125→            "tts_engine" -> _ttsEngine.value = prefs.getString(key, "Cloud HuggingFace TTS") ?: "Cloud HuggingFace TTS"
+   126→            "humanize_audio" -> _humanizeAudio.value = prefs.getBoolean(key, true)
+   127→            "auto_optimize" -> _autoOptimize.value = prefs.getBoolean(key, false)
+   128→            "queue_concurrency" -> _queueConcurrency.value = prefs.getInt(key, 2)
+   129→            "queue_rpm" -> _queueRpm.value = prefs.getInt(key, 15)
+   130→            "gemini_key" -> _geminiApiKey.value = prefs.getString(key, "") ?: ""
+   131→            "gemini_model" -> _geminiModel.value = prefs.getString(key, "gemini-1.5-flash") ?: "gemini-1.5-flash"
+   132→            "mistral_key" -> _mistralApiKey.value = prefs.getString(key, "") ?: ""
+   133→            "mistral_model" -> _mistralModel.value = prefs.getString(key, "mistral-small-latest") ?: "mistral-small-latest"
+   134→            "openrouter_key" -> _openRouterApiKey.value = prefs.getString(key, "") ?: ""
+   135→            "openrouter_model" -> _openRouterModel.value = prefs.getString(key, "google/gemini-2.0-flash-exp:free") ?: "google/gemini-2.0-flash-exp:free"
+   136→            "groq_key" -> _groqApiKey.value = prefs.getString(key, "") ?: ""
+   137→            "groq_model" -> _groqModel.value = prefs.getString(key, "openai/gpt-oss-120b") ?: "openai/gpt-oss-120b"
+   138→            "nvidia_key" -> _nvidiaApiKey.value = prefs.getString(key, "") ?: ""
+   139→            "nvidia_model" -> _nvidiaModel.value = prefs.getString(key, "mistralai/mistral-nemotron") ?: "mistralai/mistral-nemotron"
+   140→            "custom_openai_key" -> _customOpenAiApiKey.value = prefs.getString(key, "") ?: ""
+   141→            "custom_openai_base_url" -> _customOpenAiBaseUrl.value = prefs.getString(key, "https://integrate.api.nvidia.com/v1") ?: "https://integrate.api.nvidia.com/v1"
+   142→            "custom_openai_model" -> _customOpenAiModel.value = prefs.getString(key, "deepseek-ai/deepseek-v4-flash") ?: "deepseek-ai/deepseek-v4-flash"
+   143→            "hf_key" -> _hfApiKey.value = prefs.getString(key, "") ?: ""
+   144→            "hf_model" -> _hfModel.value = prefs.getString(key, "facebook/mms-tts-eng") ?: "facebook/mms-tts-eng"
+   145→            "provider" -> _selectedProvider.value = prefs.getString(key, "Gemini") ?: "Gemini"
+   146→            "app_theme" -> _appTheme.value = prefs.getString(key, "Sepia") ?: "Sepia"
+   147→            "author_name" -> _authorName.value = prefs.getString(key, "") ?: ""
+   148→            "author_pen_name" -> _authorPenName.value = prefs.getString(key, "") ?: ""
+   149→            "author_bio" -> _authorBio.value = prefs.getString(key, "") ?: ""
+   150→            "author_publisher" -> _authorPublisher.value = prefs.getString(key, "") ?: ""
+   151→            "author_website" -> _authorWebsite.value = prefs.getString(key, "") ?: ""
+   152→            "author_social" -> _authorSocial.value = prefs.getString(key, "") ?: ""
+   153→            "cleanup_enabled" -> _cleanupEnabled.value = prefs.getBoolean(key, true)
+   154→            "cleanup_frequency" -> _cleanupFrequency.value = prefs.getString(key, "Weekly") ?: "Weekly"
+   155→            "delete_temp_cache" -> _deleteTempCache.value = prefs.getBoolean(key, true)
+   156→            "delete_failed_artifacts" -> _deleteFailedArtifacts.value = prefs.getBoolean(key, true)
+   157→            "delete_expired_api" -> _deleteExpiredApi.value = prefs.getBoolean(key, false)
+   158→            "delete_unused_cache" -> _deleteUnusedCache.value = prefs.getBoolean(key, true)
+   159→            "max_cache_size_mb" -> _maxCacheSizeMb.value = prefs.getInt(key, 500)
+   160→            "max_projects_count" -> _maxProjectsCount.value = prefs.getInt(key, 10)
+   161→        }
+   162→    }
+   163→
+   164→    private val _fetchedModels = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+   165→    val fetchedModels: StateFlow<Map<String, List<String>>> = _fetchedModels.asStateFlow()
+   166→
+   167→    private val _isFetchingModels = MutableStateFlow(false)
+   168→    val isFetchingModels: StateFlow<Boolean> = _isFetchingModels.asStateFlow()
+   169→
+   170→    private val _modelFetchStatus = MutableStateFlow<String?>(null)
+   171→    val modelFetchStatus: StateFlow<String?> = _modelFetchStatus.asStateFlow()
+   172→
+   173→    init {
+   174→        sharedPrefs.registerOnSharedPreferenceChangeListener(prefListener)
+   175→        val cached = mutableMapOf<String, List<String>>()
+   176→        listOf("Groq", "NVIDIA", "Gemini", "Mistral", "OpenRouter", "Ollama", "Custom OpenAI").forEach { p ->
+   177→            val saved = sharedPrefs.getString("cached_models_$p", "") ?: ""
+   178→            if (saved.isNotEmpty()) {
+   179→                cached[p] = saved.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+   180→            } else {
+   181→                cached[p] = com.example.data.api.ModelDiscoveryService.getFallbackModelsForProvider(p)
+   182→            }
+   183→        }
+   184→        _fetchedModels.value = cached
+   185→        autoFetchModels()
+   186→    }
+   187→
+   188→    fun autoFetchModels(targetProvider: String? = null) {
+   189→        val prov = targetProvider ?: _selectedProvider.value
+   190→        val key = when (prov) {
+   191→            "Gemini" -> _geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
+   192→            "Mistral" -> _mistralApiKey.value
+   193→            "OpenRouter" -> _openRouterApiKey.value
+   194→            "Groq" -> _groqApiKey.value
+   195→            "NVIDIA" -> _nvidiaApiKey.value
+   196→            "Custom OpenAI" -> _customOpenAiApiKey.value
+   197→            "Ollama" -> _ollamaApiKey.value.ifEmpty { com.example.BuildConfig.OLLAMA_API_KEY }
+   198→            else -> ""
+   199→        }
+   200→        val baseUrl = when (prov) {
+   201→            "Ollama" -> _ollamaBaseUrl.value
+   202→            "Custom OpenAI" -> _customOpenAiBaseUrl.value
+   203→            else -> ""
+   204→        }
+   205→
+   206→        viewModelScope.launch {
+   207→            _isFetchingModels.value = true
+   208→            _modelFetchStatus.value = "Fetching live models for $prov..."
+   209→            val result = com.example.data.api.ModelDiscoveryService.fetchModelsForProvider(prov, key, baseUrl)
+   210→            val models = result.getOrDefault(com.example.data.api.ModelDiscoveryService.getFallbackModelsForProvider(prov))
+   211→            val currentMap = _fetchedModels.value.toMutableMap()
+   212→            currentMap[prov] = models
+   213→            _fetchedModels.value = currentMap
+   214→            _isFetchingModels.value = false
+   215→            _modelFetchStatus.value = "Discovered ${models.size} models for $prov"
+   216→            sharedPrefs.edit().putString("cached_models_$prov", models.joinToString(",")).apply()
+   217→        }
+   218→    }
+   219→
+   220→    override fun onCleared() {
+   221→        super.onCleared()
+   222→        sharedPrefs.unregisterOnSharedPreferenceChangeListener(prefListener)
+   223→    }
+   224→
+   225→
+   226→    private val _waitingRequests = MutableStateFlow(0)
+   227→    val waitingRequests: StateFlow<Int> = _waitingRequests.asStateFlow()
+   228→
+   229→    private val _failedRequests = MutableStateFlow(0)
+   230→    val failedRequests: StateFlow<Int> = _failedRequests.asStateFlow()
+   231→
+   232→    private val _retryCountdown = MutableStateFlow(0)
+   233→    val retryCountdown: StateFlow<Int> = _retryCountdown.asStateFlow()
+   234→
+   235→    private val _averageRequestDurationMs = MutableStateFlow(0L)
+   236→    val averageRequestDurationMs: StateFlow<Long> = _averageRequestDurationMs.asStateFlow()
+   237→
+   238→    private val _queueConcurrency = MutableStateFlow(sharedPrefs.getInt("queue_concurrency", 2))
+   239→    val queueConcurrency: StateFlow<Int> = _queueConcurrency.asStateFlow()
+   240→
+   241→    private val _queueRpm = MutableStateFlow(sharedPrefs.getInt("queue_rpm", 15))
+   242→    val queueRpm: StateFlow<Int> = _queueRpm.asStateFlow()
+   243→
+   244→    fun refreshStorageUsage() {}
+   245→
+   246→    fun pruneAudioCache(context: Context) {
+   247→        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+   248→            try {
+   249→                var freedBytes = 0L
+   250→                val cacheDir = context.cacheDir
+   251→                cacheDir.walkTopDown().forEach { file ->
+   252→                    if (file.isFile && (file.extension.equals("wav", ignoreCase = true) || file.name.startsWith("tts_") || file.name.startsWith("kittentts_"))) {
+   253→                        freedBytes += file.length()
+   254→                        file.delete()
+   255→                    }
+   256→                }
+   257→                val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+   258→                val weaverDir = java.io.File(downloadsDir, "Weaver_Studio/AudioCache")
+   259→                if (weaverDir.exists()) {
+   260→                    weaverDir.walkTopDown().forEach { file ->
+   261→                        if (file.isFile) {
+   262→                            freedBytes += file.length()
+   263→                            file.delete()
+   264→                        }
+   265→                    }
+   266→                }
+   267→                _audioCacheSize.value = 0L
+   268→                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+   269→                    android.widget.Toast.makeText(context, "🧹 Voice Cache Pruned: Freed ${freedBytes / 1024} KB of storage", android.widget.Toast.LENGTH_SHORT).show()
+   270→                }
+   271→            } catch (e: Exception) {
+   272→                android.util.Log.e("SettingsViewModel", "Failed to prune audio cache", e)
+   273→            }
+   274→        }
+   275→    }
+   276→
+   277→
+   278→
+   279→
+   280→
+   281→
+   282→
+   283→
+   284→
+   285→    fun setQueueConfig(concurrency: Int, rpm: Int) {
+   286→        _queueConcurrency.value = concurrency
+   287→        _queueRpm.value = rpm
+   288→        sharedPrefs.edit()
+   289→            .putInt("queue_concurrency", concurrency)
+   290→            .putInt("queue_rpm", rpm)
+   291→            .apply()
+   292→    }
+   293→
+   294→
+   295→    private val _cleanupEnabled = MutableStateFlow(sharedPrefs.getBoolean("cleanup_enabled", true))
+   296→    val cleanupEnabled: StateFlow<Boolean> = _cleanupEnabled.asStateFlow()
+   297→
+   298→    private val _cleanupFrequency = MutableStateFlow(sharedPrefs.getString("cleanup_frequency", "Weekly") ?: "Weekly")
+   299→    val cleanupFrequency: StateFlow<String> = _cleanupFrequency.asStateFlow()
+   300→
+   301→    private val _deleteTempCache = MutableStateFlow(sharedPrefs.getBoolean("delete_temp_cache", true))
+   302→    val deleteTempCache: StateFlow<Boolean> = _deleteTempCache.asStateFlow()
+   303→
+   304→    private val _deleteFailedArtifacts = MutableStateFlow(sharedPrefs.getBoolean("delete_failed_artifacts", true))
+   305→    val deleteFailedArtifacts: StateFlow<Boolean> = _deleteFailedArtifacts.asStateFlow()
+   306→
+   307→    private val _deleteExpiredApi = MutableStateFlow(sharedPrefs.getBoolean("delete_expired_api", false))
+   308→    val deleteExpiredApi: StateFlow<Boolean> = _deleteExpiredApi.asStateFlow()
+   309→    
+   310→    private val _deleteUnusedCache = MutableStateFlow(sharedPrefs.getBoolean("delete_unused_cache", true))
+   311→    val deleteUnusedCache: StateFlow<Boolean> = _deleteUnusedCache.asStateFlow()
+   312→
+   313→    private val _maxCacheSizeMb = MutableStateFlow(sharedPrefs.getInt("max_cache_size_mb", 500))
+   314→    val maxCacheSizeMb: StateFlow<Int> = _maxCacheSizeMb.asStateFlow()
+   315→
+   316→    private val _maxProjectsCount = MutableStateFlow(sharedPrefs.getInt("max_projects_count", 10))
+   317→    val maxProjectsCount: StateFlow<Int> = _maxProjectsCount.asStateFlow()
+   318→
+   319→    private val _databaseSize = MutableStateFlow(0L)
+   320→    val databaseSize: StateFlow<Long> = _databaseSize.asStateFlow()
+   321→
+   322→    private val _cacheSize = MutableStateFlow(0L)
+   323→    val cacheSize: StateFlow<Long> = _cacheSize.asStateFlow()
+   324→
+   325→    private val _audioCacheSize = MutableStateFlow(0L)
+   326→    val audioCacheSize: StateFlow<Long> = _audioCacheSize.asStateFlow()
+   327→
+   328→    private val _imageCacheSize = MutableStateFlow(0L)
+   329→    val imageCacheSize: StateFlow<Long> = _imageCacheSize.asStateFlow()
+   330→    
+   331→    private val _totalStorageUsed = MutableStateFlow(0L)
+   332→    val totalStorageUsed: StateFlow<Long> = _totalStorageUsed.asStateFlow()
+   333→
+   334→    private val _queueLength = MutableStateFlow(0)
+   335→    val queueLength: StateFlow<Int> = _queueLength.asStateFlow()
+   336→
+   337→    private val _runningRequests = MutableStateFlow(0)
+   338→    val runningRequests: StateFlow<Int> = _runningRequests.asStateFlow()
+   339→
+   340→    fun updateCleanupSchedule(context: Context) {
+   341→        try {
+   342→            val workManager = androidx.work.WorkManager.getInstance(context)
+   343→            val enabled = _cleanupEnabled.value
+   344→            val frequency = _cleanupFrequency.value
+   345→
+   346→            workManager.cancelAllWorkByTag("storage_cleanup")
+   347→
+   348→            if (enabled) {
+   349→                val repeatInterval = when (frequency) {
+   350→                    "Daily" -> 1L
+   351→                    "Weekly" -> 7L
+   352→                    "Monthly" -> 30L
+   353→                    else -> 7L
+   354→                }
+   355→                val constraints = androidx.work.Constraints.Builder()
+   356→                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+   357→                    .setRequiresBatteryNotLow(true)
+   358→                    .build()
+   359→
+   360→                val cleanupRequest = androidx.work.PeriodicWorkRequestBuilder<com.example.worker.StorageCleanupWorker>(
+   361→                    repeatInterval, java.util.concurrent.TimeUnit.DAYS
+   362→                )
+   363→                    .setConstraints(constraints)
+   364→                    .addTag("storage_cleanup")
+   365→                    .build()
+   366→
+   367→                workManager.enqueueUniquePeriodicWork(
+   368→                    "storage_cleanup_work",
+   369→                    androidx.work.ExistingPeriodicWorkPolicy.REPLACE,
+   370→                    cleanupRequest
+   371→                )
+   372→                android.util.Log.d("SettingsViewModel", "Scheduled storage cleanup: $frequency")
+   373→            } else {
+   374→                android.util.Log.d("SettingsViewModel", "Automatic storage cleanup disabled.")
+   375→            }
+   376→        } catch (e: Throwable) {
+   377→            android.util.Log.e("SettingsViewModel", "Failed to schedule storage cleanup", e)
+   378→        }
+   379→    }
+   380→
+   381→    fun setCleanupEnabled(context: Context, enabled: Boolean) { 
+   382→        _cleanupEnabled.value = enabled 
+   383→        sharedPrefs.edit().putBoolean("cleanup_enabled", enabled).apply()
+   384→        updateCleanupSchedule(context)
+   385→    }
+   386→    fun setCleanupFrequency(context: Context, freq: String) { 
+   387→        _cleanupFrequency.value = freq 
+   388→        sharedPrefs.edit().putString("cleanup_frequency", freq).apply()
+   389→        updateCleanupSchedule(context)
+   390→    }
+   391→    fun setDeleteTempCache(v: Boolean) { 
+   392→        _deleteTempCache.value = v 
+   393→        sharedPrefs.edit().putBoolean("delete_temp_cache", v).apply()
+   394→    }
+   395→    fun setDeleteFailedArtifacts(v: Boolean) { 
+   396→        _deleteFailedArtifacts.value = v 
+   397→        sharedPrefs.edit().putBoolean("delete_failed_artifacts", v).apply()
+   398→    }
+   399→    fun setDeleteExpiredApi(v: Boolean) { 
+   400→        _deleteExpiredApi.value = v 
+   401→        sharedPrefs.edit().putBoolean("delete_expired_api", v).apply()
+   402→    }
+   403→    fun setDeleteUnusedCache(v: Boolean) { 
+   404→        _deleteUnusedCache.value = v 
+   405→        sharedPrefs.edit().putBoolean("delete_unused_cache", v).apply()
+   406→    }
+   407→    fun setMaxCacheSizeMb(v: Int) { 
+   408→        _maxCacheSizeMb.value = v 
+   409→        sharedPrefs.edit().putInt("max_cache_size_mb", v).apply()
+   410→    }
+   411→    fun setMaxProjectsCount(v: Int) { 
+   412→        _maxProjectsCount.value = v 
+   413→        sharedPrefs.edit().putInt("max_projects_count", v).apply()
+   414→    }
+   415→    fun cleanNow(context: Context) {
+   416→        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+   417→            val workManager = androidx.work.WorkManager.getInstance(context)
+   418→            val constraints = androidx.work.Constraints.Builder()
+   419→                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+   420→                .setRequiresBatteryNotLow(true)
+   421→                .build()
+   422→            val cleanRequest = androidx.work.OneTimeWorkRequestBuilder<com.example.worker.StorageCleanupWorker>()
+   423→                .setConstraints(constraints)
+   424→                .addTag("storage_cleanup_manual")
+   425→                .build()
+   426→            workManager.enqueue(cleanRequest)
+   427→        }
+   428→    }
+   429→
+   430→    fun setAppTheme(theme: String) {
+   431→        _appTheme.value = theme
+   432→        sharedPrefs.edit().putString("app_theme", theme).apply()
+   433→    }
+   434→    
+   435→    fun setTtsEngine(engine: String) {
+   436→        _ttsEngine.value = engine
+   437→        sharedPrefs.edit().putString("tts_engine", engine).apply()
+   438→    }
+   439→
+   440→    fun setSelectedProvider(provider: String) {
+   441→        _selectedProvider.value = provider
+   442→        sharedPrefs.edit().putString("provider", provider).apply()
+   443→    }
+   444→
+   445→    fun setHumanizeAudio(enabled: Boolean) {
+   446→        _humanizeAudio.value = enabled
+   447→        sharedPrefs.edit().putBoolean("humanize_audio", enabled).apply()
+   448→    }
+   449→
+   450→    fun setAutoOptimize(enabled: Boolean) {
+   451→        _autoOptimize.value = enabled
+   452→        sharedPrefs.edit().putBoolean("auto_optimize", enabled).apply()
+   453→    }
+   454→
+   455→    fun saveApiKeys(
+   456→        gemini: String,
+   457→        geminiModel: String = "gemini-1.5-flash",
+   458→        mistral: String,
+   459→        mistralModel: String = "mistral-small-latest",
+   460→        hfKey: String,
+   461→        hfModel: String,
+   462→        provider: String,
+   463→        ttsEng: String = "Android",
+   464→        ollama: String = "",
+   465→        ollamaModel: String = "gemma4:31b",
+   466→        ollamaBaseUrl: String = "https://api.ollama.com/",
+   467→        openrouter: String = "",
+   468→        openRouterModel: String = "google/gemini-2.0-flash-exp:free",
+   469→        groqKey: String = "",
+   470→        groqModel: String = "openai/gpt-oss-120b",
+   471→        nvidiaKey: String = "",
+   472→        nvidiaModel: String = "mistralai/mistral-nemotron",
+   473→        customOpenAiKey: String = "",
+   474→        customOpenAiBaseUrl: String = "https://integrate.api.nvidia.com/v1",
+   475→        customOpenAiModel: String = "deepseek-ai/deepseek-v4-flash"
+   476→    ) {
+   477→        _geminiApiKey.value = gemini
+   478→        _geminiModel.value = geminiModel
+   479→        _mistralApiKey.value = mistral
+   480→        _mistralModel.value = mistralModel
+   481→        _openRouterApiKey.value = openrouter
+   482→        _openRouterModel.value = openRouterModel
+   483→        _groqApiKey.value = groqKey
+   484→        _groqModel.value = groqModel
+   485→        _nvidiaApiKey.value = nvidiaKey
+   486→        _nvidiaModel.value = nvidiaModel
+   487→        _customOpenAiApiKey.value = customOpenAiKey
+   488→        _customOpenAiBaseUrl.value = customOpenAiBaseUrl
+   489→        _customOpenAiModel.value = customOpenAiModel
+   490→        _hfApiKey.value = hfKey
+   491→        _hfModel.value = hfModel
+   492→        _ollamaApiKey.value = ollama
+   493→        _ollamaModel.value = ollamaModel
+   494→        _ollamaBaseUrl.value = ollamaBaseUrl
+   495→        _selectedProvider.value = provider
+   496→        _ttsEngine.value = ttsEng
+   497→
+   498→        sharedPrefs.edit()
+   499→            .putString("tts_engine", ttsEng)
+   500→            .putString("gemini_key", gemini)
+   501→            .putString("gemini_model", geminiModel)
+   502→            .putString("mistral_key", mistral)
+   503→            .putString("mistral_model", mistralModel)
+   504→            .putString("openrouter_key", openrouter)
+   505→            .putString("openrouter_model", openRouterModel)
+   506→            .putString("groq_key", groqKey)
+   507→            .putString("groq_model", groqModel)
+   508→            .putString("nvidia_key", nvidiaKey)
+   509→            .putString("nvidia_model", nvidiaModel)
+   510→            .putString("custom_openai_key", customOpenAiKey)
+   511→            .putString("custom_openai_base_url", customOpenAiBaseUrl)
+   512→            .putString("custom_openai_model", customOpenAiModel)
+   513→            .putString("ollama_key", ollama)
+   514→            .putString("ollama_model", ollamaModel)
+   515→            .putString("ollama_base_url", ollamaBaseUrl)
+   516→            .putString("hf_key", hfKey)
+   517→            .putString("hf_model", hfModel)
+   518→            .putString("provider", provider)
+   519→            .apply()
+   520→        autoFetchModels(provider)
+   521→    }
+   522→
+   523→    fun saveAuthorDetails(name: String, penName: String, bio: String, publisher: String, website: String, social: String) {
+   524→        _authorName.value = name
+   525→        _authorPenName.value = penName
+   526→        _authorBio.value = bio
+   527→        _authorPublisher.value = publisher
+   528→        _authorWebsite.value = website
+   529→        _authorSocial.value = social
+   530→
+   531→        sharedPrefs.edit()
+   532→            .putString("author_name", name)
+   533→            .putString("author_pen_name", penName)
+   534→            .putString("author_bio", bio)
+   535→            .putString("author_publisher", publisher)
+   536→            .putString("author_website", website)
+   537→            .putString("author_social", social)
+   538→            .apply()
+   539→    }
+   540→}
+   541→

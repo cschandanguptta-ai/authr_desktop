@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background solid gradient -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#0B132B" />
+                <item android:offset="0.5" android:color="#1C2541" />
+                <item android:offset="1.0" android:color="#0B132B" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Subtle ambient glow / light rays in the center background -->
+    <path android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="40"
+                android:type="radial">
+                <item android:offset="0.0" android:color="#3300B4D8" />
+                <item android:offset="1.0" android:color="#00000000" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Decorative background electronic circuit or wave line 1 -->
+    <path
+        android:pathData="M 10,25 C 25,20 30,35 45,30 C 60,25 65,40 80,35 C 95,30 98,45 108,40"
+        android:strokeColor="#11335A"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000" />
+
+    <!-- Decorative background electronic circuit or wave line 2 -->
+    <path
+        android:pathData="M 0,75 C 15,70 20,85 35,80 C 50,75 55,90 70,85 C 85,80 88,95 100,90"
+        android:strokeColor="#11335A"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000" />
+
+    <!-- Digital grid / sound lines left -->
+    <path
+        android:pathData="M15,40 L15,68 M20,44 L20,64 M25,48 L25,60"
+        android:strokeColor="#1A3A5F"
+        android:strokeWidth="0.8" />
+
+    <!-- Digital grid / sound lines right -->
+    <path
+        android:pathData="M93,40 L93,68 M88,44 L88,64 M83,48 L83,60"
+        android:strokeColor="#1A3A5F"
+        android:strokeWidth="0.8" />
+</vector>
