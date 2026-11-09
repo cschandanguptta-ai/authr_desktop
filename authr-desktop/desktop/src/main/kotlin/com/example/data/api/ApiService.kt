@@ -134,7 +134,11 @@ data class OpenAiChatRequest(
     val messages: List<OpenAiChatMessage>,
     val temperature: Float? = null,
     val top_p: Float? = null,
-    val max_tokens: Int? = null
+    val max_tokens: Int? = null,
+    /** v3.0 P2 (plan §5.1, Table 7): decode-time cliché suppression on the
+     *  OpenAI-compatible family. Keys are offender token encodings, values
+     *  the additive bias (−5). Null on routes without bias support. */
+    val logit_bias: Map<String, Int>? = null
 )
 
 @JsonClass(generateAdapter = false)

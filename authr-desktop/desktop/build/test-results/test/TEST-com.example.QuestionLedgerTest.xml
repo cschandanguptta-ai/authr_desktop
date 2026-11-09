@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.QuestionLedgerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-09T15:00:46.910Z" hostname="c-6af1d688-140d72b5-687d1e58508f" time="0.01">
+  <properties/>
+  <testcase name="long-horizon phrasing opens long-term questions without a window" classname="com.example.QuestionLedgerTest" time="0.003"/>
+  <testcase name="duplicate cues within one chapter collapse to one entry" classname="com.example.QuestionLedgerTest" time="0.001"/>
+  <testcase name="revelation outcomes cover the six checks" classname="com.example.QuestionLedgerTest" time="0.001"/>
+  <testcase name="detection opens progressive questions with answer windows" classname="com.example.QuestionLedgerTest" time="0.0"/>
+  <testcase name="answering records the chapter and links the revelation" classname="com.example.QuestionLedgerTest" time="0.0"/>
+  <testcase name="only overdue progressive questions surface" classname="com.example.QuestionLedgerTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

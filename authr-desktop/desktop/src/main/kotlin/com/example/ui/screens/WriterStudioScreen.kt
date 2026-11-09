@@ -23,9 +23,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Book
 import com.example.data.model.Chapter
+import com.example.data.model.ChekhovGun
+import com.example.data.model.QuestionEntry
 import com.example.engine.AnnotationKind
 import com.example.engine.AstAnnotation
+import com.example.engine.ChekhovLedger
 import com.example.engine.DraftState
+import com.example.engine.QuestionLedger
 import com.example.engine.Severity
 import com.example.engine.WriterGate
 import com.example.ui.viewmodel.WriterStudioViewModel
@@ -59,6 +63,9 @@ fun WriterStudioScreen(
     val isGenerating by viewModel.isGenerating.collectAsState()
     val queueIndex by viewModel.queueIndex.collectAsState()
     val ledgerCounts by viewModel.ledgerCounts.collectAsState()
+    val guns by viewModel.guns.collectAsState()
+    val questions by viewModel.questions.collectAsState()
+    val compileGate by viewModel.compileGate.collectAsState()
 
     LaunchedEffect(books) {
         if (selectedBookId == null && books.isNotEmpty()) viewModel.selectBook(books.first().id)
@@ -140,12 +147,29 @@ fun WriterStudioScreen(
                             )
                         }
                     }
-                    // ---- Margin rail ----
-                    MarginRail(
-                        annotations = annotations,
-                        chapter = openChapter,
-                        modifier = Modifier.width(300.dp).fillMaxHeight()
-                    )
+                    // ---- Margin rail + ledger panel (v3.0 P2) ----
+                    Column(modifier = Modifier.width(300.dp).fillMaxHeight()) {
+                        MarginRail(
+                            annotations = annotations,
+                            chapter = openChapter,
+                            modifier = Modifier.fillMaxWidth().weight(1.2f)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        LedgerPanel(
+                            guns = guns,
+                            questions = questions,
+                            compileGate = compileGate,
+                            currentChapter = openChapter?.chapterNumber ?: chapters.size,
+                            finalActStart = viewModel.finalActStartChapter(),
+                            resolutionEnabled = openChapter?.let { WriterGate.isCanon(it) } ?: false,
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            onResolve = { gun ->
+                                openChapter?.let { viewModel.resolveGun(gun.id, it, gun.quote.ifBlank { openChapter.content.takeLast(200) }) }
+                            },
+                            onWaive = { gun, note -> viewModel.waiveGun(gun.id, note) },
+                            onAnswer = { q -> viewModel.answerQuestion(q.id, openChapter?.chapterNumber ?: q.openedChapter) }
+                        )
+                    }
                 }
             }
 
@@ -549,5 +573,157 @@ private fun ReviewQueue(
                 }
             }
         }
+    }
+}
+
+// ----------------------------------------------------------------------
+// Ledger panel (v3.0 P2) — Chekhov guns + question ledger, one surface
+// (plan §6.7: "one ledger UI, two entry kinds")
+// ----------------------------------------------------------------------
+
+@Composable
+private fun gunStatusColor(status: String): Color = when (status) {
+    ChekhovLedger.INTRODUCED -> Color(0xFF1565C0)
+    ChekhovLedger.ESCALATED -> Color(0xFF6A1B9A)
+    ChekhovLedger.RESOLVED -> Color(0xFF2E7D32)
+    ChekhovLedger.ORPHANED -> Color(0xFFC62828)
+    ChekhovLedger.WAIVED -> Color(0xFF6D4C41)
+    else -> Color.Gray
+}
+
+@Composable
+private fun LedgerPanel(
+    guns: List<ChekhovGun>,
+    questions: List<QuestionEntry>,
+    compileGate: ChekhovLedger.GateResult,
+    currentChapter: Int,
+    finalActStart: Int,
+    modifier: Modifier = Modifier,
+    /** Resolution happens in confirmed text only (Table 8 RESOLVED guard). */
+    resolutionEnabled: Boolean = false,
+    onResolve: (ChekhovGun) -> Unit,
+    onWaive: (ChekhovGun, String) -> Unit,
+    onAnswer: (QuestionEntry) -> Unit
+) {
+    var waiveTarget by remember { mutableStateOf<ChekhovGun?>(null) }
+    var waiveNote by remember { mutableStateOf("") }
+
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Continuity Ledger", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.width(6.dp))
+                AssistChip(
+                    onClick = {},
+                    label = { Text(
+                        if (compileGate.blocked) "COMPILE BLOCKED" else "compile clear",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (compileGate.blocked) Color(0xFFC62828) else Color(0xFF2E7D32)
+                    ) }
+                )
+            }
+            Text(
+                "Final act starts at ch. $finalActStart — unfired guns orphan automatically.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                itemsIndexed(guns, key = { _, g -> "gun-${g.id}" }) { _, gun ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            gun.name, style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f),
+                            maxLines = 1
+                        )
+                        Text(
+                            "ch.${gun.introducedChapter}", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            gun.status, style = MaterialTheme.typography.labelSmall,
+                            color = gunStatusColor(gun.status), fontWeight = FontWeight.Bold
+                        )
+                        if (gun.status in ChekhovLedger.UNRESOLVED) {
+                            TextButton(onClick = { onResolve(gun) }, enabled = resolutionEnabled) {
+                                Text("Resolve", style = MaterialTheme.typography.labelSmall)
+                            }
+                            TextButton(onClick = { waiveTarget = gun; waiveNote = "" }) {
+                                Text("Waive", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        if (gun.status == ChekhovLedger.WAIVED && gun.waiveNote.isNotBlank()) {
+                            Text(
+                                "note: ${gun.waiveNote.take(40)}", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1
+                            )
+                        }
+                    }
+                }
+                itemsIndexed(questions, key = { _, q -> "q-${q.id}" }) { _, q ->
+                    val overdue = QuestionLedger.isOverdue(q, currentChapter)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            q.text, style = MaterialTheme.typography.bodySmall,
+                            color = if (q.answeredChapter != null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f), maxLines = 2
+                        )
+                        Text(
+                            when {
+                                q.answeredChapter != null -> "answered ch.${q.answeredChapter}"
+                                overdue -> "OVERDUE (due ch.${q.dueChapter})"
+                                q.dueChapter != null -> "due ch.${q.dueChapter}"
+                                else -> q.level
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (overdue) Color(0xFFC62828) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = if (overdue) FontWeight.Bold else FontWeight.Normal
+                        )
+                        if (q.answeredChapter == null) {
+                            TextButton(onClick = { onAnswer(q) }) {
+                                Text("Answer", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (waiveTarget != null) {
+        AlertDialog(
+            onDismissRequest = { waiveTarget = null },
+            title = { Text("Waive \u201C${waiveTarget?.name}\u201D", style = MaterialTheme.typography.titleMedium) },
+            text = {
+                Column {
+                    Text("Waivers are never silent — your note is disclosed in the ship report.", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = waiveNote,
+                        onValueChange = { waiveNote = it },
+                        placeholder = { Text("Mandatory note (e.g. sequel hook)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = waiveNote.isNotBlank(),
+                    onClick = {
+                        waiveTarget?.let { onWaive(it, waiveNote) }
+                        waiveTarget = null
+                    }
+                ) { Text("Waive") }
+            },
+            dismissButton = { TextButton(onClick = { waiveTarget = null }) { Text("Cancel") } }
+        )
     }
 }

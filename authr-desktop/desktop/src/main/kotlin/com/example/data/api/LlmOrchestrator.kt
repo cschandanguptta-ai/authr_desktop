@@ -88,7 +88,12 @@ object LlmOrchestrator {
         agent: Agent,
         prompt: String,
         systemInstruction: String? = null,
-        temperature: Float? = null
+        temperature: Float? = null,
+        /** P2 (plan §5.1, Table 7): decode-time cliché suppression for
+         *  logit_bias-capable routes (OpenAI-compatible family). Routes
+         *  without bias support ignore it — the prompt constraints and the
+         *  deterministic linter remain the enforcement layers there. */
+        logitBias: Map<String, Int>? = null
     ): String {
         val priority = when (agent) {
             Agent.EXECUTIVE, Agent.PLOT -> RequestQueueManager.Priority.HIGH
@@ -185,7 +190,8 @@ object LlmOrchestrator {
                                             OpenAiChatMessage(role = "user", content = prompt)
                                         ),
                                         temperature = temperature,
-                                        top_p = 0.95f
+                                        top_p = 0.95f,
+                                        logit_bias = logitBias?.takeIf { it.isNotEmpty() }
                                     )
                                     val response = ApiClient.openAiCompatibleService.generateContent(
                                         "https://api.groq.com/openai/v1/chat/completions",
@@ -209,7 +215,8 @@ object LlmOrchestrator {
                                         ),
                                         temperature = temperature ?: 0.6f,
                                         top_p = 0.7f,
-                                        max_tokens = 4096
+                                        max_tokens = 4096,
+                                        logit_bias = logitBias?.takeIf { it.isNotEmpty() }
                                     )
                                     val response = ApiClient.openAiCompatibleService.generateContent(
                                         "https://integrate.api.nvidia.com/v1/chat/completions",
@@ -233,7 +240,8 @@ object LlmOrchestrator {
                                             OpenAiChatMessage(role = "system", content = systemInstruction ?: "You are ${agent.displayName}."),
                                             OpenAiChatMessage(role = "user", content = prompt)
                                         ),
-                                        temperature = temperature
+                                        temperature = temperature,
+                                        logit_bias = logitBias?.takeIf { it.isNotEmpty() }
                                     )
                                     val response = ApiClient.openAiCompatibleService.generateContent(
                                         finalUrl,

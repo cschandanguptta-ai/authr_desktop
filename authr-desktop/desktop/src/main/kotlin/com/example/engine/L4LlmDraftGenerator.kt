@@ -38,6 +38,18 @@ class L4LlmDraftGenerator(private val context: Context) : WriterStudioViewModel.
         }
         val wordEnvelope = "${book.wordMin}–${book.wordMax} words"
 
+        // P2 prose-quality bracket (plan §5.1): the forbidden-pattern block
+        // rides the prompt on EVERY provider route; the decode-time bias
+        // payload applies only where the route's API supports logit_bias
+        // (plan Table 7 — the linter, not the bias, is the compliance gate).
+        val canonText = canonContext.joinToString("\n") { it.content }
+        val provider = LlmOrchestrator.getProviderForAgent(context, LlmOrchestrator.Agent.SCENE)
+        val biasPlan = TokenBiasPolicy.enforcementPlan(provider, canonText)
+        if (biasPlan.logitBias.isNotEmpty()) {
+            android.util.Log.i("L4LlmDraftGenerator",
+                "Token-bias policy (${provider}): suppressing ${biasPlan.logitBias.size} offender tokens at decode time (-5).")
+        }
+
         val prompt = """
             You are the Scene Composer (L4) writing chapter ${chapter.chapterNumber} of "${book.title}" (${book.format}, ${book.genre}).
 
@@ -66,9 +78,13 @@ class L4LlmDraftGenerator(private val context: Context) : WriterStudioViewModel.
             Instructions:
             Write the complete prose scene for chapter ${chapter.chapterNumber} ("${chapter.title}") in the
             target word envelope of $wordEnvelope. Show, don't tell; keep continuity with the
-            confirmed chapters only. Return ONLY the chapter content — no labels, no commentary.
+            confirmed chapters only.
+
+            ${biasPlan.promptConstraints}
+
+            Return ONLY the chapter content — no labels, no commentary.
         """.trimIndent()
 
-        return LlmOrchestrator.callAgent(context, LlmOrchestrator.Agent.SCENE, prompt)
+        return LlmOrchestrator.callAgent(context, LlmOrchestrator.Agent.SCENE, prompt, logitBias = biasPlan.logitBias)
     }
 }

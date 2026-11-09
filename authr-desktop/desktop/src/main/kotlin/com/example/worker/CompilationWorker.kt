@@ -7,6 +7,8 @@ import androidx.work.WorkerParameters
 import com.example.data.api.LlmOrchestrator
 import com.example.data.local.BookDao
 import com.example.data.local.ChapterDao
+import com.example.data.local.ChekhovGunDao
+import com.example.engine.ChekhovLedger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -14,7 +16,11 @@ class CompilationWorker(
     context: Context,
     params: WorkerParameters,
     private val bookDao: BookDao,
-    private val chapterDao: ChapterDao
+    private val chapterDao: ChapterDao,
+    /** v3.0 P2 (plan §5.2): the Chekhov ledger powers the final-act
+     *  recovery gate — compile is blocked while any confirmed gun is
+     *  still unfired, unless the writer waived it with a note. */
+    private val chekhovGunDao: ChekhovGunDao? = null
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -44,6 +50,24 @@ class CompilationWorker(
             val excluded = allChaptersForCompile.size - finalChapters.size
             if (excluded > 0) {
                 logAgentChat(bookDao, bookId, "📚 [Publishing Agent]", "Writer gate: excluded $excluded unconfirmed chapter(s) from the compiled manuscript — confirm them in the Writer Studio and re-compile.")
+            }
+
+            // v3.0 P2 (plan §5.2): the final-act recovery gate — compile is
+            // blocked while any confirmed gun is still unfired. Waived guns
+            // pass, but their waiver notes are disclosed in the log (never
+            // silent). A clean/resolved/waived ledger compiles without
+            // friction — zero false compile blocks.
+            chekhovGunDao?.let { gunDao ->
+                val allGuns = gunDao.getGunsForBookSync(bookId)
+                val gate = ChekhovLedger.recoveryGate(allGuns)
+                gate.report.forEach { line ->
+                    logAgentChat(bookDao, bookId, "🧨 [Chekhov Ledger]", line)
+                }
+                if (gate.blocked) {
+                    logAgentChat(bookDao, bookId, "🧨 [Chekhov Ledger]",
+                        "Final-act recovery gate: compilation blocked — ${gate.blocking.size} unfired promise(s) in the ledger. Resolve them in the Writer Studio (L6 rail) or waive them with a note, then re-compile.")
+                    return@withContext Result.failure()
+                }
             }
             val manuscriptBuilder = StringBuilder()
             manuscriptBuilder.append("# ${book.title}\n")

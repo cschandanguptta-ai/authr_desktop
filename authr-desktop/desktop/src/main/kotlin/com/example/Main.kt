@@ -100,7 +100,8 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
         bookDao = database.bookDao(),
         chapterDao = database.chapterDao(),
         lorebookDao = database.lorebookDao(),
-        chekhovGunDao = database.chekhovGunDao()
+        chekhovGunDao = database.chekhovGunDao(),
+        questionDao = database.questionDao()
     )
     val viewModel = StudioViewModel(
         application = app,

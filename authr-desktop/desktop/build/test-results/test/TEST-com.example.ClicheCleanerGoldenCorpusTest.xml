@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.ClicheCleanerGoldenCorpusTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-09T15:00:45.967Z" hostname="c-6af1d688-140d72b5-687d1e58508f" time="0.939">
+  <properties/>
+  <testcase name="matrix carries 154 patterns in six classes per plan table 6" classname="com.example.ClicheCleanerGoldenCorpusTest" time="0.041"/>
+  <testcase name="offender tokens rank the planted vocabulary" classname="com.example.ClicheCleanerGoldenCorpusTest" time="0.015"/>
+  <testcase name="planted set aligns with the matrix one instance per pattern" classname="com.example.ClicheCleanerGoldenCorpusTest" time="0.002"/>
+  <testcase name="every planted catch on the golden corpus is recovered" classname="com.example.ClicheCleanerGoldenCorpusTest" time="0.339"/>
+  <testcase name="golden corpus reaches fifty pages" classname="com.example.ClicheCleanerGoldenCorpusTest" time="0.013"/>
+  <testcase name="all six classes fire on the golden corpus" classname="com.example.ClicheCleanerGoldenCorpusTest" time="0.262"/>
+  <testcase name="prompt constraints name all six classes with their counts" classname="com.example.ClicheCleanerGoldenCorpusTest" time="0.004"/>
+  <testcase name="precision on the golden corpus is at least ninety percent" classname="com.example.ClicheCleanerGoldenCorpusTest" time="0.258"/>
+  <system-out><![CDATA[Golden corpus precision: 1.0000 (TP=154 FP=0 hits=154, 23210 words)
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

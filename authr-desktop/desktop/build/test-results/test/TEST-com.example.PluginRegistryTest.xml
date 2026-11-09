@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.PluginRegistryTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-09T13:18:08.016Z" hostname="c-6af184ee-14127d0f-5aa13d3776bd" time="0.052">
+<testsuite name="com.example.PluginRegistryTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-09T15:00:47.403Z" hostname="c-6af1d688-140d72b5-687d1e58508f" time="0.061">
   <properties/>
-  <testcase name="registry loads the scaffolded library with zero invalid files" classname="com.example.PluginRegistryTest" time="0.021"/>
-  <testcase name="scaffold never overwrites user edits" classname="com.example.PluginRegistryTest" time="0.007"/>
-  <testcase name="every shipped plugin validates against the schema" classname="com.example.PluginRegistryTest" time="0.001"/>
+  <testcase name="registry loads the scaffolded library with zero invalid files" classname="com.example.PluginRegistryTest" time="0.046"/>
+  <testcase name="scaffold never overwrites user edits" classname="com.example.PluginRegistryTest" time="0.005"/>
+  <testcase name="every shipped plugin validates against the schema" classname="com.example.PluginRegistryTest" time="0.002"/>
   <testcase name="schema rejects malformed plugins" classname="com.example.PluginRegistryTest" time="0.002"/>
-  <testcase name="registry reports invalid dropped-in files without loading them" classname="com.example.PluginRegistryTest" time="0.015"/>
+  <testcase name="registry reports invalid dropped-in files without loading them" classname="com.example.PluginRegistryTest" time="0.006"/>
   <testcase name="shipped library has exactly 16 structures and 22 personas" classname="com.example.PluginRegistryTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>

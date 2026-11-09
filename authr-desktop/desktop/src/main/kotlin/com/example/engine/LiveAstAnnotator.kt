@@ -146,39 +146,13 @@ object LiveAstAnnotator {
     }
 
     // ------------------------------------------------------------------
-    // 2. Cliché hits (plan §5.1; full 154-pattern matrix ships in P2 —
-    //    the annotator hook and the starter classes ship here)
+    // 2. Cliché hits (plan §5.1) — since P2 the annotator delegates to the
+    //    full 154-pattern matrix in ClicheCleaner (Table 6). One annotation
+    //    per distinct offending span; overlapping matches dedupe to the
+    //    higher-severity pattern so a writer sees one node per catch.
     // ------------------------------------------------------------------
 
-    data class ClichePattern(val regex: Regex, val clicheClass: String, val severity: Severity, val rewrite: String)
-
-    val starterPatterns: List<ClichePattern> = listOf(
-        // Dialogue-tag crutches (plan Table 6, class 1)
-        ClichePattern(Regex("""\b(she|he|it|they) (said|asked) (breathily|huskily|sharply|coldly)\b""", RegexOption.IGNORE_CASE), "Dialogue-tag crutches", Severity.WARN, "Replace with an action beat."),
-        ClichePattern(Regex("""\b(he|she) (growled|hissed|snarled|spat)\b(?! (out|back))?""", RegexOption.IGNORE_CASE), "Dialogue-tag crutches", Severity.WARN, "Use an action beat instead of an exotic tag in tense scenes."),
-        // Purple prose staples
-        ClichePattern(Regex("""heart of hearts""", RegexOption.IGNORE_CASE), "Purple prose", Severity.INFO, "State the feeling plainly."),
-        ClichePattern(Regex("""time (stood|seemed to stand) still""", RegexOption.IGNORE_CASE), "Purple prose", Severity.INFO, "Anchor the moment in a concrete sensation."),
-        ClichePattern(Regex("""little did (he|she|they|I) know""", RegexOption.IGNORE_CASE), "Purple prose", Severity.WARN, "Let the dramatic irony emerge from the story."),
-        ClichePattern(Regex("""(her|his) (heart )?(skipped a beat|missed a beat)""", RegexOption.IGNORE_CASE), "Purple prose", Severity.INFO, "Describe the body's reaction concretely."),
-        ClichePattern(Regex("""in the nick of time""", RegexOption.IGNORE_CASE), "Purple prose", Severity.INFO, "Time the rescue with concrete beats."),
-        // Weak intensifiers
-        ClichePattern(Regex("""\b(very|extremely|incredibly|unbelievably) (angry|sad|happy|scared|tired)\b""", RegexOption.IGNORE_CASE), "Weak intensifiers", Severity.INFO, "Show the emotion through behavior."),
-        // Opening crutches
-        ClichePattern(Regex("""^(it was a dark and stormy night)""", RegexOption.IGNORE_CASE), "Opening crutches", Severity.ERROR, "Open in motion, with the POV character wanting something.")
-    )
-
-    fun clicheHits(text: String): List<AstAnnotation> =
-        starterPatterns.flatMap { p ->
-            p.regex.findAll(text).map { m ->
-                AstAnnotation(
-                    kind = AnnotationKind.CLICHE_HIT, start = m.range.first, end = m.range.last + 1,
-                    excerpt = m.value, message = "${p.clicheClass}: \"${m.value}\" — ${p.rewrite}",
-                    severity = p.severity, suggestedAction = WriterAction.ACCEPT_SUGGESTION,
-                    payload = mapOf("clicheClass" to p.clicheClass, "rewrite" to p.rewrite)
-                )
-            }
-        }
+    fun clicheHits(text: String): List<AstAnnotation> = ClicheCleaner.scan(text)
 
     // ------------------------------------------------------------------
     // 3. Chekhov promises — introduced / escalated / resolved (plan §5.2)
@@ -194,15 +168,23 @@ object LiveAstAnnotator {
         PromiseDetector("Open question", Regex("""\b(the question of|no one knew (who|what|why|where)|the mystery of)\b""", RegexOption.IGNORE_CASE), "An explicit question promises an answer.")
     )
 
-    /** Marks narrative promises as CHEKHOV_GUN nodes with INTRODUCED lifecycle. */
+    /** Marks narrative promises as CHEKHOV_GUN nodes with INTRODUCED lifecycle.
+     *  The archived quote carries a context window around the match (±40
+     *  chars), which is what the ledger's duplicate detection compares —
+     *  a re-emphasized promise in a later canon chapter shares most of its
+     *  context tokens with the original (plan Table 8, ESCALATED guard). */
     fun chekhovPromises(text: String): List<AstAnnotation> =
         promiseDetectors.flatMap { d ->
             d.regex.findAll(text).map { m ->
+                val context = text.substring(
+                    (m.range.first - 40).coerceAtLeast(0),
+                    (m.range.last + 1 + 40).coerceAtMost(text.length)
+                ).replace(Regex("""\s+"""), " ").trim()
                 AstAnnotation(
                     kind = AnnotationKind.CHEKHOV_GUN, start = m.range.first, end = m.range.last + 1,
                     excerpt = m.value, message = "${d.name}: \"${m.value}\" — ${d.description}",
                     severity = Severity.INFO, suggestedAction = WriterAction.SCHEDULE_ESCALATION,
-                    payload = mapOf("gun" to d.name, "quote" to m.value, "status" to "INTRODUCED")
+                    payload = mapOf("gun" to d.name, "quote" to context, "status" to "INTRODUCED")
                 )
             }
         }

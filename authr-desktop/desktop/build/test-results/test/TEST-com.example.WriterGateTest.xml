@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.WriterGateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-09T13:18:08.120Z" hostname="c-6af184ee-14127d0f-5aa13d3776bd" time="0.008">
+<testsuite name="com.example.WriterGateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-09T15:00:47.475Z" hostname="c-6af1d688-140d72b5-687d1e58508f" time="0.002">
   <properties/>
-  <testcase name="only writer-confirmed chapters are canon" classname="com.example.WriterGateTest" time="0.005"/>
-  <testcase name="unconfirmed text never reaches ledger or export consumers" classname="com.example.WriterGateTest" time="0.0"/>
-  <testcase name="proposed drafts queue for review" classname="com.example.WriterGateTest" time="0.001"/>
+  <testcase name="only writer-confirmed chapters are canon" classname="com.example.WriterGateTest" time="0.001"/>
+  <testcase name="unconfirmed text never reaches ledger or export consumers" classname="com.example.WriterGateTest" time="0.001"/>
+  <testcase name="proposed drafts queue for review" classname="com.example.WriterGateTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

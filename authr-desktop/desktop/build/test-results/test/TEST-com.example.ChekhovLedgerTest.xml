@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.ChekhovLedgerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-09T15:00:47.172Z" hostname="c-6af1d688-140d72b5-687d1e58508f" time="0.196">
+  <properties/>
+  <testcase name="end to end - blocked serial recovers through resolve and waive" classname="com.example.ChekhovLedgerTest" time="0.143"/>
+  <testcase name="re-emphasis escalates the existing gun instead of duplicating it" classname="com.example.ChekhovLedgerTest" time="0.034"/>
+  <testcase name="the recovery gate blocks only unresolved guns" classname="com.example.ChekhovLedgerTest" time="0.0"/>
+  <testcase name="the orphan sweep fires at the final-act boundary" classname="com.example.ChekhovLedgerTest" time="0.0"/>
+  <testcase name="escalate and resolve guards hold" classname="com.example.ChekhovLedgerTest" time="0.001"/>
+  <testcase name="waivers require a mandatory note and are never silent" classname="com.example.ChekhovLedgerTest" time="0.003"/>
+  <testcase name="every planted gun in the regression corpus is detected" classname="com.example.ChekhovLedgerTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -6,12 +6,14 @@ import com.example.data.local.BookDao
 import com.example.data.local.ChapterDao
 import com.example.data.local.ChekhovGunDao
 import com.example.data.local.LorebookDao
+import com.example.data.local.QuestionDao
 import com.example.data.model.AudioTrack
 import com.example.data.model.Story
 import com.example.data.model.Book
 import com.example.data.model.Chapter
 import com.example.data.model.ChekhovGun
 import com.example.data.model.Lorebook
+import com.example.data.model.QuestionEntry
 import kotlinx.coroutines.flow.Flow
 
 class AppRepository(
@@ -20,7 +22,8 @@ class AppRepository(
     val bookDao: BookDao,
     private val chapterDao: ChapterDao,
     private val lorebookDao: LorebookDao,
-    private val chekhovGunDao: ChekhovGunDao? = null
+    private val chekhovGunDao: ChekhovGunDao? = null,
+    private val questionDao: QuestionDao? = null
 ) {
     val allStories: Flow<List<Story>> = storyDao.getAllStories()
     val allAudioTracks: Flow<List<AudioTrack>> = audioTrackDao.getAllAudioTracks()
@@ -101,6 +104,9 @@ class AppRepository(
     fun getGunsForBook(bookId: Int): Flow<List<ChekhovGun>> =
         chekhovGunDao?.getGunsForBook(bookId) ?: kotlinx.coroutines.flow.flowOf(emptyList())
 
+    suspend fun getGunsForBookSync(bookId: Int): List<ChekhovGun> =
+        chekhovGunDao?.getGunsForBookSync(bookId) ?: emptyList()
+
     suspend fun getUnresolvedGuns(bookId: Int): List<ChekhovGun> =
         chekhovGunDao?.getUnresolvedGuns(bookId) ?: emptyList()
 
@@ -111,4 +117,25 @@ class AppRepository(
     suspend fun updateGun(gun: ChekhovGun) = chekhovGunDao?.updateGun(gun) ?: Unit
 
     suspend fun deleteGun(id: Int) = chekhovGunDao?.deleteGun(id) ?: Unit
+
+    suspend fun getGunById(id: Int): ChekhovGun? = chekhovGunDao?.getGunById(id)
+
+    // Question ledger methods (v3.0, plan §6.7 / Table 15; nullable DAO keeps
+    // older construction sites and JVM tests without the ledger working).
+    fun getQuestionsForBook(bookId: Int): Flow<List<QuestionEntry>> =
+        questionDao?.getQuestionsForBook(bookId) ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun getQuestionsForBookSync(bookId: Int): List<QuestionEntry> =
+        questionDao?.getQuestionsForBookSync(bookId) ?: emptyList()
+
+    suspend fun insertQuestion(question: QuestionEntry): Long =
+        questionDao?.insertQuestion(question) ?: -1L
+
+    suspend fun insertQuestions(questions: List<QuestionEntry>) {
+        if (questions.isNotEmpty()) questionDao?.insertQuestions(questions)
+    }
+
+    suspend fun updateQuestion(question: QuestionEntry) = questionDao?.updateQuestion(question) ?: Unit
+
+    suspend fun deleteQuestion(id: Int) = questionDao?.deleteQuestion(id) ?: Unit
 }

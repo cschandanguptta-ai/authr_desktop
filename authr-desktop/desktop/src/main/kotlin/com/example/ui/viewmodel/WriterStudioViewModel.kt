@@ -3,14 +3,18 @@ package com.example.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import com.example.data.model.Book
 import com.example.data.model.Chapter
+import com.example.data.model.ChekhovGun
 import com.example.data.model.Lorebook
+import com.example.data.model.QuestionEntry
 import com.example.data.repository.AppRepository
 import com.example.engine.AnnotationKind
 import com.example.engine.AstAnnotation
+import com.example.engine.ChekhovLedger
 import com.example.engine.DraftArchive
 import com.example.engine.DraftState
 import com.example.engine.LiveAstAnnotator
 import com.example.engine.ManuscriptAst
+import com.example.engine.QuestionLedger
 import com.example.engine.SixLayerPipeline
 import com.example.engine.WriterGate
 import kotlinx.coroutines.CoroutineScope
@@ -126,6 +130,20 @@ class WriterStudioViewModel(
     private val _ledgerCounts = MutableStateFlow<Map<Int, Int>>(emptyMap())
     val ledgerCounts: StateFlow<Map<Int, Int>> = _ledgerCounts.asStateFlow()
 
+    /** The Chekhov ledger for the selected book (v3.0 P2, plan §5.2). */
+    private val _guns = MutableStateFlow<List<ChekhovGun>>(emptyList())
+    val guns: StateFlow<List<ChekhovGun>> = _guns.asStateFlow()
+
+    /** The question ledger for the selected book (v3.0 P2, plan §6.7). */
+    private val _questions = MutableStateFlow<List<QuestionEntry>>(emptyList())
+    val questions: StateFlow<List<QuestionEntry>> = _questions.asStateFlow()
+
+    /** The final-act recovery gate verdict for the current ledger (§5.2). */
+    private val _compileGate = MutableStateFlow(ChekhovLedger.GateResult(
+        blocked = false, blocking = emptyList(), waivers = emptyList(), report = emptyList()
+    ))
+    val compileGate: StateFlow<ChekhovLedger.GateResult> = _compileGate.asStateFlow()
+
     val selectedBook: Book? get() = _books.value.firstOrNull { it.id == _selectedBookId.value }
     val openChapter: Chapter? get() = _chapters.value.firstOrNull { it.id == _openChapterId.value }
 
@@ -155,6 +173,8 @@ class WriterStudioViewModel(
             val chapters = repository.getChaptersForBookSync(bookId)
             _chapters.value = chapters
             _lorebook.value = repository.getLorebookForBookSync(bookId)
+            _guns.value = repository.getGunsForBookSync(bookId)
+            _questions.value = repository.getQuestionsForBookSync(bookId)
             refreshGateReport()
             _status.value = "Loaded \"${_books.value.firstOrNull { it.id == bookId }?.title ?: bookId}\" — " +
                 "${WriterGate.canonChapters(chapters).size} canon, ${WriterGate.proposedChapters(chapters).size} proposed."
@@ -229,10 +249,49 @@ class WriterStudioViewModel(
                 _annotatedAst.value = ast
                 _annotations.value = ast.annotations
                 persistAnnotation(frozen, ast)
-                val guns = SixLayerPipeline.buildLedgerEntries(frozen, ast)
-                if (guns.isNotEmpty()) {
-                    repository.insertGuns(guns)
-                    _ledgerCounts.value = _ledgerCounts.value + (frozen.chapterNumber to guns.size)
+
+                // P2 (plan §5.2): duplicate detection on name + description
+                // similarity — a re-emphasized promise escalates the existing
+                // gun instead of inserting a second entry.
+                val ops = ChekhovLedger.planUpsert(_guns.value, frozen, ast)
+                var ledgerWrites = 0
+                for (op in ops) {
+                    when (op) {
+                        is ChekhovLedger.Op.Insert -> {
+                            repository.insertGun(op.gun)
+                            ledgerWrites++
+                        }
+                        is ChekhovLedger.Op.Escalate -> {
+                            ChekhovLedger.escalate(op.gun, op.atChapter)?.let { repository.updateGun(it); ledgerWrites++ }
+                        }
+                        is ChekhovLedger.Op.SkipDuplicate -> Unit
+                    }
+                }
+                if (ledgerWrites > 0) {
+                    _ledgerCounts.value = _ledgerCounts.value + (frozen.chapterNumber to ledgerWrites)
+                    _guns.value = repository.getGunsForBookSync(frozen.bookId)
+                }
+
+                // P2 (plan §6.7 foundations): open questions in confirmed
+                // text enter the question ledger with expected-answer windows.
+                val newQuestions = QuestionLedger.detectOpenQuestions(
+                    text, frozen.bookId, frozen.chapterNumber
+                ).filter { q -> _questions.value.none { it.text == q.text } }
+                if (newQuestions.isNotEmpty()) {
+                    repository.insertQuestions(newQuestions)
+                    _questions.value = repository.getQuestionsForBookSync(frozen.bookId)
+                }
+
+                // P2 (plan §5.2): the automatic ORPHANED sweep — once the
+                // writing crosses the final-act boundary, unfired guns orphan.
+                val totalChapters = selectedBook?.targetChapters?.takeIf { it > 0 }
+                    ?: _chapters.value.size
+                val finalActStart = ChekhovLedger.finalActStartChapter(totalChapters)
+                if (frozen.chapterNumber >= finalActStart) {
+                    val swept = ChekhovLedger.orphanSweep(_guns.value, frozen.chapterNumber, finalActStart)
+                    swept.zip(_guns.value).filter { it.first.status != it.second.status }
+                        .forEach { repository.updateGun(it.first) }
+                    _guns.value = repository.getGunsForBookSync(frozen.bookId)
                 }
             }
             refreshGateReport()
@@ -309,6 +368,86 @@ class WriterStudioViewModel(
     }
 
     // ------------------------------------------------------------------
+    // Ledger operations — the Chekhov + question ledgers (v3.0 P2)
+    // ------------------------------------------------------------------
+
+    /** The final-act boundary for the selected book (last quarter). */
+    fun finalActStartChapter(): Int {
+        val total = selectedBook?.targetChapters?.takeIf { it > 0 } ?: _chapters.value.size
+        return ChekhovLedger.finalActStartChapter(total)
+    }
+
+    /** Writer confirms an escalation from the rail: the promise re-landed. */
+    fun escalateGun(gunId: Int, atChapter: Int) {
+        scope.launch {
+            val gun = repository.getGunById(gunId) ?: return@launch
+            ChekhovLedger.escalate(gun, atChapter)?.let {
+                repository.updateGun(it)
+                _guns.value = repository.getGunsForBookSync(it.bookId)
+                refreshCompileGate()
+                _status.value = "Gun \"${it.name}\" escalated at chapter $atChapter."
+            } ?: run { _status.value = "Escalation refused: the chapter must be later canon than chapter ${gun.introducedChapter}." }
+        }
+    }
+
+    /** Writer marks the payoff from the AST rail; the quote is archived. */
+    fun resolveGun(gunId: Int, chapter: Chapter, quote: String) {
+        scope.launch {
+            val gun = repository.getGunById(gunId) ?: return@launch
+            ChekhovLedger.resolve(gun, chapter, quote)?.let {
+                repository.updateGun(it)
+                _guns.value = repository.getGunsForBookSync(it.bookId)
+                refreshCompileGate()
+                _status.value = "Gun \"${it.name}\" resolved in chapter ${chapter.chapterNumber} — payoff quote archived."
+            } ?: run {
+                _status.value = if (quote.isBlank()) "Resolution refused: a payoff quote is required."
+                else "Resolution refused: chapter ${chapter.chapterNumber} is not canon."
+            }
+        }
+    }
+
+    /** Writer accepts the orphan with a mandatory note — waivers are never silent. */
+    fun waiveGun(gunId: Int, note: String) {
+        scope.launch {
+            val gun = repository.getGunById(gunId) ?: return@launch
+            ChekhovLedger.waive(gun, note)?.let {
+                repository.updateGun(it)
+                _guns.value = repository.getGunsForBookSync(it.bookId)
+                refreshCompileGate()
+                _status.value = "Gun \"${it.name}\" waived — the note will be disclosed in the ship report."
+            } ?: run { _status.value = "Waive refused: a note is mandatory (waivers are never silent)." }
+        }
+    }
+
+    /** Writer answers a question; the chapter of the answer is recorded. */
+    fun answerQuestion(questionId: Int, answeredChapter: Int, answeredByReveal: Int? = null) {
+        scope.launch {
+            val q = _questions.value.firstOrNull { it.id == questionId } ?: return@launch
+            repository.updateQuestion(QuestionLedger.answer(q, answeredChapter, answeredByReveal))
+            _questions.value = repository.getQuestionsForBookSync(q.bookId)
+            _status.value = "Question answered in chapter $answeredChapter."
+        }
+    }
+
+    /** Re-arms a progressive question's expected-answer window. */
+    fun extendQuestionWindow(questionId: Int, windowChapters: Int) {
+        scope.launch {
+            val q = _questions.value.firstOrNull { it.id == questionId } ?: return@launch
+            repository.updateQuestion(QuestionLedger.withWindow(q, windowChapters))
+            _questions.value = repository.getQuestionsForBookSync(q.bookId)
+        }
+    }
+
+    /** Overdue progressive questions for the dashboard (§6.7, Table 15). */
+    fun overdueQuestions(currentChapter: Int): List<QuestionEntry> =
+        _questions.value.filter { QuestionLedger.isOverdue(it, currentChapter) }
+
+    /** Recomputes the final-act recovery gate verdict for the current ledger. */
+    fun refreshCompileGate() {
+        _compileGate.value = ChekhovLedger.recoveryGate(_guns.value)
+    }
+
+    // ------------------------------------------------------------------
     // Autonomous Mode queue actions (keyboard-first, plan §4.1)
     // ------------------------------------------------------------------
 
@@ -362,6 +501,7 @@ class WriterStudioViewModel(
             withheld = chapters.filter { !WriterGate.isCanon(it) }
                 .map { "Chapter ${it.chapterNumber} (${it.draftStatus}) withheld from: ${consumers.joinToString()}" }
         )
+        refreshCompileGate()
     }
 
     // ------------------------------------------------------------------

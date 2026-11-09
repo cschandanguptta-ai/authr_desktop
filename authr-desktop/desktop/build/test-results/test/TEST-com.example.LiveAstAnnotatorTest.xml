@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.LiveAstAnnotatorTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-09T13:18:07.437Z" hostname="c-6af184ee-14127d0f-5aa13d3776bd" time="0.142">
+<testsuite name="com.example.LiveAstAnnotatorTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-09T15:00:47.371Z" hostname="c-6af1d688-140d72b5-687d1e58508f" time="0.03">
   <properties/>
-  <testcase name="chekhov promises are marked introduced with quotes" classname="com.example.LiveAstAnnotatorTest" time="0.086"/>
-  <testcase name="beat coverage reports seven-of-seven on the seeded chapter" classname="com.example.LiveAstAnnotatorTest" time="0.022"/>
-  <testcase name="lore references match keys and propose undefined recurring terms" classname="com.example.LiveAstAnnotatorTest" time="0.004"/>
-  <testcase name="missing beats raise a warn the writer can waive" classname="com.example.LiveAstAnnotatorTest" time="0.005"/>
-  <testcase name="archived chapters are refused like proposals" classname="com.example.LiveAstAnnotatorTest" time="0.011"/>
-  <testcase name="quiet endings are explicitly permitted" classname="com.example.LiveAstAnnotatorTest" time="0.003"/>
-  <testcase name="cliche hits carry class severity and rewrite" classname="com.example.LiveAstAnnotatorTest" time="0.004"/>
-  <testcase name="text hash pins the ast to the frozen text" classname="com.example.LiveAstAnnotatorTest" time="0.001"/>
-  <testcase name="annotator refuses non-canon text" classname="com.example.LiveAstAnnotatorTest" time="0.001"/>
-  <testcase name="ending signal classifies the closing passage" classname="com.example.LiveAstAnnotatorTest" time="0.001"/>
-  <testcase name="annotator runs on canon text and produces all six node kinds" classname="com.example.LiveAstAnnotatorTest" time="0.004"/>
+  <testcase name="chekhov promises are marked introduced with quotes" classname="com.example.LiveAstAnnotatorTest" time="0.001"/>
+  <testcase name="beat coverage reports seven-of-seven on the seeded chapter" classname="com.example.LiveAstAnnotatorTest" time="0.008"/>
+  <testcase name="lore references match keys and propose undefined recurring terms" classname="com.example.LiveAstAnnotatorTest" time="0.003"/>
+  <testcase name="missing beats raise a warn the writer can waive" classname="com.example.LiveAstAnnotatorTest" time="0.001"/>
+  <testcase name="archived chapters are refused like proposals" classname="com.example.LiveAstAnnotatorTest" time="0.004"/>
+  <testcase name="quiet endings are explicitly permitted" classname="com.example.LiveAstAnnotatorTest" time="0.002"/>
+  <testcase name="cliche hits carry class severity and rewrite" classname="com.example.LiveAstAnnotatorTest" time="0.001"/>
+  <testcase name="text hash pins the ast to the frozen text" classname="com.example.LiveAstAnnotatorTest" time="0.0"/>
+  <testcase name="annotator refuses non-canon text" classname="com.example.LiveAstAnnotatorTest" time="0.0"/>
+  <testcase name="ending signal classifies the closing passage" classname="com.example.LiveAstAnnotatorTest" time="0.002"/>
+  <testcase name="annotator runs on canon text and produces all six node kinds" classname="com.example.LiveAstAnnotatorTest" time="0.006"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
