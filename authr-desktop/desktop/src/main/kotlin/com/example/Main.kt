@@ -30,11 +30,13 @@ import com.example.domain.usecase.GetChaptersUseCase
 import com.example.engine.L4LlmDraftGenerator
 import com.example.ui.screens.AudioScreen
 import com.example.ui.screens.MetadataScreen
+import com.example.ui.screens.SerialDashboardScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.StoryScreen
 import com.example.ui.screens.TranslateScreen
 import com.example.ui.screens.WriterStudioScreen
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.viewmodel.SerialDashboardViewModel
 import com.example.ui.viewmodel.SettingsViewModel
 import com.example.ui.viewmodel.StudioViewModel
 import com.example.ui.viewmodel.WriterStudioViewModel
@@ -101,7 +103,8 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
         chapterDao = database.chapterDao(),
         lorebookDao = database.lorebookDao(),
         chekhovGunDao = database.chekhovGunDao(),
-        questionDao = database.questionDao()
+        questionDao = database.questionDao(),
+        serialArcDao = database.serialArcDao()
     )
     val viewModel = StudioViewModel(
         application = app,
@@ -116,6 +119,12 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
         repository = repository,
         authrRoot = app.filesDir,
         draftGenerator = L4LlmDraftGenerator(app)
+    )
+    // Serial Dashboard (v3.0 P3, plan §6.10/§6.13): buffer, cadence, arcs,
+    // validator suite, worksheet + scorecard, paste-ready platform exports.
+    val serialDashboardViewModel = SerialDashboardViewModel(
+        repository = repository,
+        exportDir = app.filesDir
     )
 
     // Scaffold the .authr plugin library on first launch (P0, plan §8):
@@ -153,6 +162,10 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
                                 viewModel = writerStudioViewModel,
                                 onBack = { viewModel.selectTab(0) }
                             )
+                            7 -> SerialDashboardScreen(
+                                viewModel = serialDashboardViewModel,
+                                onBack = { viewModel.selectTab(0) }
+                            )
                             else -> StoryScreen(viewModel = viewModel) // 0: Story, 4: recommendations live in the Story workspace
                         }
                     }
@@ -174,6 +187,7 @@ private fun GlobalWorkspaceBar(currentTab: Int, onSelect: (Int) -> Unit) {
         2 to "Translate",
         3 to "Metadata",
         6 to "Writer Studio",
+        7 to "Serial",
         5 to "Settings"
     )
     Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {

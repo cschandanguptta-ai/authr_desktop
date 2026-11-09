@@ -135,23 +135,29 @@ class DraftingWorker(
                 
                 var finalPrompt = chapterPrompt
                 if (book.isSerialized) {
+                    // v3.0 P3 (plan §6): the Blueprint 2.0 drafting block. The
+                    // 1.0-era [CLIFFHANGER SCORE] instruction is replaced —
+                    // Blueprint 2.0 prohibits mechanical cliffhanger rotation
+                    // and scores nothing; retention comes from attachment,
+                    // progression, and meaningful payoffs (§6.1/§6.4).
+                    val worksheet = com.example.engine.serialization.PreDraftWorksheet.Worksheet.fromJson(chapter.worksheet)
+                    val wsBlock = if (worksheet.complete) worksheet.promptBlock()
+                    else com.example.engine.serialization.PreDraftWorksheet.Worksheet(
+                        objective = "Advance: ${chapter.summary.ifBlank { "the chapter's confirmed beats" }}",
+                        readerExperience = "Deliver a chapter payoff the reader can feel; end with a reason to continue that arises from this chapter's events."
+                    ).promptBlock()
                     finalPrompt += """
-                        
-                        CRITICAL WEBNOVEL FORMATTING INSTRUCTIONS:
-                        Because this is a serialized webnovel / episode, you MUST format your response EXACTLY as follows:
-                        
-                        [PREVIOUSLY ON...]
-                        (Write a short 2-3 sentence engaging recap of recent events for returning readers. If Chapter 1, write a short prologue hook).
-                        
-                        [CHAPTER CONTENT]
-                        (The actual full chapter prose).
-                        
-                        [NEXT EPISODE TEASER]
-                        (A short 1-2 sentence teaser for the next chapter).
-                        
-                        [CLIFFHANGER SCORE]
-                        (Rate the ending hook strength of this chapter from 0 to 100, e.g. "85/100").
-                    """.trimIndent()
+
+                        BLUEPRINT 2.0 SERIALIZED-CHAPTER CONTRACT (v3.0 §6):
+                        1. The chapter must (a) give the reader something worthwhile, (b) change the situation, understanding, relationships, or stakes, and (c) create a compelling reason to continue.
+                        2. Perform the seven beat functions somewhere in the chapter: opening continuity, immediate objective, resistance, escalation, turning point, chapter payoff, forward pull.
+                        3. The chapter ending must arise naturally from the chapter's dramatic development. Do not force a shock ending; quiet endings are explicitly permitted. An effective chapter ending does not always need to shock.
+                        4. Never sacrifice narrative credibility merely to create a cliffhanger; never sacrifice character development merely to accelerate the plot; never withhold every important answer merely to generate curiosity; never make the reader feel their time was wasted.
+                        5. Target the ${book.wordMin}-${book.wordMax}-word envelope (advisory; do not pad or split a scene to hit a number).
+                    """.trimIndent() + "\n\n" + wsBlock
+                    if (chapter.chapterNumber == 1) {
+                        finalPrompt += "\n\nOPENING RULE: " + com.example.engine.serialization.OpeningValidators.L4_OPENING_RULE
+                    }
                 }
 
                 val persona = defaultPersonas.find { it.id == book.personaId } ?: defaultPersonas.first()

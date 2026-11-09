@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.SerialExportProfilesTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:15.936Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.064">
+  <properties/>
+  <testcase name="the package carries title, body in the platform's spacing, and the author note" classname="com.example.SerialExportProfilesTest" time="0.046"/>
+  <testcase name="polls export only where the platform supports them — and the note discards links where policy forbids" classname="com.example.SerialExportProfilesTest" time="0.001"/>
+  <testcase name="episode-length guidance warns outside the envelope on tapas" classname="com.example.SerialExportProfilesTest" time="0.0"/>
+  <testcase name="batch export walks the release queue in a chosen profile" classname="com.example.SerialExportProfilesTest" time="0.015"/>
+  <testcase name="unknown profile ids fall back to the first shipped profile" classname="com.example.SerialExportProfilesTest" time="0.001"/>
+  <testcase name="recap blocks export only where the profile defaults them on" classname="com.example.SerialExportProfilesTest" time="0.0"/>
+  <testcase name="the four platform families ship with the blueprint's profile behaviors" classname="com.example.SerialExportProfilesTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

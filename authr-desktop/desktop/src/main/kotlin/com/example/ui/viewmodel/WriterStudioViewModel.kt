@@ -17,6 +17,9 @@ import com.example.engine.ManuscriptAst
 import com.example.engine.QuestionLedger
 import com.example.engine.SixLayerPipeline
 import com.example.engine.WriterGate
+import com.example.engine.serialization.BalanceMeter
+import com.example.engine.serialization.OpeningValidators
+import com.example.engine.serialization.SerialValidatorSuite
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -123,6 +126,10 @@ class WriterStudioViewModel(
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
 
+    /** The serialization validator suite report for the selected book (v3.0 P3, plan §6). */
+    private val _serialReport = MutableStateFlow<SerialValidatorSuite.Report?>(null)
+    val serialReport: StateFlow<SerialValidatorSuite.Report?> = _serialReport.asStateFlow()
+
     private val _lorebook = MutableStateFlow<List<Lorebook>>(emptyList())
     val lorebook: StateFlow<List<Lorebook>> = _lorebook.asStateFlow()
 
@@ -176,9 +183,23 @@ class WriterStudioViewModel(
             _guns.value = repository.getGunsForBookSync(bookId)
             _questions.value = repository.getQuestionsForBookSync(bookId)
             refreshGateReport()
+            refreshSerialReport()
             _status.value = "Loaded \"${_books.value.firstOrNull { it.id == bookId }?.title ?: bookId}\" — " +
                 "${WriterGate.canonChapters(chapters).size} canon, ${WriterGate.proposedChapters(chapters).size} proposed."
         }
+    }
+
+    /** Recomputes the serialization validator suite for the selected book (P3). */
+    fun refreshSerialReport() {
+        val book = selectedBook ?: return
+        _serialReport.value = if (book.isSerialized)
+            SerialValidatorSuite.run(SerialValidatorSuite.Input(
+                book = book,
+                chapters = _chapters.value,
+                arcs = emptyList(), // the Serial Dashboard runs the arc-aware suite
+                questions = _questions.value
+            ))
+        else null
     }
 
     fun setMode(mode: StudioMode) {
@@ -237,7 +258,23 @@ class WriterStudioViewModel(
                 content = text,
                 writerConfirmed = true,
                 draftStatus = DraftState.CONFIRMED,
-                status = "Completed (${wordCount(text)} words)"
+                status = "Completed (${wordCount(text)} words)",
+                // P3 (plan §6.12): persist the serialization artifacts on the
+                // frozen text — advised ending type, beat coverage, balance
+                // shares, and (free tier) the hook check.
+                endingType = LiveAstAnnotator.classifyEnding(text).first,
+                beatCoverage = LiveAstAnnotator.beatCoverage(text).firstOrNull()
+                    ?.payload?.get("coverage")?.let { cov -> "{\"coverage\":\"$cov\"}" },
+                balanceShares = BalanceMeter.measure(chapter.copy(content = text)).let { r ->
+                    "{" + r.shares.joinToString(",") { s ->
+                        "\"" + s.band + "\":" + String.format("%.1f", s.measuredPct)
+                    } + "}"
+                },
+                hookCheck = if (chapter.chapterNumber <= (selectedBook?.freeTierChapters ?: 0)) {
+                    val hook = OpeningValidators.validateHook(chapter.copy(content = text))
+                    val sources = hook.sourcesFound.joinToString(",") { "\"" + it + "\"" }
+                    "{\"scannedWords\":" + hook.scannedWords + ",\"sources\":[" + sources + "]}"
+                } else null
             )
             repository.updateChapter(frozen)
             _chapters.value = _chapters.value.map { if (it.id == frozen.id) frozen else it }
@@ -295,8 +332,10 @@ class WriterStudioViewModel(
                 }
             }
             refreshGateReport()
+            refreshSerialReport()
             _status.value = "Confirmed chapter ${frozen.chapterNumber} — writer_confirmed = 1; " +
-                "L6 annotated ${_annotations.value.size} nodes; ${_ledgerCounts.value[frozen.chapterNumber] ?: 0} ledger promises recorded."
+                "L6 annotated ${_annotations.value.size} nodes; ${_ledgerCounts.value[frozen.chapterNumber] ?: 0} ledger promises recorded; " +
+                "ending ${frozen.endingType ?: "—"}."
             onDone(true)
         }
     }

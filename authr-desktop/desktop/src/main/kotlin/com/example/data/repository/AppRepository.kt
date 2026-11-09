@@ -7,6 +7,7 @@ import com.example.data.local.ChapterDao
 import com.example.data.local.ChekhovGunDao
 import com.example.data.local.LorebookDao
 import com.example.data.local.QuestionDao
+import com.example.data.local.SerialArcDao
 import com.example.data.model.AudioTrack
 import com.example.data.model.Story
 import com.example.data.model.Book
@@ -14,6 +15,7 @@ import com.example.data.model.Chapter
 import com.example.data.model.ChekhovGun
 import com.example.data.model.Lorebook
 import com.example.data.model.QuestionEntry
+import com.example.data.model.SerialArc
 import kotlinx.coroutines.flow.Flow
 
 class AppRepository(
@@ -23,7 +25,8 @@ class AppRepository(
     private val chapterDao: ChapterDao,
     private val lorebookDao: LorebookDao,
     private val chekhovGunDao: ChekhovGunDao? = null,
-    private val questionDao: QuestionDao? = null
+    private val questionDao: QuestionDao? = null,
+    private val serialArcDao: SerialArcDao? = null
 ) {
     val allStories: Flow<List<Story>> = storyDao.getAllStories()
     val allAudioTracks: Flow<List<AudioTrack>> = audioTrackDao.getAllAudioTracks()
@@ -138,4 +141,24 @@ class AppRepository(
     suspend fun updateQuestion(question: QuestionEntry) = questionDao?.updateQuestion(question) ?: Unit
 
     suspend fun deleteQuestion(id: Int) = questionDao?.deleteQuestion(id) ?: Unit
+
+    // Serial micro-arc planner methods (v3.0 P3, plan §6.5 / §6.12; nullable
+    // DAO keeps JVM tests Room-free, same pattern as the P2 ledgers).
+    fun getArcsForBook(bookId: Int): Flow<List<SerialArc>> =
+        serialArcDao?.getArcsForBook(bookId) ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun getArcsForBookSync(bookId: Int): List<SerialArc> =
+        serialArcDao?.getArcsForBookSync(bookId) ?: emptyList()
+
+    suspend fun getArcById(arcId: Int): SerialArc? = serialArcDao?.getArcById(arcId)
+
+    suspend fun insertArc(arc: SerialArc): Long = serialArcDao?.insertArc(arc) ?: -1L
+
+    suspend fun insertArcs(arcs: List<SerialArc>) {
+        if (arcs.isNotEmpty()) serialArcDao?.insertArcs(arcs)
+    }
+
+    suspend fun updateArc(arc: SerialArc) = serialArcDao?.updateArc(arc) ?: Unit
+
+    suspend fun deleteArc(arcId: Int) = serialArcDao?.deleteArc(arcId) ?: Unit
 }

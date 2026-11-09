@@ -145,6 +145,13 @@ object LiveAstAnnotator {
         return 0 to 0
     }
 
+    /**
+     * Public accessor for one beat's deterministic cues (v3.0 P3): the
+     * balance meter shares the annotator's cue lists as a single source of
+     * truth so the rail anchors and the measured shares can never diverge.
+     */
+    fun beatCueList(beat: ChapterBeat): List<Regex> = beatCues[beat].orEmpty()
+
     // ------------------------------------------------------------------
     // 2. Cliché hits (plan §5.1) — since P2 the annotator delegates to the
     //    full 154-pattern matrix in ClicheCleaner (Table 6). One annotation
@@ -254,6 +261,23 @@ object LiveAstAnnotator {
         EndingTypes.REVERSAL to listOf(Regex("""\b(suddenly|instead|but it was|until now|the opposite|in fact|had been (the|his|her) all along|turned out)\b""", RegexOption.IGNORE_CASE)),
         EndingTypes.ANTICIPATION to listOf(Regex("""\b(tomorrow|next (time|morning|dawn|move)|about to|going to|would soon|prepared for|awaited|loomed)\b""", RegexOption.IGNORE_CASE))
     )
+
+    /**
+     * Public classification primitive (v3.0 P3): scores the closing passage
+     * against the six ending types and returns (type, cue hits) for the best
+     * match, or QUIET when no cue fires. The EndingAdvisor builds on this so
+     * the rail signal and the advisor history share one classifier.
+     */
+    fun classifyEnding(text: String, closingChars: Int = 600): Pair<String, Int> {
+        val closing = text.takeLast(closingChars)
+        if (closing.isBlank()) return EndingTypes.QUIET to 0
+        val scored = endingCues.map { (type, cues) ->
+            type to cues.sumOf { it.findAll(closing).count() }
+        }
+        val best = scored.maxByOrNull { it.second }
+        val type = best?.takeIf { it.second > 0 }?.first ?: EndingTypes.QUIET
+        return type to (best?.second ?: 0)
+    }
 
     /**
      * Classifies the closing passage (final ~600 characters) against the six

@@ -11,4 +11,4 @@
 --no-man-pages
 --strip-native-commands
 --output
-"/home/z/my-project/authr-desktop/desktop/build/compose/tmp/main/runtime"
+"/tmp/my-project/authr-desktop/desktop/build/compose/tmp/main/runtime"

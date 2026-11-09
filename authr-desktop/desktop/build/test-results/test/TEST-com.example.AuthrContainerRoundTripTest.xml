@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.AuthrContainerRoundTripTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-09T15:00:46.932Z" hostname="c-6af1d688-140d72b5-687d1e58508f" time="0.237">
+<testsuite name="com.example.AuthrContainerRoundTripTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:09.831Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="2.027">
   <properties/>
-  <testcase name="v1 containers migrate forward with backup and keep payloads" classname="com.example.AuthrContainerRoundTripTest" time="0.115"/>
-  <testcase name="tampered payload is reported by the checksum audit" classname="com.example.AuthrContainerRoundTripTest" time="0.03"/>
-  <testcase name="saves are atomic and replace previous containers safely" classname="com.example.AuthrContainerRoundTripTest" time="0.04"/>
-  <testcase name="rejected - file that is not a container" classname="com.example.AuthrContainerRoundTripTest" time="0.002"/>
-  <testcase name="v23 project round-trips through the container losslessly" classname="com.example.AuthrContainerRoundTripTest" time="0.049"/>
+  <testcase name="v1 containers migrate forward with backup and keep payloads" classname="com.example.AuthrContainerRoundTripTest" time="1.922"/>
+  <testcase name="tampered payload is reported by the checksum audit" classname="com.example.AuthrContainerRoundTripTest" time="0.024"/>
+  <testcase name="saves are atomic and replace previous containers safely" classname="com.example.AuthrContainerRoundTripTest" time="0.051"/>
+  <testcase name="rejected - file that is not a container" classname="com.example.AuthrContainerRoundTripTest" time="0.001"/>
+  <testcase name="v23 project round-trips through the container losslessly" classname="com.example.AuthrContainerRoundTripTest" time="0.027"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.EndingAdvisorBalanceWorksheetTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:04.689Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="1.879">
+  <properties/>
+  <testcase name="autoFill prefills from the arc plan and the question ledger — writer edits before the run" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.652"/>
+  <testcase name="the advisor classifies the golden serial's closings into the planned types" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.956"/>
+  <testcase name="balance shares persist as the plan 612 JSON fragment" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.096"/>
+  <testcase name="a missing worksheet parses to an empty proposal, never a crash" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.076"/>
+  <testcase name="an outside-envelope chapter is advisory, never a hard failure" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.055"/>
+  <testcase name="the meter reports shares against the advisory bands" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.02"/>
+  <testcase name="the fatigue flag fires on consecutive same-type high-intensity endings only" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.013"/>
+  <testcase name="the worksheet round-trips through JSON and feeds the L4 prompt block" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.001"/>
+  <testcase name="the worksheet validates its five sections with the mandatory payoff link" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.0"/>
+  <testcase name="quiet endings are a first-class classification" classname="com.example.EndingAdvisorBalanceWorksheetTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

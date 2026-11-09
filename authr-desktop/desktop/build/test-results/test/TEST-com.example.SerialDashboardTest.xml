@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.SerialDashboardTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:14.959Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.971">
+  <properties/>
+  <testcase name="the dashboard recomputes buffer, cadence and the suite for a loaded serial" classname="com.example.SerialDashboardTest" time="0.232"/>
+  <testcase name="releasing a chapter moves it out of the buffer and onto the cadence" classname="com.example.SerialDashboardTest" time="0.134"/>
+  <testcase name="the export profile rides the book row" classname="com.example.SerialDashboardTest" time="0.069"/>
+  <testcase name="saving a scorecard and worksheet persists to the chapter and recomputes" classname="com.example.SerialDashboardTest" time="0.153"/>
+  <testcase name="planArcs lays the default plan and the arc board lists it" classname="com.example.SerialDashboardTest" time="0.138"/>
+  <testcase name="dismissed warnings leave the budget but stay disclosed" classname="com.example.SerialDashboardTest" time="0.176"/>
+  <testcase name="release is refused for non-canon chapters" classname="com.example.SerialDashboardTest" time="0.069"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

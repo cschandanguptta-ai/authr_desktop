@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.SixLayerPipelineTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-09T15:00:47.466Z" hostname="c-6af1d688-140d72b5-687d1e58508f" time="0.008">
+<testsuite name="com.example.SixLayerPipelineTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:16.252Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.046">
   <properties/>
   <testcase name="gate assertion catches unconfirmed chapters feeding consumers" classname="com.example.SixLayerPipelineTest" time="0.001"/>
-  <testcase name="every layer result names layer agent and state" classname="com.example.SixLayerPipelineTest" time="0.005"/>
+  <testcase name="every layer result names layer agent and state" classname="com.example.SixLayerPipelineTest" time="0.042"/>
   <testcase name="empty consumer surface never flags" classname="com.example.SixLayerPipelineTest" time="0.0"/>
   <testcase name="ledger entries are built from canon only" classname="com.example.SixLayerPipelineTest" time="0.001"/>
-  <testcase name="layer agents match the plan layer map" classname="com.example.SixLayerPipelineTest" time="0.001"/>
-  <testcase name="l6 result carries canon state only for canon chapters" classname="com.example.SixLayerPipelineTest" time="0.0"/>
+  <testcase name="layer agents match the plan layer map" classname="com.example.SixLayerPipelineTest" time="0.0"/>
+  <testcase name="l6 result carries canon state only for canon chapters" classname="com.example.SixLayerPipelineTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

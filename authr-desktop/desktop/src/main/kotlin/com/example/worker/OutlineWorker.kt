@@ -82,6 +82,19 @@ class OutlineWorker(
                     currentOutline = generatedOutline
                     val currentBook = bookDao.getBookById(bookId) ?: book
                     bookDao.updateBook(currentBook.copy(outline = currentOutline, currentPhase = "Drafting"))
+
+                    // v3.0 P3 (plan §6.2, Table 9 chapter-1 row): the outline
+                    // gate — Chapter 1 must carry the inciting beat before the
+                    // L2 outline can be approved for a serial.
+                    if (book.isSerialized &&
+                        !com.example.engine.serialization.OpeningValidators.outlineCarriesIncitingBeat(currentOutline)
+                    ) {
+                        logAgentChat(bookDao, bookId, "📐 [Plot Architect]",
+                            "Outline gate: the serial's chapter 1 does not carry the inciting beat — regenerate the outline or edit episode 1 to open on the disruption, then re-run.")
+                        val b = bookDao.getBookById(bookId) ?: currentBook
+                        bookDao.updateBook(b.copy(currentPhase = "Failed"))
+                        return@withContext Result.failure()
+                    }
                 } else {
                     logAgentChat(bookDao, bookId, "❌ [System]", "Failed to generate outline from LLM. Halting.")
                     val b = bookDao.getBookById(bookId) ?: book

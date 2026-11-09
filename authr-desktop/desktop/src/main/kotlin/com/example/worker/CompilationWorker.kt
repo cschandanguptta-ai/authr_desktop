@@ -8,7 +8,10 @@ import com.example.data.api.LlmOrchestrator
 import com.example.data.local.BookDao
 import com.example.data.local.ChapterDao
 import com.example.data.local.ChekhovGunDao
+import com.example.data.local.QuestionDao
+import com.example.data.local.SerialArcDao
 import com.example.engine.ChekhovLedger
+import com.example.engine.serialization.SerialValidatorSuite
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -20,7 +23,12 @@ class CompilationWorker(
     /** v3.0 P2 (plan §5.2): the Chekhov ledger powers the final-act
      *  recovery gate — compile is blocked while any confirmed gun is
      *  still unfired, unless the writer waived it with a note. */
-    private val chekhovGunDao: ChekhovGunDao? = null
+    private val chekhovGunDao: ChekhovGunDao? = null,
+    /** v3.0 P3 (plan §6): the serialization export gates — the
+     *  anti-withholding gate, the scorecard interpretation bands, and the
+     *  arc completion requirement run before any serial export. */
+    private val serialArcDao: SerialArcDao? = null,
+    private val questionDao: QuestionDao? = null
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -67,6 +75,35 @@ class CompilationWorker(
                     logAgentChat(bookDao, bookId, "🧨 [Chekhov Ledger]",
                         "Final-act recovery gate: compilation blocked — ${gate.blocking.size} unfired promise(s) in the ledger. Resolve them in the Writer Studio (L6 rail) or waive them with a note, then re-compile.")
                     return@withContext Result.failure()
+                }
+            }
+
+            // v3.0 P3 (plan §6): the serialization export gates for serial
+            // projects. Composes with the recovery gate above — the recovery
+            // gate is ledger-only; the withholding and scorecard gates are
+            // chapter-count based; both run before export (plan Table 33).
+            if (book.isSerialized) {
+                val serialArcs = serialArcDao?.getArcsForBookSync(bookId) ?: emptyList()
+                val questions = questionDao?.getQuestionsForBookSync(bookId) ?: emptyList()
+                val suite = SerialValidatorSuite.run(SerialValidatorSuite.Input(
+                    book = book,
+                    chapters = allChaptersForCompile,
+                    arcs = serialArcs,
+                    questions = questions
+                ))
+                suite.warnings.take(10).forEach {
+                    logAgentChat(bookDao, bookId, "📖 [Serialization]", "⚠ ${it.message}")
+                }
+                suite.hardBlocks.forEach {
+                    logAgentChat(bookDao, bookId, "⛔ [Serialization]", it.message)
+                }
+                if (!suite.passes) {
+                    logAgentChat(bookDao, bookId, "📖 [Serialization]",
+                        "Serial export gate: compilation blocked — ${suite.hardBlocks.size} hard gate(s). The anti-withholding rule, the scorecard interpretation bands and the arc completion requirement run before every serial export.")
+                    return@withContext Result.failure()
+                }
+                suite.arcReportLines.forEach {
+                    logAgentChat(bookDao, bookId, "📖 [Serialization]", it)
                 }
             }
             val manuscriptBuilder = StringBuilder()

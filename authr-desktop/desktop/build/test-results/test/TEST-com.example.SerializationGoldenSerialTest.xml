@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.SerializationGoldenSerialTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:16.006Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.24">
+  <properties/>
+  <testcase name="the 15-chapter golden serial passes the full validator suite with at most two dismissable warnings" classname="com.example.SerializationGoldenSerialTest" time="0.031"/>
+  <testcase name="no seeded question is overdue" classname="com.example.SerializationGoldenSerialTest" time="0.024"/>
+  <testcase name="a planted beat gap raises a dismissable warning and dismissal clears it from the budget" classname="com.example.SerializationGoldenSerialTest" time="0.048"/>
+  <testcase name="every chapter carries all seven beat functions" classname="com.example.SerializationGoldenSerialTest" time="0.007"/>
+  <testcase name="the micro-arc completes with its question answered and its contribution declared" classname="com.example.SerializationGoldenSerialTest" time="0.024"/>
+  <testcase name="chapter 1 carries the full five-goal story promise" classname="com.example.SerializationGoldenSerialTest" time="0.003"/>
+  <testcase name="unconfirmed chapters are withheld by the canon gate inside the suite" classname="com.example.SerializationGoldenSerialTest" time="0.026"/>
+  <testcase name="all seven ending types are exercised with no consecutive same-type high-intensity repeat" classname="com.example.SerializationGoldenSerialTest" time="0.024"/>
+  <testcase name="non-serialized books short-circuit the suite" classname="com.example.SerializationGoldenSerialTest" time="0.0"/>
+  <testcase name="released chapters sit on the Mon-Wed-Fri schedule and the buffer stays amber" classname="com.example.SerializationGoldenSerialTest" time="0.038"/>
+  <testcase name="every chapter sits inside the 1000-2000 word envelope" classname="com.example.SerializationGoldenSerialTest" time="0.004"/>
+  <testcase name="every free-tier chapter carries a hook inside the 200-400 word span" classname="com.example.SerializationGoldenSerialTest" time="0.006"/>
+  <testcase name="chapters 4 and 5 carry substantial developments" classname="com.example.SerializationGoldenSerialTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

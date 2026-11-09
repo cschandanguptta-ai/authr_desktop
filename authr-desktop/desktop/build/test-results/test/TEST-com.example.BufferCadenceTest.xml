@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.BufferCadenceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:11.871Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.123">
+  <properties/>
+  <testcase name="schedule parsing handles the known day tokens" classname="com.example.BufferCadenceTest" time="0.001"/>
+  <testcase name="the cadence tracker passes the golden serial's schedule and flags off-schedule releases" classname="com.example.BufferCadenceTest" time="0.074"/>
+  <testcase name="buffer levels follow the 8-4 standard" classname="com.example.BufferCadenceTest" time="0.028"/>
+  <testcase name="non-serialized or retail projects still report buffers locally" classname="com.example.BufferCadenceTest" time="0.016"/>
+  <testcase name="the golden serial's release dates all land on Mon-Wed-Fri" classname="com.example.BufferCadenceTest" time="0.0"/>
+  <testcase name="proposed and archived chapters never enter the buffer" classname="com.example.BufferCadenceTest" time="0.0"/>
+  <testcase name="released chapters are counted by their status marker" classname="com.example.BufferCadenceTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
