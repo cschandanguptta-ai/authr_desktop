@@ -447,6 +447,128 @@ public class ChapterDao_Impl(
     }
   }
 
+  public override suspend fun getProposedChaptersForBookSync(bookId: Int): List<Chapter> {
+    val _sql: String = "SELECT * FROM chapters WHERE bookId = ? AND draftStatus = 'PROPOSED' ORDER BY chapterNumber ASC"
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        _stmt.bindLong(_argIndex, bookId.toLong())
+        val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
+        val _columnIndexOfBookId: Int = getColumnIndexOrThrow(_stmt, "bookId")
+        val _columnIndexOfChapterNumber: Int = getColumnIndexOrThrow(_stmt, "chapterNumber")
+        val _columnIndexOfTitle: Int = getColumnIndexOrThrow(_stmt, "title")
+        val _columnIndexOfContent: Int = getColumnIndexOrThrow(_stmt, "content")
+        val _columnIndexOfSummary: Int = getColumnIndexOrThrow(_stmt, "summary")
+        val _columnIndexOfStatus: Int = getColumnIndexOrThrow(_stmt, "status")
+        val _columnIndexOfWriterConfirmed: Int = getColumnIndexOrThrow(_stmt, "writerConfirmed")
+        val _columnIndexOfDraftStatus: Int = getColumnIndexOrThrow(_stmt, "draftStatus")
+        val _columnIndexOfArcId: Int = getColumnIndexOrThrow(_stmt, "arcId")
+        val _columnIndexOfEndingType: Int = getColumnIndexOrThrow(_stmt, "endingType")
+        val _columnIndexOfBeatCoverage: Int = getColumnIndexOrThrow(_stmt, "beatCoverage")
+        val _columnIndexOfBalanceShares: Int = getColumnIndexOrThrow(_stmt, "balanceShares")
+        val _columnIndexOfWorksheet: Int = getColumnIndexOrThrow(_stmt, "worksheet")
+        val _columnIndexOfQcScores: Int = getColumnIndexOrThrow(_stmt, "qcScores")
+        val _columnIndexOfQcTotal: Int = getColumnIndexOrThrow(_stmt, "qcTotal")
+        val _columnIndexOfHookCheck: Int = getColumnIndexOrThrow(_stmt, "hookCheck")
+        val _columnIndexOfCtaNote: Int = getColumnIndexOrThrow(_stmt, "ctaNote")
+        val _columnIndexOfPollJson: Int = getColumnIndexOrThrow(_stmt, "pollJson")
+        val _columnIndexOfCreatedAt: Int = getColumnIndexOrThrow(_stmt, "createdAt")
+        val _result: MutableList<Chapter> = mutableListOf()
+        while (_stmt.step()) {
+          val _item: Chapter
+          val _tmpId: Int
+          _tmpId = _stmt.getLong(_columnIndexOfId).toInt()
+          val _tmpBookId: Int
+          _tmpBookId = _stmt.getLong(_columnIndexOfBookId).toInt()
+          val _tmpChapterNumber: Int
+          _tmpChapterNumber = _stmt.getLong(_columnIndexOfChapterNumber).toInt()
+          val _tmpTitle: String
+          _tmpTitle = _stmt.getText(_columnIndexOfTitle)
+          val _tmpContent: String
+          _tmpContent = _stmt.getText(_columnIndexOfContent)
+          val _tmpSummary: String
+          _tmpSummary = _stmt.getText(_columnIndexOfSummary)
+          val _tmpStatus: String
+          _tmpStatus = _stmt.getText(_columnIndexOfStatus)
+          val _tmpWriterConfirmed: Boolean
+          val _tmp: Int
+          _tmp = _stmt.getLong(_columnIndexOfWriterConfirmed).toInt()
+          _tmpWriterConfirmed = _tmp != 0
+          val _tmpDraftStatus: String
+          _tmpDraftStatus = _stmt.getText(_columnIndexOfDraftStatus)
+          val _tmpArcId: Int?
+          if (_stmt.isNull(_columnIndexOfArcId)) {
+            _tmpArcId = null
+          } else {
+            _tmpArcId = _stmt.getLong(_columnIndexOfArcId).toInt()
+          }
+          val _tmpEndingType: String?
+          if (_stmt.isNull(_columnIndexOfEndingType)) {
+            _tmpEndingType = null
+          } else {
+            _tmpEndingType = _stmt.getText(_columnIndexOfEndingType)
+          }
+          val _tmpBeatCoverage: String?
+          if (_stmt.isNull(_columnIndexOfBeatCoverage)) {
+            _tmpBeatCoverage = null
+          } else {
+            _tmpBeatCoverage = _stmt.getText(_columnIndexOfBeatCoverage)
+          }
+          val _tmpBalanceShares: String?
+          if (_stmt.isNull(_columnIndexOfBalanceShares)) {
+            _tmpBalanceShares = null
+          } else {
+            _tmpBalanceShares = _stmt.getText(_columnIndexOfBalanceShares)
+          }
+          val _tmpWorksheet: String?
+          if (_stmt.isNull(_columnIndexOfWorksheet)) {
+            _tmpWorksheet = null
+          } else {
+            _tmpWorksheet = _stmt.getText(_columnIndexOfWorksheet)
+          }
+          val _tmpQcScores: String?
+          if (_stmt.isNull(_columnIndexOfQcScores)) {
+            _tmpQcScores = null
+          } else {
+            _tmpQcScores = _stmt.getText(_columnIndexOfQcScores)
+          }
+          val _tmpQcTotal: Int?
+          if (_stmt.isNull(_columnIndexOfQcTotal)) {
+            _tmpQcTotal = null
+          } else {
+            _tmpQcTotal = _stmt.getLong(_columnIndexOfQcTotal).toInt()
+          }
+          val _tmpHookCheck: String?
+          if (_stmt.isNull(_columnIndexOfHookCheck)) {
+            _tmpHookCheck = null
+          } else {
+            _tmpHookCheck = _stmt.getText(_columnIndexOfHookCheck)
+          }
+          val _tmpCtaNote: String?
+          if (_stmt.isNull(_columnIndexOfCtaNote)) {
+            _tmpCtaNote = null
+          } else {
+            _tmpCtaNote = _stmt.getText(_columnIndexOfCtaNote)
+          }
+          val _tmpPollJson: String?
+          if (_stmt.isNull(_columnIndexOfPollJson)) {
+            _tmpPollJson = null
+          } else {
+            _tmpPollJson = _stmt.getText(_columnIndexOfPollJson)
+          }
+          val _tmpCreatedAt: Long
+          _tmpCreatedAt = _stmt.getLong(_columnIndexOfCreatedAt)
+          _item = Chapter(_tmpId,_tmpBookId,_tmpChapterNumber,_tmpTitle,_tmpContent,_tmpSummary,_tmpStatus,_tmpWriterConfirmed,_tmpDraftStatus,_tmpArcId,_tmpEndingType,_tmpBeatCoverage,_tmpBalanceShares,_tmpWorksheet,_tmpQcScores,_tmpQcTotal,_tmpHookCheck,_tmpCtaNote,_tmpPollJson,_tmpCreatedAt)
+          _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
   public override suspend fun getChapterById(chapterId: Int): Chapter? {
     val _sql: String = "SELECT * FROM chapters WHERE id = ? LIMIT 1"
     return performSuspending(__db, true, false) { _connection ->

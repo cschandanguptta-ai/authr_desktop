@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.WriterStudioFlowTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-09T13:18:07.608Z" hostname="c-6af184ee-14127d0f-5aa13d3776bd" time="0.144">
+  <properties/>
+  <testcase name="regenerate archives the previous draft and lands a new proposal" classname="com.example.WriterStudioFlowTest" time="0.124"/>
+  <testcase name="five-chapter novella runs end to end with the confirm flow" classname="com.example.WriterStudioFlowTest" time="0.015"/>
+  <testcase name="queue keyboard flow confirms remaining proposals in order" classname="com.example.WriterStudioFlowTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
