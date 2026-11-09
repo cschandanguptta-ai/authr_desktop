@@ -5,6 +5,9 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.data.local.AppDatabase
+import androidx.room.useReaderConnection
+import androidx.room.useWriterConnection
+import androidx.room.execSQL
 import java.io.File
 
 class StorageCleanupWorker(
@@ -95,37 +98,44 @@ class StorageCleanupWorker(
         // 2. Database Cleanup & Project count limit
         try {
             val db = AppDatabase.getDatabase(context)
-            
+
             // Delete failed or orphaned artifacts if requested
             if (deleteFailedArtifacts) {
                 // Delete books that have no phase (aborted creation)
-                val supportDb = db.openHelper.writableDatabase
-                supportDb.execSQL("DELETE FROM books WHERE currentPhase = ''")
+                db.useWriterConnection { conn ->
+                    conn.execSQL("DELETE FROM books WHERE currentPhase = ''")
+                }
             }
 
             // Enforce maximum projects count
-            val supportDb = db.openHelper.writableDatabase
-            val cursor = supportDb.query("SELECT id FROM books ORDER BY createdAt DESC")
             val projectIds = mutableListOf<Int>()
-            if (cursor.moveToFirst()) {
-                do {
-                    projectIds.add(cursor.getInt(0))
-                } while (cursor.moveToNext())
+            db.useReaderConnection { conn ->
+                conn.usePrepared("SELECT id FROM books ORDER BY createdAt DESC") { st ->
+                    while (st.step()) projectIds.add(st.getInt(0))
+                }
             }
-            cursor.close()
 
             if (projectIds.size > maxProjectsCount) {
                 val idsToDelete = projectIds.subList(maxProjectsCount, projectIds.size)
                 if (idsToDelete.isNotEmpty()) {
-                    val placeholders = idsToDelete.joinToString(",") { "?" }
-                    supportDb.execSQL("DELETE FROM books WHERE id IN ($placeholders)", idsToDelete.toTypedArray())
-                    supportDb.execSQL("DELETE FROM chapters WHERE bookId IN ($placeholders)", idsToDelete.toTypedArray())
+                    db.useWriterConnection { conn ->
+                        idsToDelete.forEach { id ->
+                            conn.usePrepared("DELETE FROM chapters WHERE bookId = ?") { st ->
+                                st.bindLong(1, id.toLong()); st.step()
+                            }
+                            conn.usePrepared("DELETE FROM books WHERE id = ?") { st ->
+                                st.bindLong(1, id.toLong()); st.step()
+                            }
+                        }
+                    }
                     Log.d("StorageCleanupWorker", "Deleted ${idsToDelete.size} oldest books to respect max projects limit.")
                 }
             }
 
             // SQLite VACUUM to reclaim space
-            db.openHelper.writableDatabase.execSQL("VACUUM")
+            db.useWriterConnection { conn ->
+                conn.execSQL("VACUUM")
+            }
             Log.d("StorageCleanupWorker", "SQLite VACUUM executed successfully.")
         } catch (e: Exception) {
             Log.e("StorageCleanupWorker", "Error cleaning up Room DB: ${e.message}")

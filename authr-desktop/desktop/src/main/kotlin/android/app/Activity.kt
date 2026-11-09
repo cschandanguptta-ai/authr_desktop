@@ -1,6 +1,8 @@
 package android.app
 
 import android.content.Context
+import android.content.DesktopAppContext
+import java.io.File
 import android.os.IBinder
 
 /**
@@ -13,6 +15,13 @@ abstract class Application : Context() {
 }
 
 open class Activity : Context() {
+
+    // Activities on desktop share the application context's storage roots.
+    override val filesDir: File get() = DesktopAppContext.get().filesDir
+    override val cacheDir: File get() = DesktopAppContext.get().cacheDir
+    override val externalCacheDir: File? get() = DesktopAppContext.get().externalCacheDir
+    override val noBackupFilesDir: File get() = DesktopAppContext.get().noBackupFilesDir
+
     open fun onCreate(savedInstanceState: android.os.Bundle?) {}
     open fun onStart() {}
     open fun onResume() {}
@@ -22,11 +31,22 @@ open class Activity : Context() {
 }
 
 abstract class Service : Context() {
+
+    // Services on desktop share the application context's storage roots.
+    override val filesDir: File get() = DesktopAppContext.get().filesDir
+    override val cacheDir: File get() = DesktopAppContext.get().cacheDir
+    override val externalCacheDir: File? get() = DesktopAppContext.get().externalCacheDir
+    override val noBackupFilesDir: File get() = DesktopAppContext.get().noBackupFilesDir
+
     open fun onStartCommand(intent: android.content.Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
     open fun onDestroy() {}
     open fun onBind(intent: android.content.Intent?): IBinder? = null
 
     fun startForeground(id: Int, notification: Notification) {
+        android.app.NotificationManager.notifyStatic(id, notification)
+    }
+
+    fun startForeground(id: Int, notification: Notification, @Suppress("UNUSED_PARAMETER") foregroundServiceType: Int) {
         android.app.NotificationManager.notifyStatic(id, notification)
     }
 

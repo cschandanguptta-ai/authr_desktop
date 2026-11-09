@@ -2,20 +2,14 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
     kotlin("jvm") version "2.2.10"
+    kotlin("plugin.serialization") version "2.2.10"
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
     id("org.jetbrains.compose") version "1.9.3"
     id("com.google.devtools.ksp") version "2.2.10-2.0.2"
 }
 
-repositories {
-    mavenCentral()
-    google {
-        content {
-            includeGroupByRegex("com\\.android.*")
-            includeGroupByRegex("androidx.*")
-        }
-    }
-}
+// Repositories are declared once in settings.gradle.kts
+// (RepositoriesMode.FAIL_ON_PROJECT_REPOS).
 
 kotlin {
     jvmToolchain(21)
@@ -30,8 +24,10 @@ kotlin {
 dependencies {
     implementation(compose.desktop.currentOs)
 
-    // Material icons extended (JetBrains publishes it up to 1.7.x; binary compatible with CMP 1.9.x)
-    implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
+    // Material 3 + icons via the plugin DSL (resolves the CMP-aligned artifact;
+    // compose.desktop.currentOs does not include material3 by itself).
+    implementation(compose.material3)
+    implementation(compose.materialIconsExtended)
 
     // Lifecycle (ViewModel + viewModelScope on desktop)
     implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel:2.9.6")
@@ -52,7 +48,7 @@ dependencies {
     // org.json (Android's JSON library) for the JVM
     implementation("org.json:json:20250517")
 
-    // MP3 decoding for the MediaPlayer shim (Edge TTS / KittenTTS playback)
+    // MP3 decoding for the MediaPlayer shim (Edge TTS / Pocket TTS playback)
     implementation("com.googlecode.soundlibs:jlayer:1.0.1.4")
 
     // Room database (KMP / JVM)
@@ -62,6 +58,9 @@ dependencies {
 
     // Koin DI
     implementation("io.insert-koin:koin-core:3.5.6")
+
+    // Unit tests (P0 gates: container round-trip, plugin schema)
+    testImplementation(kotlin("test"))
 }
 
 compose.desktop {
@@ -75,7 +74,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.AppImage, TargetFormat.Exe)
             packageName = "AuthrOS"
-            packageVersion = "2.3.0"
+            packageVersion = "3.0.0"
             description = "Authr: The Autonomous Author Operating System - Desktop Edition"
             vendor = "Authr OS"
             copyright = "© 2026 Authr OS. All rights reserved."

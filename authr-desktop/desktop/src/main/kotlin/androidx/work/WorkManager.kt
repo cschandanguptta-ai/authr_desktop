@@ -34,7 +34,7 @@ import kotlin.reflect.KClass
 // Data
 // ---------------------------------------------------------------------------
 
-class Data private constructor(internal val values: Map<String, Any?>) {
+class Data internal constructor(internal val values: Map<String, Any?>) {
 
     fun getString(key: String, defaultValue: String? = null): String? =
         (values[key] as? String) ?: defaultValue
@@ -129,7 +129,7 @@ class ForegroundInfo(
 // WorkRequest
 // ---------------------------------------------------------------------------
 
-sealed class WorkRequest internal constructor(
+sealed class WorkRequest protected constructor(
     internal val workerClass: KClass<out ListenableWorker>,
     internal val inputData: Data,
     internal val tags: Set<String>,
@@ -170,7 +170,7 @@ sealed class WorkRequest internal constructor(
             return this as B
         }
         fun setId(id: UUID): B = this as B
-        fun build(): W
+        abstract fun build(): W
     }
 
     companion object {
@@ -267,29 +267,29 @@ abstract class CoroutineWorker(
 
     class Result {
         internal val type: Int
+        val outputData: Data
 
-        private constructor(type: Int) { this.type = type }
+        private constructor(type: Int, outputData: Data = Data.EMPTY) {
+            this.type = type
+            this.outputData = outputData
+        }
 
-        internal companion object {
+        companion object {
             const val SUCCESS = 0
             const val FAILURE = 1
             const val RETRY = 2
-        }
 
-        internal val outputData: Data = Data.EMPTY
+            @JvmStatic fun success(): Result = Result(SUCCESS)
+            @JvmStatic fun success(outputData: Data): Result = Result(SUCCESS, outputData)
+            @JvmStatic fun failure(): Result = Result(FAILURE)
+            @JvmStatic fun failure(outputData: Data): Result = Result(FAILURE, outputData)
+            @JvmStatic fun retry(): Result = Result(RETRY)
+        }
 
         override fun toString(): String = when (type) {
             SUCCESS -> "Success"
             FAILURE -> "Failure"
             else -> "Retry"
-        }
-
-        companion object {
-            @JvmStatic fun success(): Result = Result(Result.SUCCESS)
-            @JvmStatic fun success(outputData: Data): Result = Result(Result.SUCCESS)
-            @JvmStatic fun failure(): Result = Result(Result.FAILURE)
-            @JvmStatic fun failure(outputData: Data): Result = Result(Result.FAILURE)
-            @JvmStatic fun retry(): Result = Result.RETRY
         }
     }
 }
@@ -316,7 +316,7 @@ class WorkInfo internal constructor(
     enum class State { ENQUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED, BLOCKED }
 }
 
-class WorkContinuation private constructor(
+class WorkContinuation internal constructor(
     private val manager: DesktopWorkManager,
     private val uniqueName: String?,
     private val existingPolicy: ExistingWorkPolicy?,
@@ -346,7 +346,7 @@ class WorkManager private constructor() {
 
     private val impl = DesktopWorkManager
 
-    fun enqueue(requests: vararg request: WorkRequest): Operation {
+    fun enqueue(vararg requests: WorkRequest): Operation {
         impl.enqueueRequests(listOf(*requests))
         return Operation()
     }
@@ -393,7 +393,7 @@ class Configuration private constructor(internal val workerFactory: WorkerFactor
 
     class Builder {
         private var factory: WorkerFactory? = null
-        fun setWorkerFactory(factory: WorkerFactory?): Builder { factory = this.factory; return this }
+        fun setWorkerFactory(factory: WorkerFactory?): Builder { this.factory = factory; return this }
         fun build(): Configuration = Configuration(factory)
     }
 

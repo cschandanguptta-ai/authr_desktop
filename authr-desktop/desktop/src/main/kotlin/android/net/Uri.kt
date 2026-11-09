@@ -24,12 +24,14 @@ class Uri private constructor(private val uri: java.net.URI) {
     val lastPathSegment: String? get() = uri.rawPath?.trimEnd('/')?.substringAfterLast('/')
     val isHierarchical: Boolean get() = uri.rawSchemeSpecificPart?.startsWith("/") == true
 
-    fun toString(): String = uri.toString()
+    override fun toString(): String = uri.toString()
 
     fun buildUpon(): Builder = Builder().scheme(scheme).authority(authority).path(path).query(query).fragment(fragment)
 
     /** Desktop extension: the real file behind this URI when it is file-backed. */
-    fun toFile(): File? = if (scheme == "file") File(path ?: return null) else null
+    fun toFile(): File? {
+        return if (scheme == "file") File(path ?: return null) else null
+    }
 
     class Builder {
         private var scheme: String? = null

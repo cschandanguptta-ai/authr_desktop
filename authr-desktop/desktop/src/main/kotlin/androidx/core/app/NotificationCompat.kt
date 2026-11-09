@@ -1,6 +1,7 @@
 package androidx.core.app
 
 import android.app.Notification
+import android.content.Context
 import android.app.NotificationChannel
 import android.app.NotificationManager
 
@@ -15,7 +16,7 @@ object NotificationCompat {
     const val PRIORITY_MAX = 2
     const val PRIORITY_MIN = -2
 
-    class Builder(private val channel: String?) {
+    class Builder(private val context: Context?, private val channel: String?) {
         private val notification = Notification()
         private var ongoing = false
         private var priority = PRIORITY_DEFAULT

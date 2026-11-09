@@ -101,6 +101,7 @@ class ContentResolver(private val context: Context) {
         fun moveToNext(): Boolean
         fun close()
         fun getString(columnIndex: Int): String
+        fun getColumnIndex(columnName: String): Int
         fun getColumnIndexOrThrow(columnName: String): Int
         fun getCount(): Int
     }
@@ -111,6 +112,8 @@ class ContentResolver(private val context: Context) {
         override fun moveToNext(): Boolean { row += 1; return false }
         override fun close() {}
         override fun getString(columnIndex: Int): String = displayName
+        override fun getColumnIndex(columnName: String): Int =
+            if (columnName == "_display_name") 0 else -1
         override fun getColumnIndexOrThrow(columnName: String): Int =
             if (columnName == "_display_name") 0 else throw IllegalArgumentException(columnName)
         override fun getCount(): Int = 1

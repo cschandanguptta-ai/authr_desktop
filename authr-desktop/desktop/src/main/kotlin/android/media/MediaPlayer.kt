@@ -4,6 +4,7 @@ import javazoom.jl.decoder.Bitstream
 import javazoom.jl.decoder.Decoder
 import javazoom.jl.decoder.Header
 import javazoom.jl.decoder.SampleBuffer
+import java.io.DataInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
@@ -15,7 +16,7 @@ import javax.sound.sampled.SourceDataLine
  * Desktop replacement for android.media.MediaPlayer.
  *
  * - WAV files are played through javax.sound.sampled.
- * - MP3 files (Edge TTS / KittenTTS / Cloud TTS output) are decoded with
+ * - MP3 files (Edge TTS / Pocket TTS / Cloud TTS output) are decoded with
  *   JLayer and played through the same line.
  * - setVolume and playbackParams.speed are applied on the PCM stream
  *   (linear resampling). Pitch is folded into the resample ratio because
@@ -46,6 +47,14 @@ class MediaPlayer {
         set(value) { speed = value.speed.coerceIn(0.25f, 4f); pitch = value.pitch }
 
     val isPlaying: Boolean get() = playing && playingThread?.isAlive == true
+
+    fun pause() {
+        // Desktop: pause is implemented as stop-with-state so callers can resume.
+        paused = true
+    }
+
+    var paused: Boolean = false
+        private set
 
     fun setDataSource(path: String) { dataSource = path }
 
@@ -142,10 +151,10 @@ class MediaPlayer {
                         ins.readIntLE()   // byte rate
                         ins.readShortLE() // block align
                         bitsPerSample = ins.readShortLE().toInt()
-                        if (size > 16) ins.skipFully(size - 16)
+                        if (size > 16) ins.skipFully((size - 16).toLong())
                     }
-                    "data" -> { dataBytes = size; if (size == 0) break; break }
-                    else -> ins.skipFully(size)
+                    "data" -> { dataBytes = size.toLong(); if (size == 0) break; break }
+                    else -> ins.skipFully(size.toLong())
                 }
             }
             if (bitsPerSample != 16) {

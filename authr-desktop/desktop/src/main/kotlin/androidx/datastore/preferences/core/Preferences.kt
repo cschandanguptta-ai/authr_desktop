@@ -120,9 +120,9 @@ internal class FilePreferencesDataStore(private val file: File) : DataStore<Pref
                         "l" -> (raw as? Number)?.toLong() ?: raw.toString().toLong()
                         "f" -> (raw as? Number)?.toFloat() ?: raw.toString().toFloat()
                         "d" -> (raw as? Number)?.toDouble() ?: raw.toString().toDouble()
-                        "ss" -> (raw as? org.json.JSONArray).let { arr ->
+                        "ss" -> ((raw as? org.json.JSONArray)?.let { arr ->
                             (0 until arr.length()).map { arr.getString(it) }.toSet()
-                        }
+                        } ?: emptySet<String>())
                         else -> raw.toString()
                     }
                 }

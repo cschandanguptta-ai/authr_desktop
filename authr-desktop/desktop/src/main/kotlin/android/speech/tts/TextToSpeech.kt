@@ -29,8 +29,8 @@ import kotlin.coroutines.suspendCoroutine
  */
 class TextToSpeech(
     val context: Context,
-    private val initListener: ((Int) -> Unit)?,
-    private val engine: String? = null
+    private val engine: String? = null,
+    private val initListener: ((Int) -> Unit)? = null
 ) {
 
     private val scope = CoroutineScope(Dispatchers.IO)

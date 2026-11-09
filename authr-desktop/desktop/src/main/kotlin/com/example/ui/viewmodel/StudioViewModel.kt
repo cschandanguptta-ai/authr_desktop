@@ -442,23 +442,6 @@ class StudioViewModel(
     private val _isOptimizingAudioScript = MutableStateFlow(false)
     val isOptimizingAudioScript: StateFlow<Boolean> = _isOptimizingAudioScript.asStateFlow()
 
-    // Video Generation States
-    val videoImages = MutableStateFlow<List<android.net.Uri>>(emptyList())
-    val videoImageFocalPoints = MutableStateFlow<Map<android.net.Uri, androidx.compose.ui.geometry.Offset>>(emptyMap())
-    val videoImageDuration = MutableStateFlow(5f)
-    val videoKenBurnsEnabled = MutableStateFlow(true)
-    val videoResolution = MutableStateFlow("360p")
-    val videoProductionMode = MutableStateFlow("Short")
-    val videoAutoSplit = MutableStateFlow(true)
-    val videoAspectRatio = MutableStateFlow("9:16")
-    val videoEqualizerEnabled = MutableStateFlow(false)
-    val videoEqualizerStyle = MutableStateFlow("Neon Bars")
-    val videoExportSrt = MutableStateFlow(true)
-    val videoSelectedTrack = MutableStateFlow<com.example.data.model.AudioTrack?>(null)
-    val videoGenerationLogs = MutableStateFlow("Ready to generate video...\n")
-    val isGeneratingVideo = MutableStateFlow(false)
-    val videoGenerationProgress = MutableStateFlow(0f)
-
     private val _storyGenStatus = MutableStateFlow("Ready to write")
     val storyGenStatus: StateFlow<String> = _storyGenStatus.asStateFlow()
 
@@ -988,23 +971,29 @@ class StudioViewModel(
         }
     }
 
-    private val kittenVoices = listOf(
-        com.example.tts.VoiceItem("expr-voice-2-f", java.util.Locale.US, "Female", "Kitten Expressive (Bella)", null, "Narrative"),
-        com.example.tts.VoiceItem("expr-voice-2-m", java.util.Locale.US, "Male", "Kitten Expressive (Jasper)", null, "Narrative"),
-        com.example.tts.VoiceItem("expr-voice-3-f", java.util.Locale.US, "Female", "Kitten Expressive (Luna)", null, "Soothing"),
-        com.example.tts.VoiceItem("expr-voice-3-m", java.util.Locale.US, "Male", "Kitten Expressive (Bruno)", null, "Dramatic"),
-        com.example.tts.VoiceItem("expr-voice-4-f", java.util.Locale.US, "Female", "Kitten Expressive (Rosie)", null, "Narrative"),
-        com.example.tts.VoiceItem("expr-voice-4-m", java.util.Locale.US, "Male", "Kitten Expressive (Hugo)", null, "Dramatic"),
-        com.example.tts.VoiceItem("expr-voice-5-f", java.util.Locale.US, "Female", "Kitten Expressive (Kiki)", null, "Soothing"),
-        com.example.tts.VoiceItem("expr-voice-5-m", java.util.Locale.US, "Male", "Kitten Expressive (Leo)", null, "Narrative")
+    /**
+     * Pocket TTS narrator slots (SCR-3, v3.0). Each slot maps to a voice pack
+     * held in <data>/audio/voice_packs; the default packs are seeded from the
+     * bundled narrator references, custom packs are cloned from WAV references
+     * via PocketTtsBridge. When a pack is missing at synthesis time the
+     * manager degrades gracefully to Edge TTS.
+     */
+    private val pocketVoices = listOf(
+        com.example.tts.VoiceItem("pocket-narrator-soft", java.util.Locale.US, "Female", "Pocket Narrator (Soft)", null, "Narrative"),
+        com.example.tts.VoiceItem("pocket-narrator-clear", java.util.Locale.US, "Male", "Pocket Narrator (Clear)", null, "Narrative"),
+        com.example.tts.VoiceItem("pocket-narrator-warm", java.util.Locale.US, "Female", "Pocket Narrator (Warm)", null, "Soothing"),
+        com.example.tts.VoiceItem("pocket-narrator-deep", java.util.Locale.US, "Male", "Pocket Narrator (Deep)", null, "Dramatic"),
+        com.example.tts.VoiceItem("pocket-narrator-brisk", java.util.Locale.US, "Female", "Pocket Narrator (Brisk)", null, "Narrative"),
+        com.example.tts.VoiceItem("pocket-narrator-grave", java.util.Locale.US, "Male", "Pocket Narrator (Grave)", null, "Dramatic"),
+        com.example.tts.VoiceItem("pocket-clone-custom", java.util.Locale.US, "Any", "Pocket Clone (Author Voice)", null, "Custom")
     )
 
     private fun updateAvailableVoicesForEngine(engine: String) {
         when (engine) {
-            "Kitten TTS" -> {
-                availableVoices.value = kittenVoices
-                if (selectedVoiceName.value == null || !kittenVoices.any { it.name == selectedVoiceName.value }) {
-                    selectedVoiceName.value = "expr-voice-5-m"
+            "Pocket TTS" -> {
+                availableVoices.value = pocketVoices
+                if (selectedVoiceName.value == null || !pocketVoices.any { it.name == selectedVoiceName.value }) {
+                    selectedVoiceName.value = "pocket-narrator-soft"
                 }
             }
             "Android" -> {
@@ -1219,9 +1208,9 @@ class StudioViewModel(
 
                 viewModelScope.launch(exceptionHandler) {
                     try {
-                        com.example.tts.LocalKittenTtsManager.initialize(application)
+                        com.example.tts.PocketTtsManager.initialize(application)
                     } catch (e: Throwable) {
-                        Log.e("StudioViewModel", "Failed to initialize LocalKittenTtsManager", e)
+                        Log.e("StudioViewModel", "Failed to initialize PocketTtsManager", e)
                     }
                 }
                 loadCustomPresets()
@@ -2271,7 +2260,8 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
     }
 
     fun triggerLocalizedDubbing(translatedText: String, langName: String) {
-        // Automatically switch to Edge TTS for Indian languages as Kitten TTS is English-focused
+        // Automatically switch to Edge TTS for Indian languages when the local
+        // Pocket TTS model pack for the language is not installed
         if (_ttsEngine.value != "Edge TTS" && _ttsEngine.value != "Android") {
             _ttsEngine.value = "Edge TTS"
             updateAvailableVoicesForEngine("Edge TTS")
@@ -3099,11 +3089,11 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
                     true
                 } else {
                     when (_ttsEngine.value) {
-                        "Kitten TTS" -> {
-                            com.example.tts.LocalKittenTtsManager.speakParagraphSuspend(
+                        "Pocket TTS" -> {
+                            com.example.tts.PocketTtsManager.speakParagraphSuspend(
                                 context = getApplication(),
                                 text = currentText,
-                                voiceName = selectedVoiceName.value ?: "expr-voice-5-m",
+                                voiceName = selectedVoiceName.value ?: "pocket-narrator-soft",
                                 speed = audioRate.value,
                                 volume = audioVolume.value,
                                 cacheDir = getApplication<android.app.Application>().cacheDir
@@ -3167,11 +3157,11 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
         if (!_ttsReady.value && _ttsEngine.value == "Android") return
         viewModelScope.launch(exceptionHandler) {
             when (_ttsEngine.value) {
-                "Kitten TTS" -> {
-                    com.example.tts.LocalKittenTtsManager.speakParagraphSuspend(
+                "Pocket TTS" -> {
+                    com.example.tts.PocketTtsManager.speakParagraphSuspend(
                         context = getApplication(),
                         text = "Once upon a time, in a kingdom hidden beyond the mountains, a mysterious adventure was about to begin.",
-                        voiceName = selectedVoiceName.value ?: "expr-voice-5-m",
+                        voiceName = selectedVoiceName.value ?: "pocket-narrator-soft",
                         speed = audioRate.value,
                         volume = audioVolume.value,
                         cacheDir = getApplication<android.app.Application>().cacheDir
@@ -3226,8 +3216,8 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
             com.example.tts.EdgeTtsManager.stopSpeaking()
         } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
             com.example.tts.CloudTtsManager.stopSpeaking()
-        } else if (_ttsEngine.value == "Kitten TTS") {
-            com.example.tts.LocalKittenTtsManager.stopSpeaking()
+        } else if (_ttsEngine.value == "Pocket TTS") {
+            com.example.tts.PocketTtsManager.stopSpeaking()
         }
         ttsManager?.stopSpeaking()
         playbackJob?.cancel()
@@ -3249,8 +3239,8 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
             com.example.tts.EdgeTtsManager.stopSpeaking()
         } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
             com.example.tts.CloudTtsManager.stopSpeaking()
-        } else if (_ttsEngine.value == "Kitten TTS") {
-            com.example.tts.LocalKittenTtsManager.stopSpeaking()
+        } else if (_ttsEngine.value == "Pocket TTS") {
+            com.example.tts.PocketTtsManager.stopSpeaking()
         }
         ttsManager?.stopSpeaking()
         playbackJob?.cancel()
@@ -3281,8 +3271,8 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
             com.example.tts.EdgeTtsManager.stopSpeaking()
         } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
             com.example.tts.CloudTtsManager.stopSpeaking()
-        } else if (_ttsEngine.value == "Kitten TTS") {
-            com.example.tts.LocalKittenTtsManager.stopSpeaking()
+        } else if (_ttsEngine.value == "Pocket TTS") {
+            com.example.tts.PocketTtsManager.stopSpeaking()
         }
         ttsManager?.stopSpeaking()
         playbackJob?.cancel()
@@ -3700,7 +3690,7 @@ ${chapter.content}
                             return@async false
                         }
 
-                        if (_ttsEngine.value == "Cloud HuggingFace TTS" || _ttsEngine.value == "Kitten TTS" || _ttsEngine.value == "Edge TTS") {
+                        if (_ttsEngine.value == "Cloud HuggingFace TTS" || _ttsEngine.value == "Pocket TTS" || _ttsEngine.value == "Edge TTS") {
                             delay((i % 3) * 1500L) 
                         }
 
@@ -3761,13 +3751,13 @@ ${chapter.content}
                                     tempOutFile.delete()
                                 }
 
-                                if (_ttsEngine.value == "Kitten TTS") {
+                                if (_ttsEngine.value == "Pocket TTS") {
                                     try {
-                                        chapterComplete = com.example.tts.LocalKittenTtsManager.synthesizeToFile(
+                                        chapterComplete = com.example.tts.PocketTtsManager.synthesizeToFile(
                                             context = getApplication(),
                                             text = chapterText,
                                             outputFile = tempOutFile,
-                                            voiceName = selectedVoiceName.value ?: "expr-voice-5-m",
+                                            voiceName = selectedVoiceName.value ?: "pocket-narrator-soft",
                                             speed = audioRate.value,
                                             chunkSize = ttsChunkSize.value,
                                             onChunkProgress = { current, totalChunks ->
@@ -3776,7 +3766,7 @@ ${chapter.content}
                                             }
                                         )
                                     } catch (e: Throwable) {
-                                        lastErrorMsg.set(e.message ?: "Unknown Kitten TTS Error")
+                                        lastErrorMsg.set(e.message ?: "Unknown Pocket TTS Error")
                                         withContext(Dispatchers.Main) {
                                             _conversionLogs.value += "Part $chapterNum attempt $attempts failed: ${e.message}\n"
                                         }
@@ -3936,7 +3926,7 @@ ${chapter.content}
 
                         val currentCompleted = completedCount.incrementAndGet()
                         withContext(Dispatchers.Main) {
-                            if (_ttsEngine.value != "Kitten TTS") {
+                            if (_ttsEngine.value != "Pocket TTS") {
                                 partsProgress[chapterNum] = 1.0f
                                 _conversionProgress.value = partsProgress.values.sum() / total
                             }
@@ -4017,12 +4007,12 @@ ${chapter.content}
                 var success = false
                 try {
                     val engine = _ttsEngine.value
-                    if (engine == "Kitten TTS") {
-                        success = com.example.tts.LocalKittenTtsManager.synthesizeToFile(
+                    if (engine == "Pocket TTS") {
+                        success = com.example.tts.PocketTtsManager.synthesizeToFile(
                             context = getApplication(),
                             text = pendingItem.text,
                             outputFile = outFile,
-                            voiceName = selectedVoiceName.value ?: "default_kitten_voice",
+                            voiceName = selectedVoiceName.value ?: "pocket-narrator-soft",
                             speed = audioRate.value,
                             chunkSize = ttsChunkSize.value,
                             onChunkProgress = { current, totalChunks ->
@@ -4112,8 +4102,8 @@ ${chapter.content}
             com.example.tts.EdgeTtsManager.stopSpeaking()
         } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
             com.example.tts.CloudTtsManager.stopSpeaking()
-        } else if (_ttsEngine.value == "Kitten TTS") {
-            com.example.tts.LocalKittenTtsManager.stopSpeaking()
+        } else if (_ttsEngine.value == "Pocket TTS") {
+            com.example.tts.PocketTtsManager.stopSpeaking()
         }
         ttsManager?.stopSpeaking()
         _conversionLogs.value += "Stopping conversion and terminating sub-processes...\n"
@@ -4150,1164 +4140,6 @@ ${chapter.content}
             ?: selectedVoiceName.value
         audioRate.value = speed
         onAudioSettingChanged()
-    }
-
-    fun addVideoImages(uris: List<android.net.Uri>) {
-        val current = videoImages.value.toMutableList()
-        current.addAll(uris)
-        videoImages.value = current.distinct()
-    }
-
-    fun clearVideoImages() {
-        videoImages.value = emptyList()
-        videoImageFocalPoints.value = emptyMap()
-    }
-
-    fun setFocalPoint(uri: android.net.Uri, offset: androidx.compose.ui.geometry.Offset) {
-        val current = videoImageFocalPoints.value.toMutableMap()
-        current[uri] = offset
-        videoImageFocalPoints.value = current
-    }
-
-
-    private fun createImageWithText(sourceImageFile: java.io.File, destFile: java.io.File, text: String) {
-        try {
-            val options = android.graphics.BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
-            android.graphics.BitmapFactory.decodeFile(sourceImageFile.absolutePath, options)
-            
-            // Downsample if image is huge
-            var scale = 1
-            while (options.outWidth / scale / 2 >= 1024 && options.outHeight / scale / 2 >= 1024) {
-                scale *= 2
-            }
-            
-            val decodeOptions = android.graphics.BitmapFactory.Options().apply {
-                inSampleSize = scale
-                inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
-            }
-            
-            val bitmap = android.graphics.BitmapFactory.decodeFile(sourceImageFile.absolutePath, decodeOptions) ?: return
-            val bitmapWidth = bitmap.width
-            val bitmapHeight = bitmap.height
-            val mutableBitmap = bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, true)
-            val canvas = android.graphics.Canvas(mutableBitmap)
-            
-            val bgPaint = android.graphics.Paint().apply {
-                color = android.graphics.Color.parseColor("#B3000000") // 70% black
-                style = android.graphics.Paint.Style.FILL
-            }
-            canvas.drawRect(0f, 0f, bitmapWidth.toFloat(), bitmapHeight.toFloat(), bgPaint)
-            
-            val textPaint = android.text.TextPaint().apply {
-                color = android.graphics.Color.WHITE
-                textSize = bitmapWidth * 0.04f 
-                isAntiAlias = true
-            }
-            
-            val padding = (bitmapWidth * 0.1f).toInt()
-            val textWidth = bitmapWidth - (padding * 2)
-            
-            val cleanText = text.replace(Regex("<[^>]*>"), "") 
-            val staticLayout = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                android.text.StaticLayout.Builder.obtain(cleanText, 0, cleanText.length, textPaint, textWidth)
-                    .setAlignment(android.text.Layout.Alignment.ALIGN_NORMAL)
-                    .setLineSpacing(0f, 1.2f)
-                    .build()
-            } else {
-                @Suppress("DEPRECATION")
-                android.text.StaticLayout(cleanText, textPaint, textWidth, android.text.Layout.Alignment.ALIGN_NORMAL, 1.2f, 0f, false)
-            }
-            
-            val x = padding.toFloat()
-            val textHeight = staticLayout.height
-            val y = if (textHeight < bitmapHeight - padding * 2) {
-                (bitmapHeight - textHeight) / 2f
-            } else {
-                padding.toFloat()
-            }
-            
-            canvas.save()
-            canvas.translate(x, y)
-            staticLayout.draw(canvas)
-            canvas.restore()
-            
-            java.io.FileOutputStream(destFile).use { out ->
-                mutableBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
-            }
-            mutableBitmap.recycle()
-            bitmap.recycle()
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
-    }
-
-    private var videoGenerationJob: kotlinx.coroutines.Job? = null
-
-    fun cancelVideoGeneration() {
-        isGeneratingVideo.value = false
-        stopForegroundService()
-        videoGenerationJob?.cancel()
-        videoGenerationJob = null
-        try {
-            io.microshow.rxffmpeg.RxFFmpegInvoke.getInstance().exit()
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
-        videoGenerationLogs.value += "\nVideo generation cancelled.\n"
-    }
-
-    val videoGeneratedSrtContent = MutableStateFlow<String?>(null)
-
-
-
-    private fun generateSrtForWavFiles(wavFiles: List<java.io.File>, sourceChunksText: List<String>? = null, folder: java.io.File? = null): String? {
-
-        try {
-
-            val chunks = sourceChunksText ?: folder?.let { java.io.File(it, "source_chunks.txt").takeIf { f -> f.exists() }?.readText()?.split("|||CHUNK_SEPARATOR|||") } ?: emptyList()
-
-            val retriever = android.media.MediaMetadataRetriever()
-
-            val srtBuilder = StringBuilder()
-
-            var currentStartTimeMs = 0L
-
-            for (i in wavFiles.indices) {
-
-                val wavFile = wavFiles[i]
-
-                val chunkText = chunks.getOrNull(i) ?: ""
-
-                var durationMs = 0L
-
-                try {
-
-                    retriever.setDataSource(wavFile.absolutePath)
-
-                    val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
-
-                    durationMs = durationStr?.toLongOrNull() ?: 0L
-
-                } catch (e: Exception) {
-
-                    e.printStackTrace()
-
-                }
-
-                if (durationMs > 0) {
-
-                    val currentEndTimeMs = currentStartTimeMs + durationMs
-
-                    fun formatTime(ms: Long): String {
-
-                        val hours = (ms / 3600000)
-
-                        val minutes = (ms % 3600000) / 60000
-
-                        val seconds = ((ms % 3600000) % 60000) / 1000
-
-                        val millis = ms % 1000
-
-                        return java.lang.String.format("%02d:%02d:%02d,%03d", hours, minutes, seconds, millis)
-
-                    }
-
-                    srtBuilder.append(i + 1).append("\n")
-
-                    srtBuilder.append(formatTime(currentStartTimeMs)).append(" --> ").append(formatTime(currentEndTimeMs)).append("\n")
-
-                    srtBuilder.append(chunkText.trim()).append("\n\n")
-
-                    currentStartTimeMs = currentEndTimeMs + 500L // 0.5s silence padding from merging
-
-                }
-
-            }
-
-            retriever.release()
-
-            return srtBuilder.toString().takeIf { it.isNotEmpty() }
-
-        } catch (e: Exception) {
-
-            return null
-
-        }
-
-    }
-
-    fun generateVideo(context: android.content.Context) {
-        if (isGeneratingVideo.value) return
-        var images = videoImages.value
-        
-        if (images.isEmpty()) {
-            val cacheDir = getApplication<Application>().cacheDir
-            val tempFile = java.io.File(cacheDir, "current_cover_art.png")
-            if (tempFile.exists()) {
-                images = listOf(android.net.Uri.fromFile(tempFile))
-                videoGenerationLogs.value = "No images selected. Using generated cover art as fallback...\n"
-            } else {
-                videoGenerationLogs.value = "Error: No images selected and no generated cover art found for video generation.\n"
-                return
-            }
-        }
-
-        isGeneratingVideo.value = true
-        try {
-            val app = getApplication<Application>()
-            val intent = android.content.Intent(app, com.example.service.StudioForegroundService::class.java)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                androidx.core.content.ContextCompat.startForegroundService(app, intent)
-            } else {
-                androidx.core.content.ContextCompat.startForegroundService(app, intent)
-            }
-        } catch (e: Throwable) {
-            e.printStackTrace()
-        }
-        
-        videoGenerationProgress.value = 0f
-        videoGenerationLogs.value = "Initializing Asset Processing...\n"
-
-        videoGenerationJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob()).launch {
-            try {
-                videoGenerationLogs.value += "Copying images to cache directory...\n"
-                val cacheDir = getApplication<Application>().cacheDir
-                val imageFiles = mutableListOf<java.io.File>()
-                for (i in images.indices) {
-                    val uri = images[i]
-                    val destFile = java.io.File(cacheDir, "temp_vid_img_$i.jpg")
-                    try {
-                        context.contentResolver.openInputStream(uri)?.use { input ->
-                            destFile.outputStream().use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                        imageFiles.add(destFile)
-                    } catch (e: Throwable) {
-                        videoGenerationLogs.value += "Error copying image $i: ${e.message}\n"
-                    }
-                }
-                
-                if (imageFiles.isEmpty()) {
-                    videoGenerationLogs.value += "Error: No valid images to process.\n"
-                    isGeneratingVideo.value = false
-                    return@launch
-                }
-
-                val isLong = videoProductionMode.value == "Long"
-
-                val resolution = videoResolution.value
-
-                val ratio = videoAspectRatio.value
-
-                val dar = ratio.replace(":", "/")
-
-                val baseW = when (resolution) {
-
-                    "144p" -> 256
-
-                    "240p" -> 426
-
-                    "360p" -> 640
-
-                    else -> 640
-
-                }
-
-                val baseH = when (resolution) {
-
-                    "144p" -> 144
-
-                    "240p" -> 240
-
-                    "360p" -> 360
-
-                    else -> 360
-
-                }
-
-                val (targetW, targetH) = when (ratio) {
-
-                    "16:9" -> Pair(baseW, baseH)
-
-                    "9:16" -> Pair(baseH, baseW)
-
-                    "1:1" -> Pair(baseH, baseH)
-
-                    else -> Pair(baseH, baseW)
-
-                }
-
-                val resolutionFilter = "scale=$targetW:$targetH:force_original_aspect_ratio=decrease,pad=$targetW:$targetH:(ow-iw)/2:(oh-ih)/2"
-                
-
-
-                val selectedTrack = videoSelectedTrack.value
-                val wavFiles = mutableListOf<java.io.File>()
-                if (selectedTrack != null) {
-                    val folder = java.io.File(selectedTrack.filePath)
-                    val foundWavFiles = folder.listFiles { file ->
-                        file.isFile && file.name.startsWith("Part_") && file.name.endsWith(".wav")
-                    }?.sortedBy { file ->
-                        val numberPart = file.nameWithoutExtension.removePrefix("Part_").toIntOrNull()
-                        numberPart ?: Int.MAX_VALUE
-                    }
-                    if (foundWavFiles != null) {
-                        wavFiles.addAll(foundWavFiles)
-                    }
-                }
-                
-                if (wavFiles.isEmpty()) {
-                    videoGenerationLogs.value += "No audio track selected. Generating a silent 5-second slideshow...\n"
-                    val finalParts = mutableListOf<java.io.File>()
-                    for (i in imageFiles.indices) {
-                        val partVideoFile = java.io.File(cacheDir, "part_video_$i.mp4")
-                        val sourceImage = imageFiles[i]
-                        val cmdList = mutableListOf<String>()
-                        cmdList.add("-loop")
-                        cmdList.add("1")
-                        cmdList.add("-i")
-                        cmdList.add(sourceImage.absolutePath)
-                    if (videoEqualizerEnabled.value) {
-
-                        val eqStyle = videoEqualizerStyle.value
-
-                        val eqH = targetH / 5
-
-                        val eqFilter = when (eqStyle) {
-
-                            "Neon Bars" -> "showfreqs=s=${targetW}x${eqH}:mode=bar:colors=cyan|magenta|blue"
-
-                            "Spectrum Wave" -> "showwaves=s=${targetW}x${eqH}:mode=cline:colors=white"
-
-                            "Minimal Dots" -> "showfreqs=s=${targetW}x${eqH}:mode=dot:colors=white"
-
-                            else -> "showwaves=s=${targetW}x${eqH}:mode=cline:colors=white"
-
-                        }
-
-                        cmdList.add("-filter_complex")
-
-                        cmdList.add("[0:v]$resolutionFilter,setdar=$dar,format=yuv420p[bg];[1:a]$eqFilter[eq];[bg][eq]overlay=0:H-h[outv]")
-
-                        cmdList.add("-map")
-
-                        cmdList.add("[outv]")
-
-                        cmdList.add("-map")
-
-                        cmdList.add("1:a")
-
-                    } else {
-
-                        cmdList.add("-vf")
-
-                        cmdList.add("$resolutionFilter,setdar=$dar,format=yuv420p")
-
-                    }
-                        cmdList.add("-c:v")
-                        cmdList.add("libx264")
-                        cmdList.add("-preset")
-                        cmdList.add("ultrafast")
-                        cmdList.add("-crf")
-                        cmdList.add("28")
-                        cmdList.add("-t")
-                        cmdList.add("5")
-                        cmdList.add("-y")
-                        cmdList.add(partVideoFile.absolutePath)
-                        
-                        videoGenerationLogs.value += "[FFmpeg] Executing command for Image ${i + 1}...\n"
-                        val returnCode = io.microshow.rxffmpeg.RxFFmpegInvoke.getInstance().runCommand(cmdList.toTypedArray(), null)
-                        if (returnCode == 0) {
-                            finalParts.add(partVideoFile)
-                        } else {
-                            videoGenerationLogs.value += "\n❌ FFmpeg execution failed for image ${i + 1} with rc ${returnCode}.\n"
-                        }
-                    }
-                    
-                    if (finalParts.isNotEmpty()) {
-                        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-                        if (!downloadsDir.exists()) downloadsDir.mkdirs()
-                        val filename = "YouTube_Audiobook_Video_${System.currentTimeMillis()}.mp4"
-                        val finalOutputFile = java.io.File(cacheDir, filename)
-                        
-                        val concatFile = java.io.File(cacheDir, "concat_parts.txt")
-                        val concatWriter = concatFile.bufferedWriter()
-                        for (part in finalParts) {
-                            concatWriter.write("file '${part.absolutePath}'\n")
-                        }
-                        concatWriter.close()
-                        
-                        val cmdList = mutableListOf<String>()
-                        cmdList.add("-f")
-                        cmdList.add("concat")
-                        cmdList.add("-safe")
-                        cmdList.add("0")
-                        cmdList.add("-i")
-                        cmdList.add(concatFile.absolutePath)
-                        cmdList.add("-c")
-                        cmdList.add("copy")
-                        cmdList.add("-y")
-                        cmdList.add(finalOutputFile.absolutePath)
-                        
-                        val returnCode = io.microshow.rxffmpeg.RxFFmpegInvoke.getInstance().runCommand(cmdList.toTypedArray(), null)
-                        if (returnCode == 0) {
-                            try {
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                                    val resolver = context.contentResolver
-                                    val contentValues = android.content.ContentValues().apply {
-                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, filename)
-                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "video/mp4")
-                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-                                    }
-                                    val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                                    if (uri != null) {
-                                        resolver.openOutputStream(uri)?.use { out ->
-                                            finalOutputFile.inputStream().use { input ->
-                                                input.copyTo(out)
-                                            }
-                                        }
-                                        videoGenerationLogs.value += "Output saved to Downloads/$filename\n"
-                                    if (videoExportSrt.value && wavFiles.isNotEmpty()) {
-
-                                        val srtContent = generateSrtForWavFiles(wavFiles, folder = selectedTrack?.filePath?.let { java.io.File(it) })
-
-                                        videoGeneratedSrtContent.value = srtContent
-
-                                        if (srtContent != null) {
-
-                                            try {
-
-                                                val srtFilename = filename.replace(".mp4", ".srt")
-
-                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-
-                                                    val resolver = context.contentResolver
-
-                                                    val contentValues = android.content.ContentValues().apply {
-
-                                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, srtFilename)
-
-                                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
-
-                                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    }
-
-                                                    val srtUri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-
-                                                    if (srtUri != null) {
-
-                                                        resolver.openOutputStream(srtUri)?.use { out ->
-
-                                                            out.write(srtContent.toByteArray())
-
-                                                        }
-
-                                                        videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                    }
-
-                                                } else {
-
-                                                    val dDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    val srtFile = java.io.File(dDir, srtFilename)
-
-                                                    srtFile.writeText(srtContent)
-
-                                                    videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                }
-
-                                            } catch (e: Exception) {
-
-                                                videoGenerationLogs.value += "Error saving SRT: ${e.message}\n"
-
-                                            }
-
-                                        }
-
-                                    }
-                                    }
-                                } else {
-                                    val destFile = java.io.File(downloadsDir, filename)
-                                    finalOutputFile.copyTo(destFile, overwrite = true)
-                                    videoGenerationLogs.value += "Output saved to Downloads/$filename\n"
-                                    if (videoExportSrt.value && wavFiles.isNotEmpty()) {
-
-                                        val srtContent = generateSrtForWavFiles(wavFiles, folder = selectedTrack?.filePath?.let { java.io.File(it) })
-
-                                        videoGeneratedSrtContent.value = srtContent
-
-                                        if (srtContent != null) {
-
-                                            try {
-
-                                                val srtFilename = filename.replace(".mp4", ".srt")
-
-                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-
-                                                    val resolver = context.contentResolver
-
-                                                    val contentValues = android.content.ContentValues().apply {
-
-                                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, srtFilename)
-
-                                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
-
-                                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    }
-
-                                                    val srtUri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-
-                                                    if (srtUri != null) {
-
-                                                        resolver.openOutputStream(srtUri)?.use { out ->
-
-                                                            out.write(srtContent.toByteArray())
-
-                                                        }
-
-                                                        videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                    }
-
-                                                } else {
-
-                                                    val dDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    val srtFile = java.io.File(dDir, srtFilename)
-
-                                                    srtFile.writeText(srtContent)
-
-                                                    videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                }
-
-                                            } catch (e: Exception) {
-
-                                                videoGenerationLogs.value += "Error saving SRT: ${e.message}\n"
-
-                                            }
-
-                                        }
-
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                videoGenerationLogs.value += "Error saving video: ${e.message}\n"
-                            }
-                        }
-                    }
-                    videoGenerationProgress.value = 1f
-                    isGeneratingVideo.value = false
-                    stopForegroundService()
-                    return@launch
-                }
-
-                val matchingStory = allStories.value.find { 
-                    it.title.equals(selectedTrack?.title, ignoreCase = true) || 
-                    (selectedTrack?.title?.contains(it.heroName, ignoreCase = true) == true) 
-                }
-                val partTexts = listOf(
-                    matchingStory?.part1 ?: "",
-                    matchingStory?.part2 ?: "",
-                    matchingStory?.part3 ?: "",
-                    matchingStory?.part4 ?: "",
-                    matchingStory?.part5 ?: ""
-                )
-                
-                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
-                val filename = "YouTube_Audiobook_Video_${System.currentTimeMillis()}.mp4"
-                val finalOutputFile = java.io.File(cacheDir, filename)
-
-                val isSingleImageOpt = imageFiles.size == 1 && partTexts.all { it.isBlank() }
-                
-                if (isSingleImageOpt && wavFiles.isNotEmpty()) {
-                    videoGenerationLogs.value += "\n--- Single-Image Optimization Mode ---\n"
-                    videoGenerationLogs.value += "Detected 1 image and no story text. Generating a single continuous video segment...\n"
-                    
-                    var continuousAudioFile = java.io.File(selectedTrack?.filePath, "Merged_Continuous_Audiobook.wav")
-                    if (!continuousAudioFile.exists() && wavFiles.size > 1) {
-                        videoGenerationLogs.value += "Merging audio parts on the fly for continuous video...\n"
-                        continuousAudioFile = java.io.File(cacheDir, "temp_continuous_audio.wav")
-                        com.example.utils.WavUtils.mergeWavFiles(
-                            files = wavFiles,
-                            outputFile = continuousAudioFile,
-                            silenceSeconds = 0.5f,
-                            theme = selectedAmbientTheme.value,
-                            ambientVolume = ambientVolume.value,
-                            narrationVolume = narrationVolume.value,
-                            title = "Video Soundstage",
-                            artist = "Narrative Audio Studio",
-                            album = "Temp"
-                        )
-                        if (_humanizeAudio.value) {
-                            com.example.utils.WavUtils.humanizeWavFile(continuousAudioFile)
-                        }
-                    } else if (wavFiles.size == 1) {
-                        continuousAudioFile = wavFiles.first()
-                    }
-                    
-                    val sourceImage = imageFiles[0]
-                    val cmdList = mutableListOf<String>()
-                    cmdList.add("-loop")
-                    cmdList.add("1")
-                    cmdList.add("-i")
-                    cmdList.add(sourceImage.absolutePath)
-                    cmdList.add("-i")
-                    cmdList.add(continuousAudioFile.absolutePath)
-                    if (videoEqualizerEnabled.value) {
-
-                        val eqStyle = videoEqualizerStyle.value
-
-                        val eqH = targetH / 5
-
-                        val eqFilter = when (eqStyle) {
-
-                            "Neon Bars" -> "showfreqs=s=${targetW}x${eqH}:mode=bar:colors=cyan|magenta|blue"
-
-                            "Spectrum Wave" -> "showwaves=s=${targetW}x${eqH}:mode=cline:colors=white"
-
-                            "Minimal Dots" -> "showfreqs=s=${targetW}x${eqH}:mode=dot:colors=white"
-
-                            else -> "showwaves=s=${targetW}x${eqH}:mode=cline:colors=white"
-
-                        }
-
-                        cmdList.add("-filter_complex")
-
-                        cmdList.add("[0:v]$resolutionFilter,setdar=$dar,format=yuv420p[bg];[1:a]$eqFilter[eq];[bg][eq]overlay=0:H-h[outv]")
-
-                        cmdList.add("-map")
-
-                        cmdList.add("[outv]")
-
-                        cmdList.add("-map")
-
-                        cmdList.add("1:a")
-
-                    } else {
-
-                        cmdList.add("-vf")
-
-                        cmdList.add("$resolutionFilter,setdar=$dar,format=yuv420p")
-
-                    }
-                    cmdList.add("-c:v")
-                    cmdList.add("libx264")
-                    cmdList.add("-preset")
-                    cmdList.add("ultrafast")
-                    cmdList.add("-crf")
-                    cmdList.add("28")
-                    cmdList.add("-c:a")
-                    cmdList.add("aac")
-                    cmdList.add("-b:a")
-                    cmdList.add("128k")
-                    cmdList.add("-shortest")
-                    cmdList.add("-y")
-                    cmdList.add(finalOutputFile.absolutePath)
-                    
-                    videoGenerationLogs.value += "[FFmpeg] Executing continuous generation...\n"
-                    val returnCode = io.microshow.rxffmpeg.RxFFmpegInvoke.getInstance().runCommand(cmdList.toTypedArray(), null)
-                    
-                    if (returnCode == 0) {
-                        videoGenerationLogs.value += "\n✅ Final Video generation complete!\n"
-                        
-                        // Copy to MediaStore
-                        try {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                                val resolver = context.contentResolver
-                                val contentValues = android.content.ContentValues().apply {
-                                    put(android.provider.MediaStore.Downloads.DISPLAY_NAME, filename)
-                                    put(android.provider.MediaStore.Downloads.MIME_TYPE, "video/mp4")
-                                    put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-                                }
-                                val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                                if (uri != null) {
-                                    resolver.openOutputStream(uri)?.use { out ->
-                                        finalOutputFile.inputStream().use { input ->
-                                            input.copyTo(out)
-                                        }
-                                    }
-                                    videoGenerationLogs.value += "Output saved to Downloads/$filename\n"
-                                    if (videoExportSrt.value && wavFiles.isNotEmpty()) {
-
-                                        val srtContent = generateSrtForWavFiles(wavFiles, folder = selectedTrack?.filePath?.let { java.io.File(it) })
-
-                                        videoGeneratedSrtContent.value = srtContent
-
-                                        if (srtContent != null) {
-
-                                            try {
-
-                                                val srtFilename = filename.replace(".mp4", ".srt")
-
-                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-
-                                                    val resolver = context.contentResolver
-
-                                                    val contentValues = android.content.ContentValues().apply {
-
-                                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, srtFilename)
-
-                                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
-
-                                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    }
-
-                                                    val srtUri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-
-                                                    if (srtUri != null) {
-
-                                                        resolver.openOutputStream(srtUri)?.use { out ->
-
-                                                            out.write(srtContent.toByteArray())
-
-                                                        }
-
-                                                        videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                    }
-
-                                                } else {
-
-                                                    val dDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    val srtFile = java.io.File(dDir, srtFilename)
-
-                                                    srtFile.writeText(srtContent)
-
-                                                    videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                }
-
-                                            } catch (e: Exception) {
-
-                                                videoGenerationLogs.value += "Error saving SRT: ${e.message}\n"
-
-                                            }
-
-                                        }
-
-                                    }
-                                } else {
-                                    videoGenerationLogs.value += "Error: Could not save to MediaStore.\n"
-                                }
-                            } else {
-                                val destDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-                                if (!destDir.exists()) destDir.mkdirs()
-                                val destFile = java.io.File(destDir, filename)
-                                finalOutputFile.copyTo(destFile, overwrite = true)
-                                videoGenerationLogs.value += "Output saved to Downloads/$filename\n"
-                                    if (videoExportSrt.value && wavFiles.isNotEmpty()) {
-
-                                        val srtContent = generateSrtForWavFiles(wavFiles, folder = selectedTrack?.filePath?.let { java.io.File(it) })
-
-                                        videoGeneratedSrtContent.value = srtContent
-
-                                        if (srtContent != null) {
-
-                                            try {
-
-                                                val srtFilename = filename.replace(".mp4", ".srt")
-
-                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-
-                                                    val resolver = context.contentResolver
-
-                                                    val contentValues = android.content.ContentValues().apply {
-
-                                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, srtFilename)
-
-                                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
-
-                                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    }
-
-                                                    val srtUri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-
-                                                    if (srtUri != null) {
-
-                                                        resolver.openOutputStream(srtUri)?.use { out ->
-
-                                                            out.write(srtContent.toByteArray())
-
-                                                        }
-
-                                                        videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                    }
-
-                                                } else {
-
-                                                    val dDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    val srtFile = java.io.File(dDir, srtFilename)
-
-                                                    srtFile.writeText(srtContent)
-
-                                                    videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                }
-
-                                            } catch (e: Exception) {
-
-                                                videoGenerationLogs.value += "Error saving SRT: ${e.message}\n"
-
-                                            }
-
-                                        }
-
-                                    }
-                            }
-                        } catch (e: Exception) {
-                            videoGenerationLogs.value += "Error saving video: ${e.message}\n"
-                            e.printStackTrace()
-                        }
-                    } else {
-                        videoGenerationLogs.value += "\n❌ Video generation failed with rc ${returnCode}.\n"
-                    }
-                    
-                    try {
-                        if (finalOutputFile.exists()) finalOutputFile.delete()
-                        val tempAudio = java.io.File(cacheDir, "temp_continuous_audio.wav")
-                        if (tempAudio.exists()) tempAudio.delete()
-                    } catch (e: Exception) {}
-                    
-                    videoGenerationProgress.value = 1f
-                    isGeneratingVideo.value = false
-                    stopForegroundService()
-                    return@launch
-                }
-
-                val finalParts = mutableListOf<java.io.File>()
-
-                videoGenerationLogs.value += "Generating ${wavFiles.size} video parts...\n"
-
-                for (i in wavFiles.indices) {
-                    val wavFile = wavFiles[i]
-                    val partText = partTexts.getOrNull(i) ?: ""
-                    val sourceImage = imageFiles[i % imageFiles.size]
-                    val partImageFile = java.io.File(cacheDir, "part_image_$i.jpg")
-                    
-                    videoGenerationLogs.value += "\n--- Generating Part ${i + 1} ---\n"
-                    videoGenerationLogs.value += "Rendering text on image...\n"
-                    createImageWithText(sourceImage, partImageFile, partText)
-                    
-                    val partVideoFile = java.io.File(cacheDir, "part_video_$i.mp4")
-                    
-                    var audioDuration = 0.0
-                    try {
-                        val mmr = android.media.MediaMetadataRetriever()
-                        mmr.setDataSource(wavFile.absolutePath)
-                        val durationStr = mmr.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
-                        if (durationStr != null) {
-                            audioDuration = durationStr.toLong() / 1000.0
-                        }
-                        mmr.release()
-                    } catch (e: Throwable) {
-                        e.printStackTrace()
-                    }
-                    
-                    val afadeFilter = if (audioDuration > 0.4) {
-                        "afade=t=in:ss=0:d=0.2,afade=t=out:st=${audioDuration - 0.2}:d=0.2"
-                    } else {
-                        "afade=t=in:ss=0:d=0.1"
-                    }
-
-                    val cmdList = mutableListOf<String>()
-                    cmdList.add("-loop")
-                    cmdList.add("1")
-                    cmdList.add("-i")
-                    cmdList.add(if (partImageFile.exists()) partImageFile.absolutePath else sourceImage.absolutePath)
-                    cmdList.add("-i")
-                    cmdList.add(wavFile.absolutePath)
-                    if (videoEqualizerEnabled.value) {
-
-                        val eqStyle = videoEqualizerStyle.value
-
-                        val eqH = targetH / 5
-
-                        val eqFilter = when (eqStyle) {
-
-                            "Neon Bars" -> "showfreqs=s=${targetW}x${eqH}:mode=bar:colors=cyan|magenta|blue"
-
-                            "Spectrum Wave" -> "showwaves=s=${targetW}x${eqH}:mode=cline:colors=white"
-
-                            "Minimal Dots" -> "showfreqs=s=${targetW}x${eqH}:mode=dot:colors=white"
-
-                            else -> "showwaves=s=${targetW}x${eqH}:mode=cline:colors=white"
-
-                        }
-
-                        cmdList.add("-filter_complex")
-
-                        cmdList.add("[0:v]$resolutionFilter,setdar=$dar,format=yuv420p[bg];[1:a]$eqFilter[eq];[bg][eq]overlay=0:H-h[outv]")
-
-                        cmdList.add("-map")
-
-                        cmdList.add("[outv]")
-
-                        cmdList.add("-map")
-
-                        cmdList.add("1:a")
-
-                    } else {
-
-                        cmdList.add("-vf")
-
-                        cmdList.add("$resolutionFilter,setdar=$dar,format=yuv420p")
-
-                    }
-                    cmdList.add("-c:v")
-                    cmdList.add("libx264")
-                    cmdList.add("-preset")
-                    cmdList.add("ultrafast")
-                    cmdList.add("-crf")
-                    cmdList.add("28")
-                    cmdList.add("-c:a")
-                    cmdList.add("aac")
-                    cmdList.add("-b:a")
-                    cmdList.add("128k")
-                    cmdList.add("-af")
-                    cmdList.add(afadeFilter)
-                    cmdList.add("-shortest")
-                    cmdList.add("-y")
-                    cmdList.add(partVideoFile.absolutePath)
-                    
-                    videoGenerationLogs.value += "[FFmpeg] Executing command for Part ${i + 1}...\n"
-                    val returnCode = io.microshow.rxffmpeg.RxFFmpegInvoke.getInstance().runCommand(cmdList.toTypedArray(), null)
-                    
-                    if (returnCode == 0) {
-                        videoGenerationLogs.value += "[FFmpeg] Part ${i + 1} generated successfully!\n"
-                        finalParts.add(partVideoFile)
-                    } else {
-                        videoGenerationLogs.value += "\n❌ FFmpeg execution failed for part ${i + 1} with rc ${returnCode}.\n"
-                    }
-                    videoGenerationProgress.value = (i + 0.5f) / (wavFiles.size + 1)
-                }
-                
-                if (finalParts.isNotEmpty()) {
-                    videoGenerationLogs.value += "\n--- Merging Video Parts ---\n"
-                    val concatFile = java.io.File(cacheDir, "concat_parts.txt")
-                    val concatWriter = concatFile.bufferedWriter()
-                    for (part in finalParts) {
-                        concatWriter.write("file '${part.absolutePath}'\n")
-                    }
-                    concatWriter.close()
-                    
-                    val cmdList = mutableListOf<String>()
-                    cmdList.add("-f")
-                    cmdList.add("concat")
-                    cmdList.add("-safe")
-                    cmdList.add("0")
-                    cmdList.add("-i")
-                    cmdList.add(concatFile.absolutePath)
-                    cmdList.add("-c")
-                    cmdList.add("copy")
-                    cmdList.add("-y")
-                    cmdList.add(finalOutputFile.absolutePath)
-                    
-                    val returnCode = io.microshow.rxffmpeg.RxFFmpegInvoke.getInstance().runCommand(cmdList.toTypedArray(), null)
-                    if (returnCode == 0) {
-                        videoGenerationLogs.value += "\n✅ Final Video generation complete!\n"
-                        
-                        // Copy to MediaStore
-                        try {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                                val resolver = context.contentResolver
-                                val contentValues = android.content.ContentValues().apply {
-                                    put(android.provider.MediaStore.Downloads.DISPLAY_NAME, filename)
-                                    put(android.provider.MediaStore.Downloads.MIME_TYPE, "video/mp4")
-                                    put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-                                }
-                                val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-                                if (uri != null) {
-                                    resolver.openOutputStream(uri)?.use { out ->
-                                        finalOutputFile.inputStream().use { input ->
-                                            input.copyTo(out)
-                                        }
-                                    }
-                                    videoGenerationLogs.value += "Output saved to Downloads/$filename\n"
-                                    if (videoExportSrt.value && wavFiles.isNotEmpty()) {
-
-                                        val srtContent = generateSrtForWavFiles(wavFiles, folder = selectedTrack?.filePath?.let { java.io.File(it) })
-
-                                        videoGeneratedSrtContent.value = srtContent
-
-                                        if (srtContent != null) {
-
-                                            try {
-
-                                                val srtFilename = filename.replace(".mp4", ".srt")
-
-                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-
-                                                    val resolver = context.contentResolver
-
-                                                    val contentValues = android.content.ContentValues().apply {
-
-                                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, srtFilename)
-
-                                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
-
-                                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    }
-
-                                                    val srtUri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-
-                                                    if (srtUri != null) {
-
-                                                        resolver.openOutputStream(srtUri)?.use { out ->
-
-                                                            out.write(srtContent.toByteArray())
-
-                                                        }
-
-                                                        videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                    }
-
-                                                } else {
-
-                                                    val dDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    val srtFile = java.io.File(dDir, srtFilename)
-
-                                                    srtFile.writeText(srtContent)
-
-                                                    videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                }
-
-                                            } catch (e: Exception) {
-
-                                                videoGenerationLogs.value += "Error saving SRT: ${e.message}\n"
-
-                                            }
-
-                                        }
-
-                                    }
-                                } else {
-                                    videoGenerationLogs.value += "Error: Could not save to MediaStore.\n"
-                                }
-                            } else {
-                                val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-                                if (!downloadsDir.exists()) downloadsDir.mkdirs()
-                                val destFile = java.io.File(downloadsDir, filename)
-                                finalOutputFile.copyTo(destFile, overwrite = true)
-                                videoGenerationLogs.value += "Output saved to Downloads/$filename\n"
-                                    if (videoExportSrt.value && wavFiles.isNotEmpty()) {
-
-                                        val srtContent = generateSrtForWavFiles(wavFiles, folder = selectedTrack?.filePath?.let { java.io.File(it) })
-
-                                        videoGeneratedSrtContent.value = srtContent
-
-                                        if (srtContent != null) {
-
-                                            try {
-
-                                                val srtFilename = filename.replace(".mp4", ".srt")
-
-                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-
-                                                    val resolver = context.contentResolver
-
-                                                    val contentValues = android.content.ContentValues().apply {
-
-                                                        put(android.provider.MediaStore.Downloads.DISPLAY_NAME, srtFilename)
-
-                                                        put(android.provider.MediaStore.Downloads.MIME_TYPE, "text/plain")
-
-                                                        put(android.provider.MediaStore.Downloads.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    }
-
-                                                    val srtUri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-
-                                                    if (srtUri != null) {
-
-                                                        resolver.openOutputStream(srtUri)?.use { out ->
-
-                                                            out.write(srtContent.toByteArray())
-
-                                                        }
-
-                                                        videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                    }
-
-                                                } else {
-
-                                                    val dDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-
-                                                    val srtFile = java.io.File(dDir, srtFilename)
-
-                                                    srtFile.writeText(srtContent)
-
-                                                    videoGenerationLogs.value += "Subtitle saved to Downloads/$srtFilename\n"
-
-                                                }
-
-                                            } catch (e: Exception) {
-
-                                                videoGenerationLogs.value += "Error saving SRT: ${e.message}\n"
-
-                                            }
-
-                                        }
-
-                                    }
-                            }
-                        } catch (e: Exception) {
-                            videoGenerationLogs.value += "Error saving video: ${e.message}\n"
-                            e.printStackTrace()
-                        }
-                    } else {
-                        videoGenerationLogs.value += "\n❌ Final merge failed with rc ${returnCode}.\n"
-                    }
-                    
-                    // Delete the temporary final file in cache
-                    try {
-                        if (finalOutputFile.exists()) {
-                            finalOutputFile.delete()
-                        }
-                    } catch (e: Exception) {}
-                } else {
-                    videoGenerationLogs.value += "\n❌ Failed to generate any valid video parts.\n"
-                }
-                videoGenerationProgress.value = 1f
-            } catch (e: Throwable) {
-                videoGenerationLogs.value += "Error generating video: ${e.message}\n"
-            } finally {
-                isGeneratingVideo.value = false
-                stopForegroundService()
-                
-                // Cleanup temporary video files
-                try {
-                    val cacheDir = getApplication<Application>().cacheDir
-                    cacheDir.listFiles()?.forEach { file ->
-                        if (file.name.startsWith("temp_vid_img_") ||
-                            file.name.startsWith("part_image_") ||
-                            file.name.startsWith("part_video_") ||
-                            file.name == "concat_parts.txt") {
-                            file.delete()
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        }
     }
 
     fun cancelDrafting(context: Context, bookId: Int) {
@@ -6221,8 +5053,8 @@ ${chapter.content}
                     
                     var success = false
                     // TTS Logic (similar to assembleAudiobookWithModulation)
-                    if (_ttsEngine.value == "Kitten TTS") {
-                        success = com.example.tts.LocalKittenTtsManager.synthesizeToFile(
+                    if (_ttsEngine.value == "Pocket TTS") {
+                        success = com.example.tts.PocketTtsManager.synthesizeToFile(
                             context = getApplication(),
                             text = text,
                             outputFile = tempSegmentFile,
@@ -6432,9 +5264,9 @@ ${chapter.content}
                         if (tempSegmentFile.exists()) tempSegmentFile.delete()
 
                         var success = false
-                        if (_ttsEngine.value == "Kitten TTS") {
+                        if (_ttsEngine.value == "Pocket TTS") {
                             try {
-                                success = com.example.tts.LocalKittenTtsManager.synthesizeToFile(
+                                success = com.example.tts.PocketTtsManager.synthesizeToFile(
                                     context = getApplication(),
                                     text = text,
                                     outputFile = tempSegmentFile,
@@ -6445,7 +5277,7 @@ ${chapter.content}
                                 )
                             } catch (e: Throwable) {
                                 withContext(Dispatchers.Main) {
-                                    assemblyLogs.value += "❌ Kitten TTS failed for segment $segIndex: ${e.message}\n"
+                                    assemblyLogs.value += "❌ Pocket TTS failed for segment $segIndex: ${e.message}\n"
                                 }
                             }
                         } else if (_ttsEngine.value == "Edge TTS") {

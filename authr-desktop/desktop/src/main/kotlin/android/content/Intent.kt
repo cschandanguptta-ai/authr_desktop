@@ -8,7 +8,11 @@ import android.net.Uri
  *  - ACTION_SENDTO(mailto) -> opens the default desktop mail client
  *  - ACTION_BATTERY_CHANGED-> synthetic sticky intent (desktop = charging/full)
  */
-class Intent private constructor(val action: String?) {
+class Intent(var action: String? = null) {
+
+    /** Component class (desktop: carries the target service class, mirrors Android). */
+    var componentClass: Class<*>? = null
+        private set
 
     var type: String? = null
         private set
@@ -16,12 +20,11 @@ class Intent private constructor(val action: String?) {
         private set
     var `package`: String? = null
         private set
-    private val extras = android.os.Bundle()
+    internal val extras = android.os.Bundle()
     private val categories = LinkedHashSet<String>()
 
-    constructor() : this(null)
-    constructor(action: String?) : this(action as String?)
     constructor(action: String?, uri: Uri) : this(action) { data = uri }
+    constructor(context: android.content.Context?, cls: Class<*>) : this(null) { componentClass = cls }
 
     fun setAction(action: String?): Intent { return Intent(action).also { it.extras.putAll(this.extras); it.data = this.data; it.type = this.type } }
     fun setType(type: String?): Intent { this.type = type; return this }

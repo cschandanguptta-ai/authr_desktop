@@ -18,6 +18,21 @@ data class Book(
     val isSerialized: Boolean = false,
     val targetChapters: Int = 0,
     val releaseSchedule: String = "Mon/Wed/Fri",
+    // --- Serialization profile (v3.0 schema v2, plan §6.12 / Table 21; Appendix A) ---
+    // NOTE (migration): these columns carry SQL DEFAULT clauses in
+    // MIGRATION_14_15, but deliberately declare no @ColumnInfo defaultValue:
+    // Room's schema validation strictly enforces entity-declared defaults,
+    // while tolerating database-side defaults (TableInfo.equalsCommon). The
+    // Kotlin defaults below govern every Room write, so behavior is identical.
+    /** Free tier size; conversion gates bound to it. */
+    val freeTierChapters: Int = 5,
+    /** Advisory chapter envelope, adjustable per genre and platform. */
+    val wordMin: Int = 1000,
+    val wordMax: Int = 2000,
+    /** Buffer meter target (4-8 range, plan §6.10). */
+    val bufferTarget: Int = 8,
+    /** Default platform export profile (plan §6.13). */
+    val exportProfile: String = "royal_road",
     val compiledManuscript: String = "",
     val currentPhase: String = "Outlining",
     val storyBible: String = "",

@@ -76,7 +76,7 @@ private val authrLogoVector: ImageVector by lazy {
 @Composable
 fun painterResource(id: Int): Painter {
     return when (id) {
-        0x7f080001 -> remember { rememberVectorPainter(authrLogoVector) }
+        0x7f080001 -> rememberVectorPainter(authrLogoVector)
         else -> error("Unknown drawable id $id")
     }
 }

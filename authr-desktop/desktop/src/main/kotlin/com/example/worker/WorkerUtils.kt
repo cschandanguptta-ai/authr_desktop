@@ -69,5 +69,5 @@ fun isNetworkConnected(context: android.content.Context): Boolean {
     val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return false
     val activeNetwork = cm.activeNetwork ?: return false
     val capabilities = cm.getNetworkCapabilities(activeNetwork) ?: return false
-    return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    return capabilities.hasCapability(android.net.ConnectivityManager.NET_CAPABILITY_INTERNET)
 }

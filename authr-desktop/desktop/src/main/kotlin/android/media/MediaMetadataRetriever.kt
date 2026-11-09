@@ -102,7 +102,7 @@ class MediaMetadataRetriever {
                 if (header == null) null
                 else {
                     // trim is not perfect for VBR but exact for the CBR TTS outputs
-                    val ms = file.length().toDouble() / (header.bitrate / 8.0) * 1000.0
+                    val ms = file.length().toDouble() / (header.bitrate() / 8.0) * 1000.0
                     bitstream.close()
                     ms.toLong()
                 }

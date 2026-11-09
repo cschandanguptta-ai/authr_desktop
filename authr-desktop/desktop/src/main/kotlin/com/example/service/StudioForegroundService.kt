@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import android.content.pm.ServiceInfo
-import android.annotation.SuppressLint
 
 class StudioForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
@@ -26,7 +25,6 @@ class StudioForegroundService : Service() {
         }
     }
 
-    @SuppressLint("WrongConstant")
     @Suppress("DEPRECATION")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "STOP") {

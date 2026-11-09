@@ -2429,7 +2429,7 @@ modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
 
         Dialog(
             onDismissRequest = { showCreateDialog = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+            properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Card(
                 modifier = Modifier
@@ -3912,7 +3912,7 @@ modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
                                         .horizontalScroll(rememberScrollState()),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    listOf("Android", "Kitten TTS", "Cloud HuggingFace TTS", "Edge TTS").forEach { engine ->
+                                    listOf("Android", "Pocket TTS", "Cloud HuggingFace TTS", "Edge TTS").forEach { engine ->
                                         FilterChip(
                                             selected = ttsEngine == engine,
                                             onClick = { viewModel.setTtsEngine(engine) },
@@ -3938,7 +3938,7 @@ modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
                                     ) {
                                         val (infoIcon, infoText) = when (ttsEngine) {
                                             "Android" -> Icons.Default.Android to "Uses your device's built-in Text-to-Speech system. Works completely offline, fast, and light on resources."
-                                            "Kitten TTS" -> Icons.Default.PhonelinkRing to "Uses a local on-device neural model. Offers completely private, 100% offline speech synthesis!"
+                                            "Pocket TTS" -> Icons.Default.PhonelinkRing to "Runs the local Pocket TTS engine: 100% offline synthesis in real time on CPU, private, with narrator voice cloning from a short WAV reference."
                                             "Edge TTS" -> Icons.Default.CloudQueue to "Uses high-quality Microsoft Edge cloud voices. Completely free to use with no API key required (requires internet)."
                                             else -> Icons.Default.SettingsApplications to "Uses Hugging Face inference endpoints. Highly customizable with cutting-edge neural speech models (requires internet and API key)."
                                         }

@@ -28,7 +28,7 @@ class AndroidTtsManager(
 
         if (hasVoxSherpa) {
             Log.i("AndroidTtsManager", "VoxSherpa engine detected. Initializing with com.CodeBySonu.VoxSherpa.")
-            tts = TextToSpeech(context, { status ->
+            tts = TextToSpeech(context, "com.CodeBySonu.VoxSherpa") { status ->
                 if (status == TextToSpeech.SUCCESS) {
                     isInitialized = true
                     isVoxSherpaActive = true
@@ -38,7 +38,7 @@ class AndroidTtsManager(
                     Log.e("AndroidTtsManager", "VoxSherpa TTS Initialization failed! Falling back to default.")
                     initializeDefaultTts()
                 }
-            }, "com.CodeBySonu.VoxSherpa")
+            }
         } else {
             initializeDefaultTts()
         }

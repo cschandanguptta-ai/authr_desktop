@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.WriterGateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-09T12:20:46.102Z" hostname="c-6af184ee-14127d0f-5aa13d3776bd" time="0.004">
+  <properties/>
+  <testcase name="only writer-confirmed chapters are canon" classname="com.example.WriterGateTest" time="0.002"/>
+  <testcase name="unconfirmed text never reaches ledger or export consumers" classname="com.example.WriterGateTest" time="0.001"/>
+  <testcase name="proposed drafts queue for review" classname="com.example.WriterGateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

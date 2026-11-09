@@ -33,7 +33,7 @@ abstract class Context {
 
     val packageManager: PackageManager by lazy { PackageManager() }
 
-    val resources: res.Resources by lazy { res.Resources() }
+    val resources: android.content.res.Resources by lazy { android.content.res.Resources() }
 
     private val prefsCache = HashMap<String, SharedPreferences>()
     private val clipboardManager by lazy { DesktopClipboardManager() }
@@ -123,9 +123,9 @@ abstract class Context {
         try {
             java.awt.Desktop.getDesktop().let { desktop ->
                 when {
-                    java.awt.Desktop.Action.BROWSE in desktop.supportedActions && (uri.scheme == "http" || uri.scheme == "https") ->
+                    desktop.isSupported(java.awt.Desktop.Action.BROWSE) && (uri.scheme == "http" || uri.scheme == "https") ->
                         desktop.browse(javaUri)
-                    java.awt.Desktop.Action.MAIL in desktop.supportedActions && uri.scheme == "mailto" ->
+                    desktop.isSupported(java.awt.Desktop.Action.MAIL) && uri.scheme == "mailto" ->
                         desktop.mail()
                     else -> android.util.Log.w("Context", "Unsupported desktop action for $uri")
                 }
@@ -137,7 +137,12 @@ abstract class Context {
 
     fun startForegroundService(intent: Intent) {
         // Desktop apps are always foreground; the notification shim handles visibility.
-        android.util.Log.d("Context", "startForegroundService -> ${intent.component ?: intent.action}")
+        android.util.Log.d("Context", "startForegroundService -> ${intent.action}")
+    }
+
+    fun startService(intent: Intent): Boolean {
+        android.util.Log.d("Context", "startService -> ${intent.action ?: intent.componentClass?.name}")
+        return true
     }
 
     fun stopService(intent: Intent): Boolean {

@@ -10,7 +10,10 @@ import java.awt.RenderingHints
  * AWT-backed; supports the exact drawing operations the app performs
  * (solid fills, bitmaps and wrapped text via android.text.StaticLayout).
  */
-class Paint {
+open class Paint {
+    // @set:JvmName avoids the JVM platform clash with the setColor(Int) helper below
+    // (Kotlin property syntax `paint.color = x` is unaffected).
+    @set:JvmName("setColorField")
     var color: Int = 0xFF000000.toInt()
     var textSize: Float = 14f
     var isAntiAlias: Boolean = true
@@ -31,7 +34,7 @@ class Paint {
         val fm = fontMetrics()
         return fm.stringWidth(text).toFloat()
     }
-    fun ascent(): Float = -fontMetrics().ascent
+    fun ascent(): Float = -fontMetrics().ascent.toFloat()
     fun descent(): Float = fontMetrics().descent.toFloat()
 
     fun fontMetrics(): java.awt.FontMetrics {

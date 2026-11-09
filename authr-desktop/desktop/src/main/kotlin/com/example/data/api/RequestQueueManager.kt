@@ -185,7 +185,7 @@ object RequestQueueManager {
             val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
             val activeNetwork = connectivityManager?.activeNetwork
             val networkCapabilities = connectivityManager?.getNetworkCapabilities(activeNetwork)
-            val isWifi = networkCapabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ?: false
+            val isWifi = networkCapabilities?.hasTransport(android.net.ConnectivityManager.TRANSPORT_WIFI) ?: false
 
             // 3. Check Thermal state (Android 10+ / API 29+)
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager

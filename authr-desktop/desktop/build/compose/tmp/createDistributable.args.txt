@@ -1,0 +1,32 @@
+--input
+"/home/z/my-project/authr-desktop/desktop/build/compose/tmp/createDistributable/libs"
+--runtime-image
+"/home/z/my-project/authr-desktop/desktop/build/compose/tmp/main/runtime"
+--resource-dir
+"/home/z/my-project/authr-desktop/desktop/build/compose/tmp/resources"
+--java-options
+"'-Dcompose.application.resources.dir=$APPDIR/resources'"
+--main-jar
+"desktop-b011afe6112448824de4abeda807b44.jar"
+--main-class
+"com.example.MainKt"
+--icon
+"/home/z/my-project/authr-desktop/desktop/build/compose/default-resources/1.9.3/default-icon-linux.png"
+--java-options
+"'-Dcompose.application.configure.swing.globals=true'"
+--java-options
+"'-Dskiko.library.path=$APPDIR'"
+--type
+"app-image"
+--dest
+"/home/z/my-project/authr-desktop/desktop/build/compose/binaries/main/app"
+--name
+"AuthrOS"
+--description
+"Authr: The Autonomous Author Operating System - Desktop Edition"
+--copyright
+"© 2026 Authr OS. All rights reserved."
+--app-version
+"3.0.0"
+--vendor
+"Authr OS"

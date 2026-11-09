@@ -249,7 +249,7 @@ class SettingsViewModel(
                 var freedBytes = 0L
                 val cacheDir = context.cacheDir
                 cacheDir.walkTopDown().forEach { file ->
-                    if (file.isFile && (file.extension.equals("wav", ignoreCase = true) || file.name.startsWith("tts_") || file.name.startsWith("kittentts_"))) {
+                    if (file.isFile && (file.extension.equals("wav", ignoreCase = true) || file.name.startsWith("tts_") || file.name.startsWith("pockettts_"))) {
                         freedBytes += file.length()
                         file.delete()
                     }

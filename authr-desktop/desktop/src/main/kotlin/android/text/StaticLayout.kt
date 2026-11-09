@@ -48,7 +48,7 @@ class StaticLayout private constructor(
         val measurer = LineBreakMeasurer(AttributedString(text, mapOf(
             java.awt.font.TextAttribute.FONT to font
         )).iterator, frc)
-        while (measurer.nextOffset.let { measurer.position < text.length }) {
+        while (measurer.position < text.length) {
             val next = measurer.nextOffset(width.toFloat())
             val start = measurer.position
             val line = text.substring(start, next.coerceAtMost(text.length))

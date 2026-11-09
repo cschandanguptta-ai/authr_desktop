@@ -644,7 +644,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf("Android", "Kitten TTS", "Cloud HuggingFace TTS", "Edge TTS").forEach { engine ->
+                    listOf("Android", "Pocket TTS", "Cloud HuggingFace TTS", "Edge TTS").forEach { engine ->
                         FilterChip(
                             selected = selectedTtsEngine == engine,
                             onClick = { 
@@ -708,7 +708,7 @@ fun SettingsScreen(
                 ) {
                     val (infoIcon, infoText) = when (selectedTtsEngine) {
                         "Android" -> Icons.Default.Android to "Uses your device's built-in Text-to-Speech system. Works completely offline, fast, and light on resources."
-                        "Kitten TTS" -> Icons.Default.PhonelinkRing to "Uses a local on-device neural model. Offers completely private, 100% offline speech synthesis!"
+                        "Pocket TTS" -> Icons.Default.PhonelinkRing to "Runs the local Pocket TTS engine on this machine: 100% offline, private, real-time on CPU, with narrator voice cloning from a short WAV reference. Optional on Android as a downloadable model pack."
                         "Edge TTS" -> Icons.Default.CloudQueue to "Uses high-quality Microsoft Edge cloud voices. Completely free to use with no API key required (requires internet)."
                         else -> Icons.Default.SettingsApplications to "Uses Hugging Face inference endpoints. Highly customizable with cutting-edge neural speech models (requires internet and API key)."
                     }
@@ -1644,7 +1644,7 @@ fun SettingsScreen(
                     leadingContent = { Icon(Icons.Default.Email, contentDescription = null) },
                     modifier = Modifier.clickable { 
                         val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                            data = android.net.Uri.parse("mailto:support@audionovelstudio.com")
+                            setData(android.net.Uri.parse("mailto:support@audionovelstudio.com"))
                             putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback for Authr OS")
                         }
                         try {

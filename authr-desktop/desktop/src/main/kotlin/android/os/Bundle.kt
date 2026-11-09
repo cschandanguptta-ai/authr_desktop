@@ -29,7 +29,7 @@ class Bundle {
     fun keySet(): Set<String> = map.keys
     fun remove(key: String) { map.remove(key) }
     fun clear() { map.clear() }
-    fun isEmpty: Boolean = map.isEmpty()
+    fun isEmpty(): Boolean = map.isEmpty()
 
     fun putAll(bundle: Bundle) { map.putAll(bundle.map) }
 
