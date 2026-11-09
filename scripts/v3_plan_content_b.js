@@ -1,6 +1,6 @@
-// Section 6: Web Novel Serialization Format (both modes) — the Rev 2 headline feature
+// Section 6: Web Novel Serialization Format (both modes) — encoded from
+// SERIALIZED FICTION BLUEPRINT 2.0 (retention through attachment, not cliffhangers alone)
 "use strict";
-const path = require("path");
 const { h1, h2, p, tbl } = require("./v3_plan_lib");
 
 function build() {
@@ -8,150 +8,284 @@ function build() {
 
   out.push(h1("6. Web Novel Serialization Format (Both Modes)"));
   out.push(p(
-    "Serialized fiction is a distinct economic product: readers pay per chapter in a micro-transaction loop, discover the story through a free opening tier, and stay through cadence and habit. The Serialized Fiction Blueprint supplied with this revision specifies the structural, pacing, and retention mechanics of that model in implementable detail; v3.0 encodes the blueprint as a **project format** (section 9) with a **validator suite**, a **cliffhanger rotation tracker**, a **micro-arc planner**, and a **retention toolkit**, all available in **both workspaces**. The serialization surface is deterministic and local: the LLM drafts chapters, but every structural rule in this section is checked by code, not by the model's discretion."
+    "Serialized fiction is a distinct economic product: readers pay per chapter in a micro-transaction loop, discover the story through a free opening tier, and stay through cadence and habit. The **Serialized Fiction Blueprint 2.0** supplied with this revision specifies the structural, pacing, and retention mechanics of that model in implementable detail, and it is materially different from the 1.0 draft Rev 1 referenced: its core principle is that retention is built through **character attachment, narrative progression, emotional investment, suspense, and meaningful payoffs — not through cliffhangers alone**. v3.0 encodes Blueprint 2.0 as a **project format** (section 9) with a validator suite, a pre-draft worksheet, a pre-publication scorecard, a micro-arc planner, and a retention toolkit, all available in **both workspaces**. Every structural rule in this section is checked by deterministic local code; the LLM drafts, but code decides what passes."
   ));
   out.push(p(
-    "The format extends what v2.3 already seeds. The Book entity carries isSerialized, targetChapters (default 100), and releaseSchedule (default \u201cMon/Wed/Fri\u201d), and the Outline and Drafting workers already branch on isSerialized. Section 6.7 defines the full field set; Appendix A carries the DDL."
+    "The format extends what v2.3 already seeds. The Book entity carries isSerialized, targetChapters (default 100), and releaseSchedule (default \u201cMon/Wed/Fri\u201d), and the Outline and Drafting workers already branch on isSerialized. Section 6.12 defines the full field set; Appendix A carries the DDL."
   ));
 
-  out.push(h2("6.1 Free Tier and the Hook (Chapters 1–5)"));
+  // ── 6.1 Core principle ────────────────────────────────────────────────────
+  out.push(h2("6.1 The Core Retention Principle"));
   out.push(p(
-    "The free tier has one objective: **conversion velocity**. The writer must build a large information deficit before the reader reaches the paywall, and the application must measure that deficit mechanically. Three structural benchmarks and two continuous pacing checks are enforced on free-tier chapters; each produces a warning in the Studio rail and a blocking error only at chapter export if the writer has not addressed or dismissed it with a note."
+    "Blueprint 2.0 opens with a contract every serial chapter must satisfy, and v3.0 makes it the first screen of the serial workspace so the writer sees it on every chapter card. **Every chapter must (1) give the reader something worthwhile for the time invested, (2) change the situation, understanding, relationships, or stakes, and (3) create a compelling reason to continue reading.** These three duties are enforced at three different points: duty 1 and 2 are scored by the pre-publication scorecard (6.9), and duty 3 is the ending check (6.4). The principle also disciplines the product itself: nothing in the serialization tooling is allowed to push the writer toward shock-value endings at the expense of narrative credibility — the blueprint's ultimate rules (6.9) appear verbatim in the export pre-flight dialog."
+  ));
+
+  // ── 6.2 Opening strategy ──────────────────────────────────────────────────
+  out.push(h2("6.2 Opening Strategy: Capturing the Reader (Chapters 1\u20135)"));
+  out.push(p(
+    "The opening benchmark in Blueprint 2.0 is deliberately softer than the 1.0 draft's hard 200-word rule: introduce a compelling source of interest within the **first 200\u2013400 words**, and avoid opening with extended geography, history, family background, or fictional-system exposition unless it directly serves the immediate scene. The hook validator therefore scans the opening span for any of **seven acceptable sources of interest** — a disturbing or unusual event; an urgent problem; a character pursuing something important; an unexpected confrontation; a mystery that challenges the reader's assumptions; a powerful emotional situation; an intriguing voice or unusual narrative perspective — and flags openings that run on pure description. The drafting rule is encoded into the L4 prompt for chapter one: begin with a character experiencing, pursuing, or confronting something that matters, letting world-building emerge through action and observation."
   ));
   out.push(...tbl(
-    "Free-tier structural benchmarks and their validators",
-    ["Benchmark", "Rule (blueprint)", "Validator implementation", "Failure signal"],
+    "Free-tier phase requirements and validators (Blueprint 2.0, Part 1)",
+    ["Phase", "Requirement", "Validator / tooling"],
     [
-      ["The 200-word hook", "The inciting disruption or acute tension must be established within the first 200 words of Chapter 1; extended world-building up front is a high churn risk", "Hook detector scans the first 200 words for tension markers (threat verbs, stakes nouns, conflicting dialogue); a text dominated by setting description flags **high churn risk**", "Churn-risk badge on Chapter 1; export warning until a tension marker is present or the writer dismisses with a note"],
-      ["Inciting incident window", "The inciting incident must occur squarely in Chapter 1 — serialization cannot delay it the way a novel may", "Beat-map check on the approved L2 outline: Chapter 1 must contain the inciting beat", "Outline cannot be approved for a serial without an inciting beat in Chapter 1"],
-      ["Paywall cliffhanger placement", "The final free chapter must end precisely one beat **before** a structural payoff (a revealed answer, a collision, an impact)", "Paywall linter: the last free chapter must contain a cliffhanger signature in its final 50 words and must **not** contain the payoff beat marked in the outline", "Blocking warning at chapter export if the payoff beat is detected inside the free tier"],
-      ["Exposition pacing warning", "Chapters 1–2 must not run more than 300 consecutive words of exposition or narration without dialogue or action", "Paragraph-run analyzer over confirmed text; counts consecutive narration words between dialogue/action beats", "Inline pacing warning in the Studio rail with the offending run highlighted"],
-      ["Cliffhanger signature check", "Chapters 4–5 should carry a high-density cliffhanger signature approaching the paywall", "Final-50-words density check: question marks, interrupted dialogue (em-dash cutoffs), abrupt action verbs", "Missing-signature info hint on chapters 4–5 of the free tier"],
+      ["Chapter 1 — story promise", "Five goals: introduce the protagonist; establish the immediate situation; introduce a conflict, disruption, or compelling objective; give the reader a reason to care; create an unanswered question that encourages further reading. The reader must understand what kind of story they are entering; backstory and mythology arrive progressively", "Hook validator (200\u2013400-word scan against the seven sources of interest); outline gate: Chapter 1 must carry the inciting beat before the L2 outline can be approved for a serial"],
+      ["Chapters 2\u20133 — build investment", "Do not spend two chapters explaining the world. Show the protagonist responding to the initial conflict; introduce consequences and complications; establish important relationships; reveal strengths, weaknesses, and motivations; give an immediate objective; introduce an obstacle not easily overcome. By the end of Chapter 3 the central narrative direction is understood even if the larger mystery is not", "Exposition-run check (flags long narration stretches without dialogue or action); investment card listing the six responses, confirmed per chapter"],
+      ["Chapters 4\u20135 — strengthen the conversion point", "At least one substantial development: an unexpected revelation; a significant victory with an unforeseen cost; a confrontation that changes a relationship; a major complication; a decision that changes direction; a new understanding of the central conflict", "Substantial-development check against the chapter's confirmed beats; the free-to-paid principle below is a hard gate on the final free chapter"],
+      ["Free-to-paid transition principle", "Do not deliberately withhold an easily deliverable payoff merely to force payment. Instead, resolve an important part of the opening conflict and introduce a more consequential development — the reader must feel the story rewarded their investment and that the next chapter offers genuinely valuable continuation", "**Anti-withholding gate:** the final free chapter must contain a confirmed payoff beat resolving part of the opening conflict, plus the seed of a more consequential development. This is the inverse of the Rev 1 paywall-cliffhanger rule, which Blueprint 2.0 replaces"],
     ],
-    [16, 26, 32, 26]
+    [16, 42, 42]
   ));
 
-  out.push(h2("6.2 Premium Chapter Anatomy: the 10/70/20 Cycle"));
+  // ── 6.3 Seven-beat chapter model ──────────────────────────────────────────
+  out.push(h2("6.3 The Seven-Beat Chapter Model"));
   out.push(p(
-    "Once a reader pays, each chapter is a self-contained unit of persuasion. The blueprint fixes the internal economy of a premium chapter: **10% immediate resolution, 70% progressive complication, 20% the new horizon**, inside a word envelope of **1,000–2,000 words** — sized for mobile reading in short breaks, where long chapters read as an exhausting investment and very short ones as low value. The L4 drafter receives the anatomy as a structural prompt (it drafts toward the cycle), and the anatomy meter verifies the result on confirmed text."
+    "Blueprint 2.0 replaces the 1.0 draft's fixed 10/70/20 anatomy with a **seven-beat model** — a flexible narrative progression, not a rigid template. The beats are functions of the chapter, not mandatory scene divisions: a beat may occupy one line or half the chapter, and quiet chapters may weight them very differently. L3 beat cards for serial chapters are pre-seeded with the seven beats as prompts, and the coverage checker verifies on confirmed text that each function is performed somewhere in the chapter; missing functions raise a warning the writer can address or waive with a note."
   ));
   out.push(...tbl(
-    "Serial chapter anatomy (10/70/20) and its validators",
-    ["Segment", "Share", "Function (blueprint)", "Validator on confirmed text"],
+    "The seven chapter beats (Blueprint 2.0, Part 2) and coverage checks",
+    ["Beat", "Function", "Coverage check on confirmed text"],
     [
-      ["Immediate resolution", "10%", "Resolve the previous chapter's cliffhanger tension while inheriting its underlying consequences", "Opening-segment checker: the prior chapter's dangling beat must be referenced within the first tenth of the word count"],
-      ["Progressive complication", "70%", "Advance plot or subplot with new friction, new data points, or shifting interpersonal dynamics", "Beat coverage: at least one new complication beat confirmed in the chapter's beat card; the linter warns when the middle span contains no conflict marker"],
-      ["The new horizon", "20%", "Pivot the scene toward a sudden obstacle or revelation that builds the next cliffhanger", "Final-fifth signature check: a cliffhanger signal must be present in the last fifth of the chapter"],
-      ["Word envelope", "—", "1,000–2,000 words per chapter", "Hard prompt constraint at L4; export-time warning outside 900–2,200; the meter shows the deviation"],
+      ["1. Opening continuity", "Reconnect the reader with the immediate situation; continue the previous chapter's tension without unnecessary repetition", "Previous chapter's ending state referenced within the opening span; recap-phrase detector flags repetition of already-established information"],
+      ["2. Immediate objective", "Establish what the viewpoint character wants to accomplish this chapter — physical, emotional, relational, or informational", "Objective statement detected or confirmed from the worksheet (6.8); the QC scorecard scores its clarity"],
+      ["3. Resistance", "Introduce an obstacle, conflicting intention, unexpected development, or internal struggle", "Conflict markers present in the middle span; absence flags a tension gap"],
+      ["4. Escalation", "Increase difficulty or consequences — the situation must become more complicated, not simply repeat the original problem", "Escalation beat tracked against the complication list; \u201csame problem restated\u201d heuristic warns"],
+      ["5. Turning point", "An important discovery, decision, confrontation, reversal, or change in understanding", "Turning-point beat confirmed in the beat card; revelation quality checked against 6.7 criteria"],
+      ["6. Chapter payoff", "Deliver a meaningful result — success, failure, compromise, discovery, or consequence. Something must change", "Payoff beat present and linked to the chapter's question list; **zero on this function is a hard scorecard trigger (6.9)**"],
+      ["7. Forward pull", "End with a new question, looming consequence, decision, revelation, or unresolved emotional situation", "Ending check (6.4) verifies the closing signal; quiet endings are explicitly permitted"],
     ],
-    [18, 8, 34, 40]
-  ));
-
-  out.push(h2("6.3 The Four-Tier Cliffhanger Rotation Matrix"));
-  out.push(p(
-    "Repetitive formulaic endings fatigue readers. The blueprint requires rotating through four specific emotional and structural triggers at chapter ends. v3.0 implements the rotation as a **tracked plan**: each serial chapter carries an intended tier, the Annotator's cliffhanger-signal check verifies the tier's signature in the final 50 words, and the rotation tracker suggests the least-recently-used tier when the writer plans the next chapter. Repeating the same tier within three chapters raises a **fatigue warning** — dismissable, because the writer, not the tracker, owns the ending. The suggested default wheel order is Danger → Emotion → Mystery → Cost, but any order the writer plans is legal; only repetition is flagged."
+    [16, 42, 42]
   ));
   out.push(...tbl(
-    "Cliffhanger rotation matrix (tier catalogue)",
-    ["Tier", "Trigger", "Mechanism (blueprint)", "Example ending from the blueprint", "Signature signals"],
+    "Recommended narrative balance (advisory bands, not rigid percentages)",
+    ["Segment", "Recommended share", "Advisory behaviour"],
     [
-      ["DANGER", "Physical", "A character in immediate life-threatening jeopardy or trapped in an escalating tactical conflict", "\u201cThe floorboards gave way, and before he could reach for the ledge, darkness swallowed him whole.\u201d", "Impact verbs, falling/motion chains, sensory blackout"],
-      ["EMOTION", "Interpersonal", "A sudden realization, romantic breakthrough, or devastating betrayal that upends character dynamics", "\u201cShe looked into the eyes of her protector and realized he was the one who signed her execution warrant.\u201d", "Realization verbs, relationship nouns, betrayal vocabulary"],
-      ["MYSTERY", "Informational", "A hidden artifact, an inexplicable clue, or a revelation that invalidates prior beliefs", "\u201cThe DNA results were clear. He wasn't tracking his brother's killer; he was tracking himself.\u201d", "Discovery nouns, question forms, paradigm-shift phrasing"],
-      ["COST", "Dilemma", "An agonizing, irreversible choice under a ticking clock, with execution deferred to the next chapter", "\u201cHe had ten seconds to choose: drop the antidote to save his sister, or inject it to save the city.\u201d", "Choice frames, countdown/timeline markers, stakes pairs"],
+      ["Opening and continuity (beats 1\u20132)", "10\u201315%", "The balance meter shows the measured share per chapter; deviations are informational, never blocking"],
+      ["Objective, conflict, and escalation (beats 2\u20134)", "50\u201360%", "Same advisory; the blueprint allows substantial deviation for action sequences, emotional confrontations, revelations, or quiet development"],
+      ["Turning point and payoff (beats 5\u20136)", "20\u201325%", "Same advisory"],
+      ["Forward pull (beat 7)", "10\u201315%", "Same advisory"],
+      ["Chapter length", "1,000\u20132,000 words as the initial working range", "Adjustable per project (wordMin/wordMax, 6.12) according to genre expectations, scene count, complexity, emotional intensity, and platform format. Warnings outside the envelope are advisory: do not artificially extend a chapter to hit a count, and do not divide a powerful scene merely to hit a limit. The correct chapter ending is where a meaningful change has occurred and the next unit can begin"],
     ],
-    [10, 12, 26, 32, 20]
+    [30, 20, 50]
   ));
 
-  out.push(h2("6.4 Macro-Arc Architecture: the 10–15 Chapter Micro-Arc"));
+  // ── 6.4 Chapter endings ───────────────────────────────────────────────────
+  out.push(h2("6.4 Chapter Endings: Six Types, Selected Naturally"));
   out.push(p(
-    "Traditional three-act structure fails in serialized ecosystems because the gratification loop is too long. Serials instead chain **rapid, cascading micro-arks** of ten to fifteen chapters. In v3.0 an arc is a first-class object: the micro-arc planner lays out arcs over the book's target chapter count (the v2.3 targetChapters field), each arc declares its localized conflict, and the planner verifies that every arc's bridge plants at least one seed of the next arc's conflict. The structure library (section 8) ships the arc pattern as a plot structure — **Micro-Arc Cascade** — so L2 can plan an entire serial as an arc chain in one pass."
+    "Blueprint 2.0 expands the ending catalogue from four tiers to **six types** and, critically, **prohibits mechanical rotation**: the ending must be selected according to the chapter's dramatic development, must arise naturally from preceding events, and the same high-intensity type must not be used repeatedly. The 1.0 rotation wheel and its least-recently-used suggestion are therefore removed from the design; in their place the ending advisor classifies the closing passage against the six types, tracks type history, and raises a soft fatigue flag only when the same high-intensity type repeats in consecutive chapters. Quiet, reflective, or emotionally satisfying endings are explicitly supported — the classifier recognizes them instead of forcing every chapter into a shock category."
   ));
   out.push(...tbl(
-    "Micro-arc phases (10–15 chapters per arc)",
-    ["Phase", "Chapters", "Function (blueprint)", "Planner checks"],
+    "The six ending types (Blueprint 2.0, Part 3) with signature detection",
+    ["Type", "Mechanism", "Blueprint example", "Signature signals"],
     [
-      ["Setup", "1–3", "Introduce a localized conflict: escaping a specific dungeon, surviving a gala, winning a street race", "Arc conflict statement present; conflict introduced by chapter 3 of the arc"],
-      ["Escalation", "4–8", "Complications, rivals, and shifting parameters that raise the stakes of the localized conflict", "At least two escalation beats confirmed across the span"],
-      ["Micro-climax", "9–12", "High-octane resolution of the localized conflict", "Climax beat marked; cliffhanger tiers avoided immediately before the climax beat"],
-      ["Bridge", "13–15", "Handle fallout, reward characters (micro-payoff), and immediately plant the next localized conflict", "Micro-payoff beat present; at least one next-arc seed planted before arc close"],
+      ["1. Danger", "A character faces physical danger, immediate threat, or an escalating tactical situation", "\u201cThe door burst open. Three armed men entered, and one of them was carrying her missing brother's identification card.\u201d", "Threat nouns, impact verbs, tactical escalation in the closing span"],
+      ["2. Emotional revelation", "A relationship, loyalty, or personal belief is suddenly challenged", "\u201cHe had spent ten years searching for the woman who saved his life. Now she stood before him, asking him to forget that she had ever existed.\u201d", "Relationship nouns, betrayal/recognition vocabulary, belief-challenge frames"],
+      ["3. Mystery or discovery", "An unexpected piece of information changes the reader's understanding", "\u201cThe signature on the original agreement was not the chairman's. It belonged to the person who had supposedly died twenty years earlier.\u201d", "Discovery nouns, information-reversal phrasing, document/detail reveals"],
+      ["4. Irreversible choice", "A character must decide under serious consequences", "\u201cShe could expose the truth and destroy her family, or remain silent and allow an innocent man to take the blame.\u201d", "Choice frames, stakes pairs, consequence vocabulary"],
+      ["5. Reversal", "A seemingly successful plan, victory, or understanding collapses", "\u201cThe witnesses had all confirmed his alibi. Then the prosecutor played the recording.\u201d", "Contrast structures (success marker, then collapse marker)"],
+      ["6. Anticipation", "The reader knows an important confrontation, reunion, discovery, or event is approaching", "\u201cAt midnight, the palace gates would open. For the first time in fifteen years, the two brothers would stand on opposite sides of the same battlefield.\u201d", "Future-time markers, appointment/deadline framing"],
     ],
-    [14, 12, 40, 34]
+    [17, 22, 37, 24]
+  ));
+  out.push(p(
+    "The advisor applies the blueprint's six selection principles as product rules: it never auto-assigns a type; it checks that the ending's stakes are understandable and that the unresolved question matters to the protagonist or central plot; it warns when consecutive high-intensity endings repeat the same type; and it cross-references the promise ledger so endings that promise answers the following chapters do not deliver are surfaced at the next chapter's drafting time. **The objective rule, quoted in the product, is that an effective chapter ending does not always need to shock** — a character's decision, an unexpected emotional realization, or a fulfilled promise is often more compelling."
   ));
 
-  out.push(h2("6.5 Retention Engineering: Cadence, Buffer, and Community"));
+  // ── 6.5 Micro-arc architecture ────────────────────────────────────────────
+  out.push(h2("6.5 Micro-Arc Architecture: the 10\u201315 Chapter Cycle"));
   out.push(p(
-    "Pacing keeps readers inside a chapter; retention mechanics keep them returning week after week. The blueprint fixes three standards and two community mechanics, all of which become local tooling with zero platform dependency."
+    "The micro-arc remains the macro planning unit, but Blueprint 2.0 reshapes its interior: a **Reversal and Pivot** phase now sits between escalation and climax, and every arc carries an explicit **completion requirement**. Arcs are first-class objects (the serial_arcs table, 6.12); the planner lays arcs across the book's targetChapters, each arc declaring its localized conflict, its phase boundaries, and its contribution to the larger novel."
   ));
   out.push(...tbl(
-    "Retention mechanics and their v3.0 features",
-    ["Mechanic", "Standard (blueprint)", "v3.0 feature"],
+    "Micro-arc phases (Blueprint 2.0, Part 4)",
+    ["Phase", "Chapters", "Function", "Planner checks"],
     [
-      ["Velocity", "Minimum 2–3 updates per week; daily during promotional pushes", "Cadence tracker validates the release schedule against released chapters; streak and slip warnings appear on the serial dashboard"],
-      ["Buffer", "Maintain a 4–8 chapter production buffer before and during the run to protect the schedule against burnout or disruption", "Buffer meter: confirmed-but-unreleased chapters count toward the buffer; green at 8+, amber at 4–7, red below 4; Autonomous Studio accepts a \u201cwrite to buffer\u201d target that drafts until the meter is green"],
-      ["Author-note CTAs", "Capitalize on the reader's emotional residue at the bottom of each chapter with a call to action", "Author-note composer attached to every chapter export, with CTA templates (follow, vote, next-chapter teaser) the writer can edit or disable"],
-      ["Native polls", "Deploy mini-polls in end-of-chapter notes (\u201cWho sent the letter? Vote now.\u201d) to gamify community investment without surrendering creative control", "Poll builder: question plus two to four options, stored per chapter; exported inside the author note on platforms that support polls, rendered as a plain-text question elsewhere"],
-      ["Schedule protection", "The buffer exists to protect the schedule, not to replace it", "Release queue: the writer queues confirmed chapters against releaseSchedule dates; the queue view shows what releases when, and warns when the queue runs dry"],
+      ["Objective and setup", "1\u20133", "Establish a localized conflict, the immediate objective, relevant characters and stakes, and an important question", "Conflict statement and question recorded; conflict introduced by chapter 3 of the arc"],
+      ["Escalation", "4\u20137", "Introduce obstacles; develop rivalries and relationships; reveal partial information; create setbacks; increase the consequences of failure", "At least two escalation beats confirmed across the span"],
+      ["Reversal and pivot", "8\u201311", "Reveal information that changes the situation; challenge the protagonist's assumptions; introduce a new tactical or emotional direction; force an important decision", "A reversal beat confirmed in the phase; the pivot links to a new direction in the beat map"],
+      ["Climax and resolution", "12\u201315", "Bring the localized conflict to its decisive confrontation; deliver a meaningful outcome; show consequences; reward the reader with an important payoff; introduce the next narrative objective", "Climax and payoff beats confirmed; next-arc objective seeded before arc close"],
     ],
-    [14, 34, 52]
+    [16, 10, 42, 32]
+  ));
+  out.push(p(
+    "**Completion requirement.** Every micro-arc must answer at least one important question introduced within that arc, and must do at least one of: advance the central story; develop the protagonist; change an important relationship or power dynamic; reveal meaningful information; or introduce a new complication or objective. The arc cannot close while its question ledger shows an unanswered arc-level question, and the ship report for a serial lists every arc's contribution — preventing the fifteen-chapter sequence that reads as unrelated episodes. Exact chapter allocation flexes per story; the phase boundaries are defaults the planner can slide."
   ));
 
-  out.push(h2("6.6 Serialization in Both Modes"));
+  // ── 6.6 Character attachment ───────────────────────────────────────────────
+  out.push(h2("6.6 Character Attachment and Emotional Retention"));
   out.push(p(
-    "Every serialization capability ships in **both workspaces**, with mode-appropriate surfaces. In the **Interactive Wizard**, each capability is a card the writer steps through per chapter — validate the hook, pick the cliffhanger tier with the rotation suggestion beside it, watch the anatomy meter fill as the draft confirms. In the **Autonomous Studio**, the same capabilities become run configuration: the writer sets the arc plan, the intended tier rotation, and the buffer target once, and the background run drafts serial chapters against those parameters with every validator executing on each PROPOSED chapter before it enters the review queue. Nothing serial-related is gated to one mode."
+    "Blueprint 2.0 is explicit that plot interest alone is insufficient: readers must care about the characters. The bible intake (engine L1) already profiles characters; v3.0 adds a **seven-element attachment panel** to each protagonist record, and the scorecard (6.9) scores character development per chapter. Emotional consequences are tracked beside external plot developments: a victory should sometimes carry a cost, a relationship should sometimes create complications, a mystery should sometimes alter personal beliefs."
+  ));
+  out.push(...tbl(
+    "The seven attachment elements (Blueprint 2.0, Part 5)",
+    ["Element", "Design question", "Where enforced"],
+    [
+      ["Desire", "What does the character genuinely want?", "Bible intake — required field for protagonists"],
+      ["Vulnerability", "What makes the character emotionally or psychologically exposed?", "Bible intake — required field"],
+      ["Contradiction", "What is the difference between how the character appears and how the character actually behaves?", "Bible intake; the L5 style pass can be asked to dramatize it"],
+      ["Relationships", "What does the character stand to lose through love, loyalty, ambition, betrayal, or friendship?", "Bible relationships section; arc planner references"],
+      ["Consequences", "How do important events permanently change the character?", "Continuity ledger: consequence entries attach to confirmed plot events"],
+      ["Agency", "Does the protagonist make consequential decisions rather than simply react to events?", "Arc planner counts protagonist decisions vs. reactions per arc; scorecard criterion 4"],
+      ["Growth", "Does the character change, deteriorate, or discover something meaningful about themselves?", "Arc completion requirement (6.5); scorecard criterion 4"],
+    ],
+    [21, 39, 40]
+  ));
+
+  // ── 6.7 Information and revelation management ─────────────────────────────
+  out.push(h2("6.7 Information and Revelation Management"));
+  out.push(p(
+    "Serialized stories fail twice at information: once when they confuse the reader, and once when their twists exist for shock. Blueprint 2.0 counters both. Information is organized into **three levels** — immediate (needed to understand the current scene), progressive (discovered over the next few chapters), and long-term (unresolved until a major turning point or climax) — and the golden rule is encoded as a scene-level clarity check: **mystery is not confusion**. The reader may not know who committed the crime, but must understand what crime is being investigated; may not know why a character betrayed, but must understand the consequences of the betrayal."
+  ));
+  out.push(...tbl(
+    "The three information levels and their tooling",
+    ["Level", "Definition", "Tool"],
+    [
+      ["Immediate", "What the reader needs to understand the current scene", "Scene clarity check: who/where/what-at-stake detectable in the chapter's opening span; failures flag at scorecard time"],
+      ["Progressive", "What the reader gradually discovers over the next few chapters", "Question ledger: progressive questions are tracked with expected-answer windows; overdue questions surface on the writer's dashboard"],
+      ["Long-term", "What stays unresolved until a major turning point or climax", "Long-term question ledger, shared with the Chekhov ledger (section 5.2): guns are promises about objects, skills, and grudges; questions are promises about information — one ledger UI, two entry kinds"],
+    ],
+    [17, 38, 45]
+  ));
+  out.push(p(
+    "**Revelation quality.** Every important revelation must accomplish at least one of six things: answer an existing question; create a more important question; change the meaning of an earlier event; change a character's objective; alter a relationship; or increase the stakes. When L6 detects a revelation beat in confirmed text, it checks the beat against this list — a twist that matches none of the six is flagged with the blueprint's warning that a good revelation should feel surprising when discovered and credible when the reader looks back at the clues. Twists for shock value alone surface as scorecard notes, and the question ledger marks the newly created question so the next chapters inherit it honestly."
+  ));
+
+  // ── 6.8 Drafting worksheet ────────────────────────────────────────────────
+  out.push(h2("6.8 The Chapter Drafting Worksheet"));
+  out.push(p(
+    "Blueprint 2.0 requires a completed worksheet before drafting every chapter. v3.0 implements it as a **pre-draft card** in the Interactive Wizard and as an auto-filled, writer-editable template in the Autonomous Studio run: the L4 drafter consumes the worksheet as prompt context, so the chapter is drafted toward an explicit purpose instead of a word count."
+  ));
+  out.push(...tbl(
+    "Pre-draft worksheet (Blueprint 2.0, Part 8), as implemented",
+    ["Section", "Worksheet questions", "Feeds"],
+    [
+      ["A. Narrative objective", "What is the main purpose of this chapter? What does the protagonist want? What prevents it?", "L4 prompt; beat 2 (objective) and beat 3 (resistance) coverage"],
+      ["B. Character development", "Which character receives the most meaningful development? What emotional conflict is present? Does a relationship change?", "Attachment panel (6.6); scorecard criterion 4"],
+      ["C. Plot development", "What new information is revealed? What complication is introduced? What changes by the end?", "Question ledger (6.7); beats 5\u20136"],
+      ["D. Reader experience", "Why should the reader care about this chapter? What question is the reader expecting answered? What satisfying payoff does the chapter deliver? What makes the reader want the next chapter?", "Scorecard criteria 1, 5, 6, 7; the payoff link is mandatory"],
+      ["E. Chapter ending", "Is the ending consistent with preceding events? Sufficiently compelling? Does it create anticipation without feeling artificially interrupted?", "Ending advisor (6.4); endingType recorded on the chapter"],
+    ],
+    [18, 48, 34]
+  ));
+
+  // ── 6.9 QC scorecard ──────────────────────────────────────────────────────
+  out.push(h2("6.9 Pre-Publication Quality Control: the 14-Point Scorecard"));
+  out.push(p(
+    "Every completed chapter is scored before release on **seven criteria, each 0\u20132, maximum 14**. L6 proposes scores with one-line rationales (deterministic checks contribute directly: objective presence from the worksheet, payoff-beat detection, ending signal, balance bands, beat coverage); the writer reviews and sets the final scores. The scorecard is an editorial self-assessment aid, not a scientifically validated reader-retention score — the product copy says exactly that — but two triggers are hard gates regardless of total: a zero on **narrative objective clarity** or on **satisfying payoff** forces a revision prompt before export, overridable only by an explicit writer note."
+  ));
+  out.push(...tbl(
+    "Scorecard criteria and interpretation bands (Blueprint 2.0, Part 9)",
+    ["Criterion (score 0\u20132)", "Deterministic contribution"],
+    [
+      ["1. Opening captures attention", "Hook validator result (6.2)"],
+      ["2. Narrative objective is clear", "Worksheet section A + beat 2 coverage"],
+      ["3. Conflict and tension progress", "Beat 3\u20134 coverage; balance meter middle span"],
+      ["4. Character development is meaningful", "Worksheet section B; attachment changes"],
+      ["5. New information or plot advancement", "Worksheet section C; ledger deltas"],
+      ["6. Chapter provides a satisfying payoff", "Beat 6 payoff link; **zero is a hard trigger**"],
+      ["7. Ending encourages continuation", "Ending advisor result (6.4)"],
+    ],
+    [40, 60]
+  ));
+  out.push(...tbl(
+    "Scorecard interpretation bands and export behaviour",
+    ["Total", "Interpretation (blueprint)", "Export behaviour"],
+    [
+      ["12\u201314", "Strong chapter; proceed to final editing", "Release queue"],
+      ["9\u201311", "Reasonably effective; examine weaker areas", "Release queue with a writer note on the weak criteria"],
+      ["6\u20138", "Requires structural revision", "Blocked from release until revised, or writer overrides with note"],
+      ["0\u20135", "Reconsider the chapter's purpose and narrative construction", "Blocked; revision required"],
+    ],
+    [12, 48, 40]
+  ));
+  out.push(p(
+    "The export pre-flight dialog then walks the blueprint's **ten final drafting principles** as a checklist — clear narrative purpose, identifiable objective, meaningful resistance, events producing consequences, changed situation, integrated exposition, some narrative gratification, appropriate forward pull, no unnecessary repetition, and contribution to the larger story — and quotes the four ultimate rules verbatim: never sacrifice narrative credibility merely to create a cliffhanger; never sacrifice character development merely to accelerate the plot; never withhold every important answer merely to generate curiosity; never make the reader feel their time was wasted."
+  ));
+
+  // ── 6.10 Retention through publication ─────────────────────────────────────
+  out.push(h2("6.10 Retention Through Serial Publication"));
+  out.push(p(
+    "The release side of serialization stays in the blueprint's spirit: sustainable cadence, a real buffer, and community engagement that the author controls. None of it depends on platform APIs; all of it is local tooling."
+  ));
+  out.push(...tbl(
+    "Publication mechanics (Blueprint 2.0, Part 7)",
+    ["Mechanic", "Standard", "v3.0 feature"],
+    [
+      ["Cadence", "2\u20133 chapters per week as the starting frequency; daily may suit certain platforms but not at the expense of writing quality; the requirement is consistency with the schedule communicated to readers", "Cadence tracker validates released chapters against releaseSchedule (v2.3 field, default \u201cMon/Wed/Fri\u201d); streak and slip warnings on the serial dashboard"],
+      ["Buffer", "A reserve of at least 4\u20138 completed chapters before publication begins, ideally more when feasible; the buffer protects the schedule during illness, editing delays, and creative interruptions", "Buffer meter over confirmed-but-unreleased chapters: green at 8+, amber 4\u20137, red below 4; the Autonomous Studio accepts a \u201cwrite to buffer\u201d target"],
+      ["Reader engagement", "Use author notes and community features selectively: ask which character readers trust, invite predictions after a revelation, run polls after a major development, discuss a moral dilemma, ask which relationship is most compelling", "Author-note composer with poll builder attached to every chapter; exported inside the note where platforms support polls, plain text elsewhere"],
+      ["Author control", "Do not allow reader polls to dictate the entire plot; the author retains control of character consistency, narrative logic, and long-term direction", "Polls are annotations on the manuscript, never inputs to the engine; the drafting chain never reads poll results"],
+    ],
+    [14, 44, 42]
+  ));
+
+  // ── 6.11 Both modes ───────────────────────────────────────────────────────
+  out.push(h2("6.11 Serialization in Both Modes"));
+  out.push(p(
+    "Every capability above ships in **both workspaces**. In the Interactive Wizard each is a card the writer steps through per chapter; in the Autonomous Studio the same capabilities are run configuration plus automatic checks over PROPOSED chapters before they enter the review queue. Nothing serial-related is gated to one mode."
   ));
   out.push(...tbl(
     "Serialization capability mapping across workspaces",
     ["Capability", "Interactive Wizard surface", "Autonomous Studio surface"],
     [
-      ["Hook validation", "Free-tier card with the 200-word scan result and churn-risk badge", "Automatic hook scan on chapters 1–5 of any new serial run; failures surface in the run report"],
-      ["Anatomy meter (10/70/20)", "Per-chapter meter card with segment highlights", "Anatomy check on every PROPOSED chapter; off-envelope drafts are re-drafted once, then flagged"],
-      ["Cliffhanger rotation", "Tier picker with least-recently-used suggestion and signature check", "Rotation plan set at run configuration; deviations logged per chapter"],
-      ["Micro-arc planner", "Arc board: drag chapters into phases, declare conflicts and seeds", "Arc plan generated by L2 from the Micro-Arc Cascade structure, editable before the run starts"],
-      ["Buffer meter", "Serial dashboard gauge", "\u201cWrite to buffer\u201d target; run pauses at the configured buffer level"],
-      ["Cadence and streaks", "Release queue view against releaseSchedule", "Same tracker, plus run report lists upcoming release dates"],
-      ["Polls and author notes", "Per-chapter composer with CTA templates", "Note templates applied at batch confirm; editable in the review queue"],
-      ["Platform export", "Chapter export card with platform profile picker (section 6.8)", "Batch export of the release queue in a chosen platform profile"],
+      ["Hook validation (200\u2013400 words)", "Free-tier card with source-of-interest detection", "Automatic scan on chapters 1\u20135 of a new serial run; results in the run report"],
+      ["Seven-beat coverage + balance meter", "Per-chapter beat card with coverage results and measured shares", "Coverage and balance computed on every PROPOSED chapter; failures re-draft once, then flag"],
+      ["Ending advisor (6 types)", "Ending check at confirm time; type history visible", "EndingType recorded per chapter; consecutive high-intensity repeats logged in the run report"],
+      ["Pre-draft worksheet", "Worksheet card, required before Draft Chapter Scene", "Auto-filled from arc plan and question ledger, writer edits before the run"],
+      ["QC scorecard", "Scorecard card at confirm time", "L6-proposed scores on every PROPOSED chapter; writer finalizes in the review queue"],
+      ["Micro-arc planner", "Arc board: phases, conflicts, questions, seeds", "Arc plan generated from the Micro-Arc Cascade structure (section 8), editable before the run"],
+      ["Question ledger (info levels)", "Ledger rail in the Writer Studio", "Automatic ledger updates on confirmed chapters; overdue questions in the run report"],
+      ["Buffer meter + cadence", "Serial dashboard gauges", "\u201cWrite to buffer\u201d target; run pauses at the configured buffer level"],
+      ["Author notes + polls", "Per-chapter composer", "Templates applied at batch confirm, editable in the review queue"],
+      ["Platform export", "Chapter export card with profile picker (6.13)", "Batch export of the release queue in a chosen profile"],
     ],
-    [20, 40, 40]
+    [24, 38, 38]
   ));
 
-  out.push(h2("6.7 Serialization Data Model"));
+  // ── 6.12 Data model ───────────────────────────────────────────────────────
+  out.push(h2("6.12 Serialization Data Model"));
   out.push(p(
-    "The format extends the existing Book and Chapter entities rather than forking them, so a serial project is a normal project with the serialization profile attached. Non-serial projects ignore every field below; defaults apply only when isSerialized is set. The full DDL, including the serial_arcs table, is in Appendix A."
+    "The format extends the existing Book and Chapter entities rather than forking them: a serial project is a normal project with the serialization profile attached. Non-serial projects ignore every field below; defaults apply only when isSerialized is set. The 1.0-era cliffhanger_tier field is replaced by endingType with the six Blueprint 2.0 types (plus QUIET for reflective endings); anatomy ratios are replaced by beat coverage and balance shares; the scorecard and worksheet are stored per chapter. Appendix A carries the DDL."
   ));
   out.push(...tbl(
     "Serialization field set (extends v2.3 Book and Chapter)",
     ["Field", "Entity", "Type / default", "Purpose"],
     [
       ["isSerialized", "Book", "Boolean / false (exists in v2.3)", "Switches the project into the serial profile"],
-      ["targetChapters", "Book", "Integer / 100 (exists in v2.3)", "Planned chapter count; the arc planner distributes arcs across it"],
-      ["releaseSchedule", "Book", "Text / \u201cMon/Wed/Fri\u201d (exists in v2.3)", "Cadence the tracker validates against"],
-      ["freeTierChapters", "Book", "Integer / 5", "Size of the free tier; paywall placement checks bound to it"],
-      ["wordMin / wordMax", "Book", "Integer / 1000 / 2000", "Premium chapter envelope"],
-      ["bufferTarget", "Book", "Integer / 8", "Buffer meter target (4–8 range recommended)"],
-      ["exportProfile", "Book", "Text / \u201croyal_road\u201d", "Default platform export profile (section 6.8)"],
-      ["arcId", "Chapter", "Integer / null", "Owning micro-arc; null only in standalone chapters"],
-      ["cliffhangerTier", "Chapter", "Text / null (DANGER, EMOTION, MYSTERY, COST)", "Intended tier; verified against the signature check"],
-      ["anatomyRatios", "Chapter", "JSON / null", "Measured 10/70/20 segmentation at confirm time"],
-      ["hookOk", "Chapter", "Boolean / null", "Free-tier hook validation result for chapters 1–5"],
+      ["targetChapters", "Book", "Integer / 100 (exists in v2.3)", "Planned chapter count; arcs distributed across it"],
+      ["releaseSchedule", "Book", "Text / \u201cMon/Wed/Fri\u201d (exists in v2.3)", "Cadence the tracker validates"],
+      ["freeTierChapters", "Book", "Integer / 5", "Free tier size; conversion gates bound to it"],
+      ["wordMin / wordMax", "Book", "Integer / 1000 / 2000", "Advisory chapter envelope, adjustable per genre and platform"],
+      ["bufferTarget", "Book", "Integer / 8", "Buffer meter target (4\u20138 range)"],
+      ["exportProfile", "Book", "Text / \u201croyal_road\u201d", "Default platform export profile (6.13)"],
+      ["arcId", "Chapter", "Integer / null", "Owning micro-arc"],
+      ["endingType", "Chapter", "Text / null — DANGER, EMOTIONAL_REVELATION, MYSTERY_DISCOVERY, IRREVERSIBLE_CHOICE, REVERSAL, ANTICIPATION, QUIET", "Advised ending classification, verified against the closing passage"],
+      ["beatCoverage", "Chapter", "JSON / null", "Seven-beat functions present in confirmed text, with spans"],
+      ["balanceShares", "Chapter", "JSON / null", "Measured segment shares against the 6.3 bands (advisory)"],
+      ["worksheet", "Chapter", "JSON / null", "Pre-draft worksheet A\u2013E content"],
+      ["qcScores / qcTotal", "Chapter", "JSON / Integer 0\u201314", "Scorecard scores and total; zero-triggers enforced at export"],
+      ["hookCheck", "Chapter", "JSON / null", "Opening validator result for chapters 1\u20135"],
       ["ctaNote / pollJson", "Chapter", "Text / null", "Author note and poll payload exported with the chapter"],
     ],
-    [18, 10, 30, 42]
+    [24, 12, 34, 30]
+  ));
+  out.push(p(
+    "The serial_arcs table carries id, bookId, arcIndex, the localized conflict statement, the arc's question reference, phase boundaries (JSON), the answered-question link required by the completion rule (6.5), the contribution note, and next-arc seeds (JSON)."
   ));
 
-  out.push(h2("6.8 Platform Export Profiles"));
+  // ── 6.13 Platform export profiles ─────────────────────────────────────────
+  out.push(h2("6.13 Platform Export Profiles"));
   out.push(p(
-    "v3.0 ships chapter-level exports as **paste-ready packages** formatted per platform, not automated platform APIs — the target platforms' terms of service make unapproved automated posting a liability, so the contract is: the application formats, the writer pastes. Each profile produces a chapter block (title, optional recap block, body paragraphs in the platform's spacing conventions, author note with CTA, and poll text where the platform supports polls) plus a plain-text clipboard bundle. Volumes bundle into EPUB 3 through the same pipeline as novels (section 11), so a completed serial graduates to retail without rework."
+    "v3.0 ships chapter-level exports as **paste-ready packages** formatted per platform, not automated platform APIs — the target platforms' terms of service make unapproved automated posting a liability, so the contract is: the application formats, the writer pastes. Each profile produces a chapter block (title, optional recap block from the recap tool, body paragraphs in the platform's spacing conventions, author note with CTA, and poll text where the platform supports polls) plus a plain-text clipboard bundle. Volumes bundle into EPUB 3 through the same pipeline as novels (section 11), so a completed serial graduates to retail without rework."
   ));
   out.push(...tbl(
     "Serial platform export profiles",
     ["Platform", "Model", "Export profile highlights"],
     [
       ["Royal Road", "Free serial; patronage monetization", "Clean paragraph spacing, horizontal-rule scene breaks, author note appended; no recap by default"],
-      ["Wattpad", "Free serial; ad/program monetization", "Looser paragraph spacing conventions, media placeholders for inline art slots"],
-      ["GoodNovel / Dreame / Webnovel", "Pay-per-chapter storefronts", "Paste-ready chapter body, optional recap header block (from the recap tool), strict paragraph discipline, author note without external links"],
-      ["Tapas", "Episode model", "Episode-length chunking guidance against the 1,000–2,000 word envelope, note-style CTA"],
+      ["Wattpad", "Free serial; ad and program monetization", "Looser paragraph spacing conventions, media placeholders for inline art slots"],
+      ["GoodNovel / Dreame / Webnovel", "Pay-per-chapter storefronts", "Paste-ready chapter body, optional recap header block, strict paragraph discipline, author note without external links"],
+      ["Tapas", "Episode model", "Episode-length guidance against the 1,000\u20132,000-word envelope, note-style CTA"],
     ],
     [22, 26, 52]
   ));

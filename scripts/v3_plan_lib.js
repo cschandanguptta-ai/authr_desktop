@@ -25,7 +25,7 @@ const P = {
 
 const FONT_BODY = { ascii: "Times New Roman", eastAsia: "SimSun" };
 const FONT_HEAD = { ascii: "Times New Roman", eastAsia: "SimHei" };
-const FONT_MONO = { ascii: "Consolas", eastAsia: "SimSun" };
+const FONT_MONO = { ascii: "Courier New", eastAsia: "SimSun" };
 
 const NB = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
 const noBorders = { top: NB, bottom: NB, left: NB, right: NB };
@@ -94,7 +94,6 @@ const counters = { table: 0, figure: 0 };
 function tbl(caption, headers, rows, widths) {
   counters.table += 1;
   const n = counters.table;
-  const capText = caption ? `Table ${n} — ${caption}` : `Table ${n}`;
   const capPara = new Paragraph({
     keepNext: true,
     alignment: AlignmentType.LEFT,
@@ -115,7 +114,7 @@ function tbl(caption, headers, rows, widths) {
       margins: { top: 60, bottom: 60, left: 120, right: 120 },
       children: [new Paragraph({
         alignment: AlignmentType.LEFT,
-        spacing: { line: 276 },
+        spacing: { line: 312 },
         children: rich(text, { bold: true, size: 20, color: "FFFFFF" }),
       })],
     })),
@@ -128,7 +127,7 @@ function tbl(caption, headers, rows, widths) {
       margins: { top: 60, bottom: 60, left: 120, right: 120 },
       children: [new Paragraph({
         alignment: AlignmentType.LEFT,
-        spacing: { line: 276 },
+        spacing: { line: 312 },
         children: rich(text, { size: 20 }),
       })],
     })),
@@ -172,7 +171,7 @@ function figure(pngPath, caption, displayWidth = 480) {
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { after: 160, line: 276 },
+      spacing: { after: 160, line: 312 },
       children: [
         new TextRun({ text: `Figure ${n}. `, bold: true, size: 21, color: P.secondary, font: FONT_BODY }),
         new TextRun({ text: caption, size: 21, color: P.secondary, font: FONT_BODY }),
@@ -185,7 +184,7 @@ function figure(pngPath, caption, displayWidth = 480) {
 function codeBlock(lines) {
   return lines.map((line, i) => new Paragraph({
     alignment: AlignmentType.LEFT,
-    spacing: { before: i === 0 ? 120 : 0, after: i === lines.length - 1 ? 160 : 0, line: 276 },
+    spacing: { before: i === 0 ? 120 : 0, after: i === lines.length - 1 ? 160 : 0, line: 312 },
     shading: { type: ShadingType.CLEAR, fill: P.surface },
     border: {
       left: { style: BorderStyle.SINGLE, size: 12, color: P.accent, space: 8 },

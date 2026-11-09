@@ -71,8 +71,6 @@ def chart_effort():
     ax.tick_params(axis="x", labelsize=10)
     ax.spines[["top", "right"]].set_visible(False)
     ax.grid(axis="y", alpha=0.3, color=GRID)
-    ax.text(0.99, 0.97, "P3 (highlighted) = Web Novel Serialization,\npromoted from post-P5 into the main plan in Rev 2",
-            transform=ax.transAxes, fontsize=9, color="#8A6A52", ha="right", va="top")
     return save_chart(fig, os.path.join(OUT, "fig2_roadmap_effort.png"))
 
 

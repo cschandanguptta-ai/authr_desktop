@@ -11,7 +11,7 @@ function build() {
     "Authr OS 2.3 is a multi-agent authoring workstation: six Weaver sub-agents (Executive Orchestrator, Plot Architect, Character Psychologist, World Builder, Scene Composer, Continuity Manager) run over a dynamic multi-provider LLM orchestrator, exposed through two workspaces — the **Interactive Wizard** for step-by-step co-writing and the **Autonomous Studio** for hands-free background production. Version 3.0 turns this workstation into a **one-person author publisher**: a single writer who plans, drafts, serializes, narrates, and ships finished products to retail and pay-per-chapter platforms without leaving the application."
   ));
   out.push(p(
-    "The v3.0 programme stands on four pillars. First, a **writer-sovereign six-layer drafting engine** in which every generated artifact — bible records, outlines, beats, prose, style passes — is a proposal that becomes canon only when the writer confirms it. Second, **serialized fiction as a first-class project format**, available in both workspaces, with deterministic validators for hooks, chapter anatomy, cliffhanger rotation, and retention cadence. Third, a **studio-grade audiobook engine** built on Pocket TTS as the local synthesis engine, with IPA pronunciation, cross-segment acoustic continuity, a three-layer ffmpeg mastering chain, ACX compliance auditing, and SMIL read-along export. Fourth, **publish-ready output**: EPUB 3 for Kindle, print interiors with a verified gutter ladder, and paste-ready chapter packages for serial platforms."
+    "The v3.0 programme stands on four pillars. First, a **writer-sovereign six-layer drafting engine** in which every generated artifact — bible records, outlines, beats, prose, style passes — is a proposal that becomes canon only when the writer confirms it. Second, **serialized fiction as a first-class project format**, available in both workspaces and specified end to end by the **Serialized Fiction Blueprint 2.0** (supplied with this revision): deterministic validators for the opening hook, the seven-beat chapter model, chapter-ending quality, a pre-draft worksheet, and a 14-point pre-publication scorecard. Third, a **studio-grade audiobook engine** built on Pocket TTS as the local synthesis engine, with IPA pronunciation, cross-segment acoustic continuity, a three-layer ffmpeg mastering chain, ACX compliance auditing, and SMIL read-along export. Fourth, **publish-ready output**: EPUB 3 for Kindle, print interiors with a verified gutter ladder, and paste-ready chapter packages for serial platforms."
   ));
   out.push(p(
     "This document is **Revision 2** of the improvement plan. Rev 1 contained four scope decisions that are corrected here before implementation begins: scene auto-drafting is **retained** (not removed) behind a writer-confirmation gate; the feature actually being removed is the **Scene Automation & Video tab** in Interactive Mode; the local TTS engine is **Pocket TTS** (replacing Kitten TTS); and **web novel serialization is added to both modes** and promoted from the post-P5 backlog into the main roadmap as phase P3. Table 1 summarizes the corrections."
@@ -23,7 +23,7 @@ function build() {
       ["Scene auto-drafting (engine Level 4)", "Removed; replaced by Writer Studio + Live AST Annotator", "**Retained.** L4 Scene Auto-Drafter stays the productivity core; drafts land as PROPOSED and become canon only on writer confirmation", "Solo serial authors need throughput; sovereignty is achieved by gating, not removal"],
       ["Scene Automation & Video tab (Interactive Mode)", "Not addressed", "**Removed** in v3.0 (UI, view-model state, video rendering path, exports)", "Video muxing is the highest-maintenance, lowest-core-value subsystem; v3.0 is a publishing platform, not a video marketing suite"],
       ["Local TTS engine", "Kitten TTS (cloud HF Space + 762 KB native lib)", "**Pocket TTS** (Kyutai, MIT): 100M-parameter local engine, voice cloning, real-time on CPU, streaming", "Offline, private, multilingual, no shared HF Space queue; see section 7"],
-      ["Web novel serialization", "Royal Road and serial platforms deferred to post-P5", "**Full format in both modes**, promoted to phase P3 of the main roadmap", "Pay-per-chapter is where the one-person-publisher model compounds; v2.3 already seeds the data model"],
+      ["Web novel serialization", "Royal Road and serial platforms deferred to post-P5", "**Full format in both modes**, promoted to phase P3 of the main roadmap", "Blueprint 2.0 specifies the complete retention framework; v2.3 already seeds the data model"],
     ],
     [22, 26, 28, 24]
   ));
@@ -46,7 +46,7 @@ function build() {
     "**Principle 3 — Local-first with escape hatches.** Where a task can run locally, it does: Pocket TTS synthesizes narration on-device, validators and ledgers are pure local computation, and the .authr container keeps the whole project portable. Cloud LLM providers and cloud TTS remain configurable per agent for scale and quality, never as a hard dependency."
   ));
   out.push(p(
-    "**Principle 4 — Deterministic guardrails around stochastic engines.** Language models propose; deterministic code decides what passes. Cliché detection, hook validation, cliffhanger signatures, anatomy ratios, and the Chekhov ledger are all implemented as local, testable, versioned checkers. This is what makes the guardrails auditable: the same chapter always produces the same audit result."
+    "**Principle 4 — Deterministic guardrails around stochastic engines.** Language models propose; deterministic code decides what passes. Cliché detection, hook validation, ending-type classification, seven-beat coverage, scorecard triggers, and the Chekhov ledger are all implemented as local, testable, versioned checkers. This is what makes the guardrails auditable: the same chapter always produces the same audit result."
   ));
   out.push(p(
     "**Principle 5 — Publish-ready, not draft-ready.** An export is only done when it passes the destination's own gate: epubcheck for Kindle files, the KDP Print Previewer for interiors, the ACX audio meter for audiobooks, and the serialization validator suite for chapter packages. Internal success metrics are defined against those external gates, not against internal impressions."
@@ -58,7 +58,7 @@ function build() {
       ["Writer sovereignty", "writer_confirmed flag on beats and chapters; PROPOSED/CONFIRMED status machine at engine Level 4; side-by-side style diffs; dismissable flags with mandatory notes"],
       ["One manuscript, many formats", "Single .authr container feeds EPUB 3, print PDF, serial chapter packages, and audio masters; format-specific exporters never fork the manuscript"],
       ["Local-first", "Pocket TTS local engine; local validators and ledger; plugin directory inside the project container; cloud providers per-agent, optional"],
-      ["Deterministic guardrails", "154-pattern cliché linter, hook and cliffhanger signature checkers, 10/70/20 anatomy meter, Chekhov ledger — all local and unit-tested against golden corpora"],
+      ["Deterministic guardrails", "154-pattern cliché linter, hook validator, seven-beat coverage and ending-type checkers, 14-point scorecard, Chekhov and question ledgers — all local and unit-tested against golden corpora"],
       ["Publish-ready outputs", "Acceptance gates mirror external validators: epubcheck, KDP Print Previewer, ACX meter, serialization golden suite"],
     ],
     [26, 74]
@@ -107,7 +107,7 @@ function build() {
 
   out.push(h2("3.4 SCR-4 — Web Novel Serialization Added to Both Modes"));
   out.push(p(
-    "Rev 1 parked serial platforms behind P5 as a post-release extension. **Rev 2 promotes serialized fiction to a first-class project format, implemented in phase P3, available in both the Interactive Wizard and the Autonomous Studio.** Two facts drive the change. First, the product input for this revision — the Serialized Fiction Blueprint — specifies the structural, pacing, and retention mechanics of pay-per-chapter serialization in implementable detail (section 6 encodes it end to end). Second, v2.3 already seeds the data model: Book carries isSerialized, targetChapters (default 100), and releaseSchedule (default \u201cMon/Wed/Fri\u201d), and the Outline and Drafting workers already branch on isSerialized. The remaining distance to a complete format — validators, rotation tracking, micro-arc planning, buffer and cadence tooling, platform export profiles — is squarely inside v3.0 scope."
+    "Rev 1 parked serial platforms behind P5 as a post-release extension. **Rev 2 promotes serialized fiction to a first-class project format, implemented in phase P3, available in both the Interactive Wizard and the Autonomous Studio.** Two facts drive the change. First, the product input for this revision — the **Serialized Fiction Blueprint 2.0**, which supersedes the 1.0 draft Rev 1 referenced — specifies the structural, pacing, and retention mechanics of pay-per-chapter serialization in implementable detail (section 6 encodes it end to end). Second, v2.3 already seeds the data model: Book carries isSerialized, targetChapters (default 100), and releaseSchedule (default \u201cMon/Wed/Fri\u201d), and the Outline and Drafting workers already branch on isSerialized. The remaining distance to a complete format — validators, the seven-beat anatomy meter, ending advisory, the pre-draft worksheet, the pre-publication scorecard, micro-arc planning, buffer and cadence tooling, platform export profiles — is squarely inside v3.0 scope."
   ));
 
   // ── 4. Six-Layer Drafting Engine & Writer Studio ───────────────────────────
@@ -126,10 +126,10 @@ function build() {
       ["L5", "Style Polisher", "Executive Orchestrator", "Confirmed draft + persona style card → styled revision (cliché-suppressed)", "Side-by-side diff; accept, edit, or reject"],
       ["L6", "Continuity Auditor", "Continuity Manager", "Confirmed text → timeline entries, Chekhov ledger updates, contradiction flags", "Flags are dismissable only with a writer note"],
     ],
-    [7, 17, 20, 33, 23]
+    [9, 16, 20, 32, 23]
   ));
   out.push(p(
-    "**Level 4 in detail.** The Scene Auto-Drafter assembles its prompt from confirmed material only: the chapter's confirmed beats, the active character sheets, matching lorebook keys (the existing keyword-injection mechanism), the continuity summaries of all confirmed chapters, the selected persona card, and the format's word envelope — 1,000–2,000 words for serial chapters, 2,000–4,000 for long-form formats. The draft is written to the chapter workspace with status PROPOSED. The writer edits freely; confirming the chapter freezes the text, sets writer_confirmed = 1, and triggers L6 annotation and ledger updates on the frozen text. An L4 draft may also be **regenerated** (new proposal) or **archived**; archived drafts are kept in the container for diffing but never feed downstream layers."
+    "**Level 4 in detail.** The Scene Auto-Drafter assembles its prompt from confirmed material only: the chapter's confirmed beats, the active character sheets, matching lorebook keys (the existing keyword-injection mechanism), the continuity summaries of all confirmed chapters, the selected persona card, and the format's word envelope — the serial default working range of 1,000–2,000 words per chapter (advisory and adjustable, section 6.3), and 2,000–4,000 for long-form formats. The draft is written to the chapter workspace with status PROPOSED. The writer edits freely; confirming the chapter freezes the text, sets writer_confirmed = 1, and triggers L6 annotation and ledger updates on the frozen text. An L4 draft may also be **regenerated** (new proposal) or **archived**; archived drafts are kept in the container for diffing but never feed downstream layers."
   ));
   out.push(h2("4.1 Writer Studio & Live AST Annotator"));
   out.push(p(
@@ -139,11 +139,11 @@ function build() {
     "Live AST annotator node types",
     ["AST node", "Annotates", "Writer action"],
     [
-      ["Beat", "Coverage of each confirmed beat in the chapter; missing/weak beats flagged", "Open beat card; regenerate scene section or waive the beat with a note"],
+      ["Beat", "Coverage of each confirmed beat in the chapter (the seven-beat model for serials, section 6.3); missing/weak beats flagged", "Open beat card; regenerate scene section or waive the beat with a note"],
       ["Cliché hit", "Every linter match with class, severity, and suggested rewrite", "Accept suggestion, edit manually, or whitelist the phrase project-wide"],
       ["Chekhov gun", "Introduced, escalated, and resolved promises tracked by the ledger", "Mark false positive, adjust severity, or schedule escalation"],
       ["Lore reference", "Lorebook keys matched in text; missing definitions proposed inline", "Accept the proposed lorebook entry or discard"],
-      ["Cliffhanger signal", "Serial chapters: tier signature detected in the final 50 words", "Confirm the detected tier or pick another; re-run the signature check"],
+      ["Ending signal", "Serial chapters: closing passage classified against the six Blueprint 2.0 ending types, or a quiet ending", "Confirm the detected type or pick another; re-run the signature check"],
       ["Continuity flag", "Contradictions against the timeline and bibles raised by L6", "Resolve in text or dismiss with a mandatory note"],
     ],
     [18, 46, 36]
