@@ -1,0 +1,555 @@
+NESTED at line 24 3  *   /plugins/             structures/*.json, personas/*.json (user-extensible)
+NESTED at line 25 3  *   /exports/             epub/, print/, serial/, audio/ — regenerable outputs
+NESTED at line 26 3  *   /metadata/            book.json (full project record) + KDP workbench data
+NESTED at line 27 3  *
+NESTED at line 28 3  * Guarantees required by the plan (§10, risk register):
+NESTED at line 29 3  *   - openers migrate forward on load, never silently downgrade;
+NESTED at line 30 3  *   - a backup of the original container is always written before migrating;
+NESTED at line 31 3  *   - saves are atomic (temp file + rename) so a crash mid-save can never
+NESTED at line 32 3  *     corrupt a project.
+NESTED at line 33 3  *
+NESTED at line 34 3  * Losslessness contract (P0 exit gate): every field of the project record is
+NESTED at line 35 3  * carried verbatim in /metadata/book.json; the per-directory files are the
+NESTED at line 36 3  * human- and tool-readable projections of the same data.
+NESTED at line 37 2  */
+NESTED at line 38 2 object AuthrContainer {
+NESTED at line 39 2 
+NESTED at line 40 2     const val SCHEMA_VERSION = 2
+NESTED at line 41 2     const val APP_VERSION = "3.0.0-alpha"
+NESTED at line 42 2     const val MANIFEST_ENTRY = "authr/manifest.json"
+NESTED at line 43 2     const val BOOK_ENTRY = "authr/metadata/book.json"
+NESTED at line 44 2 
+NESTED at line 45 2     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
+NESTED at line 46 2 
+NESTED at line 47 2     // ---------------------------------------------------------------------
+NESTED at line 48 2     // Manifest
+NESTED at line 49 2     // ---------------------------------------------------------------------
+NESTED at line 50 2 
+NESTED at line 51 2     @Serializable
+NESTED at line 52 2     data class Manifest(
+NESTED at line 53 2         val schemaVersion: Int = SCHEMA_VERSION,
+NESTED at line 54 2         val appVersion: String = APP_VERSION,
+NESTED at line 55 2         val format: String = "Novel",
+NESTED at line 56 2         val createdAt: Long,
+NESTED at line 57 2         val exportedAt: Long,
+NESTED at line 58 2         val generator: String = "AuthrOS-$APP_VERSION",
+NESTED at line 59 2         /** sha256 of every data payload, keyed by container-relative path. */
+NESTED at line 60 2         val checksums: Map<String, String> = emptyMap(),
+NESTED at line 61 2         /** Feature flags the writing app may toggle (P1+). */
+NESTED at line 62 2         val featureFlags: Map<String, Boolean> = emptyMap(),
+NESTED at line 63 2         /** Human-readable note when this container was migrated forward. */
+NESTED at line 64 2         val migrationNote: String? = null
+NESTED at line 65 2     )
+NESTED at line 66 2 
+NESTED at line 67 2     /** Result of [import]. */
+NESTED at line 68 2     data class ImportResult(
+NESTED at line 69 2         val manifest: Manifest,
+NESTED at line 70 2         val snapshot: ProjectSnapshot,
+NESTED at line 71 2         /** Set when the container was older than schema v2 and migrated forward. */
+NESTED at line 72 2         val migratedFrom: Int?,
+NESTED at line 73 2         /** Path of the pre-migration backup copy (always written when migrating). */
+NESTED at line 74 2         val backupPath: String?,
+NESTED at line 75 2         /** Checksum audit results (reported, never silent). */
+NESTED at line 76 2         val checksumWarnings: List<String>
+NESTED at line 77 2     )
+NESTED at line 78 2 
+NESTED at line 79 2     // ---------------------------------------------------------------------
+NESTED at line 80 2     // Snapshot: the lossless data contract between the app DB and the container
+NESTED at line 81 2     // ---------------------------------------------------------------------
+NESTED at line 82 2 
+NESTED at line 83 2     data class ProjectSnapshot(
+NESTED at line 84 2         val book: com.example.data.model.Book,
+NESTED at line 85 2         val chapters: List<com.example.data.model.Chapter>,
+NESTED at line 86 2         val lorebook: List<com.example.data.model.Lorebook>,
+NESTED at line 87 2         val arcs: List<com.example.data.model.SerialArc> = emptyList(),
+NESTED at line 88 2         val guns: List<com.example.data.model.ChekhovGun> = emptyList(),
+NESTED at line 89 2         val questions: List<com.example.data.model.QuestionEntry> = emptyList(),
+NESTED at line 90 2         val plugins: List<com.example.data.model.PluginRecord> = emptyList()
+NESTED at line 91 2     )
+NESTED at line 92 2 
+NESTED at line 93 2     // ---------------------------------------------------------------------
+NESTED at line 94 2     // Export (project snapshot -> .authr file)
+NESTED at line 95 2     // ---------------------------------------------------------------------
+NESTED at line 96 2 
+NESTED at line 97 2     fun export(snapshot: ProjectSnapshot, target: File) {
+NESTED at line 98 2         val staging = File.createTempFile(
+NESTED at line 99 2             "authr_staging_${System.currentTimeMillis()}", ".tmp", target.parentFile ?: Fi
+NESTED at line 100 2         )
+NESTED at line 101 2         staging.delete(); staging.mkdirs()
+NESTED at line 102 2         try {
+NESTED at line 103 2             writeLayout(staging, snapshot)
+NESTED at line 104 2 
+NESTED at line 105 2             val payloads = staging.walkTopDown().filter { it.isFile }.toList()
+NESTED at line 106 2             val manifest = Manifest(
+NESTED at line 107 2                 format = snapshot.book.format,
+NESTED at line 108 2                 createdAt = snapshot.book.createdAt,
+NESTED at line 109 2                 exportedAt = System.currentTimeMillis(),
+NESTED at line 110 2                 checksums = payloads.associate {
+NESTED at line 111 2                     it.relativeTo(staging).invariantSeparatorsPath to sha256(it)
+NESTED at line 112 2                 },
+NESTED at line 113 2                 featureFlags = mapOf(
+NESTED at line 114 2                     "writer_confirmed_gates" to true,
+NESTED at line 115 2                     "pocket_tts_local" to true,
+NESTED at line 116 2                     "serialization_format" to snapshot.book.isSerialized
+NESTED at line 117 2                 )
+NESTED at line 118 2             )
+NESTED at line 119 2             File(staging, "manifest.json").writeText(json.encodeToString(Manifest.serializ
+NESTED at line 120 2 
+NESTED at line 121 2             // Atomic save: zip to a .part sibling, then rename into place.
+NESTED at line 122 2             val parent = target.parentFile ?: File(".")
+NESTED at line 123 2             val part = File(parent, target.name + ".part")
+NESTED at line 124 2             ZipOutputStream(part.outputStream().buffered()).use { zos ->
+NESTED at line 125 2                 staging.walkTopDown().filter { it.isFile }.sortedBy { it.relativeTo(stagin
+NESTED at line 126 2                     zos.putNextEntry(ZipEntry("authr/" + f.relativeTo(staging).invariantSe
+NESTED at line 127 2                     f.inputStream().use { it.copyTo(zos) }
+NESTED at line 128 2                     zos.closeEntry()
+NESTED at line 129 2                 }
+NESTED at line 130 2             }
+NESTED at line 131 2             val replaced = if (target.exists()) {
+NESTED at line 132 2                 val r = File(parent, target.name + ".replaced")
+NESTED at line 133 2                 target.copyTo(r, overwrite = true)
+NESTED at line 134 2                 r
+NESTED at line 135 2             } else null
+NESTED at line 136 2             if (!part.renameTo(target)) {
+NESTED at line 137 2                 if (target.exists()) target.delete()
+NESTED at line 138 2                 if (!part.renameTo(target)) {
+NESTED at line 139 2                     replaced?.renameTo(target) // restore previous container
+NESTED at line 140 2                     throw java.io.IOException("Atomic rename failed for ${target.absoluteP
+NESTED at line 141 2                 }
+NESTED at line 142 2             }
+NESTED at line 143 2             replaced?.delete()
+NESTED at line 144 2         } finally {
+NESTED at line 145 2             staging.deleteRecursively()
+NESTED at line 146 2         }
+NESTED at line 147 2     }
+NESTED at line 148 2 
+NESTED at line 149 2     /** Materializes the schema-v2 layout for [snapshot] into [root]. */
+NESTED at line 150 2     private fun writeLayout(root: File, snapshot: ProjectSnapshot) {
+NESTED at line 151 2         val b = snapshot.book
+NESTED at line 152 2 
+NESTED at line 153 2         // 1. Full project record — the lossless source of truth.
+NESTED at line 154 2         dir(root, "metadata").also { meta ->
+NESTED at line 155 2             File(meta, "book.json").writeText(json.encodeToString(BookPayload.serializer()
+NESTED at line 156 2             File(meta, "kdp_workbench.json").writeText(stringPayload(b.marketingMaterials)
+NESTED at line 157 2             File(meta, "cover_prompt.json").writeText(stringPayload(b.coverPrompt))
+NESTED at line 158 2         }
+NESTED at line 159 2 
+NESTED at line 160 2         // 2. Manuscript: per-chapter JSON payloads + the human-readable canon.
+NESTED at line 161 2         dir(root, "manuscript").also { manuscript ->
+NESTED at line 162 2             snapshot.chapters.forEach { ch ->
+NESTED at line 163 2                 val file = File(manuscript, "chapter_%03d.json".format(ch.chapterNumber))
+NESTED at line 164 2                 file.writeText(json.encodeToString(ChapterPayload.serializer(), ch.toPaylo
+NESTED at line 165 2             }
+NESTED at line 166 2             File(manuscript, "manuscript.md").writeText(buildString {
+NESTED at line 167 2                 appendLine("# ${b.title}")
+NESTED at line 168 2                 appendLine()
+NESTED at line 169 2                 snapshot.chapters.filter { it.writerConfirmed && it.draftStatus == "CONFIR
+NESTED at line 170 2                     .sortedBy { it.chapterNumber }
+NESTED at line 171 2                     .forEach { ch ->
+NESTED at line 172 2                         appendLine("## Chapter ${ch.chapterNumber} — ${ch.title}")
+NESTED at line 173 2                         appendLine()
+NESTED at line 174 2                         appendLine(ch.content)
+NESTED at line 175 2                         appendLine()
+NESTED at line 176 2                     }
+NESTED at line 177 2             })
+NESTED at line 178 2         }
+NESTED at line 179 2 
+NESTED at line 180 2         // 3. Bibles (L1 records).
+NESTED at line 181 2         dir(root, "bibles").also {
+NESTED at line 182 2             File(it, "story_bible.json").writeText(stringPayload(b.storyBible))
+NESTED at line 183 2             File(it, "character_bible.json").writeText(stringPayload(b.characterBible))
+NESTED at line 184 2             File(it, "world_bible.json").writeText(stringPayload(b.worldBible))
+NESTED at line 185 2             File(it, "relationships.json").writeText(stringPayload(b.plotPointsHistory))
+NESTED at line 186 2         }
+NESTED at line 187 2 
+NESTED at line 188 2         // 4. Lorebook.
+NESTED at line 189 2         dir(root, "lorebook").also {
+NESTED at line 190 2             File(it, "lorebook.json").writeText(
+NESTED at line 191 2                 json.encodeToString(LorebookList.serializer(), LorebookList(snapshot.loreb
+NESTED at line 192 2             )
+NESTED at line 193 2         }
+NESTED at line 194 2 
+NESTED at line 195 2         // 5. Ledgers (L6 continuity accounting).
+NESTED at line 196 2         dir(root, "ledger").also {
+NESTED at line 197 2             File(it, "chekhov.json").writeText(
+NESTED at line 198 2                 json.encodeToString(GunList.serializer(), GunList(snapshot.guns.map { it.t
+NESTED at line 199 2             )
+NESTED at line 200 2             File(it, "questions.json").writeText(
+NESTED at line 201 2                 json.encodeToString(QuestionList.serializer(), QuestionList(snapshot.quest
+NESTED at line 202 2             )
+NESTED at line 203 2             File(it, "timeline.json").writeText(stringPayload(b.continuityWarnings))
+NESTED at line 204 2         }
+NESTED at line 205 2 
+NESTED at line 206 2         // 6. Structure (L2 outline, L3 beats, serial micro-arcs).
+NESTED at line 207 2         dir(root, "structure").also {
+NESTED at line 208 2             File(it, "outline.json").writeText(stringPayload(b.outline))
+NESTED at line 209 2             File(it, "beats.json").writeText(stringPayload(b.plotPointsHistory))
+NESTED at line 210 2             File(it, "arcs.json").writeText(
+NESTED at line 211 2                 json.encodeToString(ArcList.serializer(), ArcList(snapshot.arcs.map { it.t
+NESTED at line 212 2             )
+NESTED at line 213 2         }
+NESTED at line 214 2 
+NESTED at line 215 2         // 7. Audio (voice packs / segments / masters are created empty until P4 work land
+NESTED at line 216 2         dir(root, "audio").also {
+NESTED at line 217 2             File(it, "pronunciation_rules.json").writeText(
+NESTED at line 218 2                 json.encodeToString(
+NESTED at line 219 2                     PronunciationRules.serializer(),
+NESTED at line 220 2                     PronunciationRules(projectTitle = b.title, rules = emptyList())
+NESTED at line 221 2                 )
+NESTED at line 222 2             )
+NESTED at line 223 2             File(it, "voice_packs").mkdirs()
+NESTED at line 224 2             File(it, "segments").mkdirs()
+NESTED at line 225 2             File(it, "masters").mkdirs()
+NESTED at line 226 2         }
+NESTED at line 227 2 
+NESTED at line 228 2         // 8. Plugins (scaffolded from the shipped library by PluginRegistry).
+NESTED at line 229 2         dir(root, "plugins").also {
+NESTED at line 230 2             dir(it, "structures")
+NESTED at line 231 2             dir(it, "personas")
+NESTED at line 232 2         }
+NESTED at line 233 2 
+NESTED at line 234 2         // 9. Exports (regenerable outputs, stamped with generator version).
+NESTED at line 235 2         dir(root, "exports").also { ex ->
+NESTED at line 236 2             listOf("epub", "print", "serial", "audio").forEach { dir(ex, it) }
+NESTED at line 237 2             File(ex, ".generator_version").writeText(APP_VERSION)
+NESTED at line 238 2         }
+NESTED at line 239 2     }
+NESTED at line 240 2 
+NESTED at line 241 2     // ---------------------------------------------------------------------
+NESTED at line 242 2     // Import (.authr file -> project snapshot), forward migration + backup
+NESTED at line 243 2     // ---------------------------------------------------------------------
+NESTED at line 244 2 
+NESTED at line 245 2     fun import(file: File): ImportResult {
+NESTED at line 246 2         require(file.exists() && file.length() > 0) { "Container missing or empty: ${file.
+NESTED at line 247 2         val extractDir = File.createTempFile("authr_import_${System.currentTimeMillis()}",
+NESTED at line 248 2         extractDir.delete(); extractDir.mkdirs()
+NESTED at line 249 2         try {
+NESTED at line 250 2             ZipFile(file).use { zip ->
+NESTED at line 251 2                 val entries = zip.entries().toList()
+NESTED at line 252 2                 require(entries.any { it.name == MANIFEST_ENTRY }) {
+NESTED at line 253 2                     "Not a .authr container (manifest.json missing): ${file.name}"
+NESTED at line 254 2                 }
+NESTED at line 255 2                 entries.forEach { entry ->
+NESTED at line 256 2                     if (entry.isDirectory) return@forEach
+NESTED at line 257 2                     val rel = entry.name.removePrefix("authr/")
+NESTED at line 258 2                     if (rel.startsWith("/") || rel.contains("..")) {
+NESTED at line 259 2                         throw SecurityException("Container entry escapes root: ${entry.nam
+NESTED at line 260 2                     }
+NESTED at line 261 2                     val out = File(extractDir, rel)
+NESTED at line 262 2                     out.parentFile?.mkdirs()
+NESTED at line 263 2                     zip.getInputStream(entry).use { input -> out.outputStream().use { inpu
+NESTED at line 264 2                 }
+NESTED at line 265 2             }
+NESTED at line 266 2 
+NESTED at line 267 2             val manifest = json.decodeFromString(
+NESTED at line 268 2                 Manifest.serializer(), File(extractDir, "manifest.json").readText()
+NESTED at line 269 2             )
+NESTED at line 270 2 
+NESTED at line 271 2             var effective = manifest
+NESTED at line 272 2             var migratedFrom: Int? = null
+NESTED at line 273 2             var backupPath: String? = null
+NESTED at line 274 2 
+NESTED at line 275 2             if (manifest.schemaVersion < SCHEMA_VERSION) {
+NESTED at line 276 2                 // Never silently downgrade; always backup before migrating.
+NESTED at line 277 2                 val backup = File(
+NESTED at line 278 2                     file.parentFile,
+NESTED at line 279 2                     file.nameWithoutExtension + ".backup-${System.currentTimeMillis()}.aut
+NESTED at line 280 2                 )
+NESTED at line 281 2                 file.copyTo(backup, overwrite = true)
+NESTED at line 282 2                 backupPath = backup.absolutePath
+NESTED at line 283 2                 effective = migrateForward(extractDir, manifest)
+NESTED at line 284 2                 migratedFrom = manifest.schemaVersion
+NESTED at line 285 2                 File(extractDir, "manifest.json").writeText(json.encodeToString(Manifest.s
+NESTED at line 286 2             }
+NESTED at line 287 2 
+NESTED at line 288 2             // Checksum audit: report every mismatch, never silently ignore.
+NESTED at line 289 2             val warnings = mutableListOf<String>()
+NESTED at line 290 2             effective.checksums.forEach { (path, expected) ->
+NESTED at line 291 2                 val f = File(extractDir, path)
+NESTED at line 292 2                 when {
+NESTED at line 293 2                     !f.isFile -> warnings += "Missing payload declared in manifest: $path"
+NESTED at line 294 2                     sha256(f) != expected -> warnings += "Checksum mismatch: $path"
+NESTED at line 295 2                 }
+NESTED at line 296 2             }
+NESTED at line 297 2 
+NESTED at line 298 2             return ImportResult(effective, readSnapshot(extractDir, effective), migratedFr
+NESTED at line 299 2         } finally {
+NESTED at line 300 2             extractDir.deleteRecursively()
+NESTED at line 301 2         }
+NESTED at line 302 2     }
+NESTED at line 303 2 
+NESTED at line 304 3     /**
+NESTED at line 305 3      * v1 -> v2 migration: schema v1 prototype containers carried manuscript +
+NESTED at line 306 3      * bibles but lacked ledger/, structure/arcs.json, plugins/ and exports/.
+NESTED at line 307 3      * Additive only — no payload is dropped or rewritten.
+NESTED at line 308 2      */
+NESTED at line 309 2     private fun migrateForward(root: File, manifest: Manifest): Manifest {
+NESTED at line 310 2         listOf("ledger", "structure", "plugins", "exports").forEach { dir(root, it) }
+NESTED at line 311 2         if (!File(root, "ledger/chekhov.json").exists()) File(root, "ledger/chekhov.json")
+NESTED at line 312 2         if (!File(root, "ledger/questions.json").exists()) File(root, "ledger/questions.js
+NESTED at line 313 2         if (!File(root, "structure/arcs.json").exists()) File(root, "structure/arcs.json")
+NESTED at line 314 2         return manifest.copy(
+NESTED at line 315 2             schemaVersion = SCHEMA_VERSION,
+NESTED at line 316 2             appVersion = APP_VERSION,
+NESTED at line 317 2             migrationNote = "Migrated from schema v${manifest.schemaVersion} to v$SCHEMA_V
+NESTED at line 318 2         )
+NESTED at line 319 2     }
+NESTED at line 320 2 
+NESTED at line 321 2     private fun readSnapshot(root: File, manifest: Manifest): ProjectSnapshot {
+NESTED at line 322 2         val bookFile = File(root, "metadata/book.json")
+NESTED at line 323 2         val book: com.example.data.model.Book = if (bookFile.exists()) {
+NESTED at line 324 2             json.decodeFromString(BookPayload.serializer(), bookFile.readText()).toEntity(
+NESTED at line 325 2         } else {
+NESTED at line 326 2             // v1 prototype containers: fall back to fragments.
+NESTED at line 327 2             com.example.data.model.Book(
+NESTED at line 328 2                 id = 0,
+NESTED at line 329 2                 title = readManuscriptTitle(root) ?: "Untitled",
+NESTED at line 330 2                 genre = "",
+NESTED at line 331 2                 synopsis = "",
+NESTED at line 332 2                 outline = "",
+NESTED at line 333 2                 format = manifest.format,
+NESTED at line 334 2                 isSerialized = manifest.featureFlags["serialization_format"] == true,
+NESTED at line 335 2                 createdAt = manifest.createdAt
+NESTED at line 336 2             )
+NESTED at line 337 2         }
+NESTED at line 338 2 
+NESTED at line 339 2         val chapters = File(root, "manuscript")
+NESTED at line 340 2             .listFiles { f -> f.name.matches(Regex("chapter_\\d+\\.json")) }
+NESTED at line 341 2             ?.sortedBy { it.name }
+NESTED at line 342 2             ?.map { f -> json.decodeFromString(ChapterPayload.serializer(), f.readText()).
+NESTED at line 343 2             ?: emptyList()
+NESTED at line 344 2 
+NESTED at line 345 2         val lorebook = File(root, "lorebook/lorebook.json").takeIf { it.exists() }
+NESTED at line 346 2             ?.let { json.decodeFromString(LorebookList.serializer(), it.readText()).lorebo
+NESTED at line 347 2             ?: emptyList()
+NESTED at line 348 2 
+NESTED at line 349 2         val arcs = File(root, "structure/arcs.json").takeIf { it.exists() }
+NESTED at line 350 2             ?.let { json.decodeFromString(ArcList.serializer(), it.readText()).arcs.map { 
+NESTED at line 351 2             ?: emptyList()
+NESTED at line 352 2 
+NESTED at line 353 2         val guns = File(root, "ledger/chekhov.json").takeIf { it.exists() }
+NESTED at line 354 2             ?.let { json.decodeFromString(GunList.serializer(), it.readText()).guns.map { 
+NESTED at line 355 2             ?: emptyList()
+NESTED at line 356 2 
+NESTED at line 357 2         val questions = File(root, "ledger/questions.json").takeIf { it.exists() }
+NESTED at line 358 2             ?.let { json.decodeFromString(QuestionList.serializer(), it.readText()).questi
+NESTED at line 359 2             ?: emptyList()
+NESTED at line 360 2 
+NESTED at line 361 2         return ProjectSnapshot(
+NESTED at line 362 2             book = book,
+NESTED at line 363 2             chapters = chapters,
+NESTED at line 364 2             lorebook = lorebook,
+NESTED at line 365 2             arcs = arcs,
+NESTED at line 366 2             guns = guns,
+NESTED at line 367 2             questions = questions
+NESTED at line 368 2         )
+NESTED at line 369 2     }
+NESTED at line 370 2 
+NESTED at line 371 2     // ---------------------------------------------------------------------
+NESTED at line 372 2     // Payload DTOs + entity mapping (lossless)
+NESTED at line 373 2     // ---------------------------------------------------------------------
+NESTED at line 374 2 
+NESTED at line 375 2     @Serializable
+NESTED at line 376 2     data class BookPayload(
+NESTED at line 377 2         val id: Int, val title: String, val genre: String, val synopsis: String,
+NESTED at line 378 2         val outline: String, val personaId: String, val format: String,
+NESTED at line 379 2         val targetWordCount: Int, val narrativeStructure: String, val chapterLength: Strin
+NESTED at line 380 2         val isSerialized: Boolean, val targetChapters: Int, val releaseSchedule: String,
+NESTED at line 381 2         val freeTierChapters: Int, val wordMin: Int, val wordMax: Int,
+NESTED at line 382 2         val bufferTarget: Int, val exportProfile: String,
+NESTED at line 383 2         val compiledManuscript: String, val currentPhase: String,
+NESTED at line 384 2         val storyBible: String, val characterBible: String, val worldBible: String,
+NESTED at line 385 2         val plotPointsHistory: String, val memoryState: String, val agentLogs: String,
+NESTED at line 386 2         val marketingMaterials: String, val coverPrompt: String,
+NESTED at line 387 2         val completionPercentage: Int, val wordsPerMinute: Int,
+NESTED at line 388 2         val readabilityScore: String, val emotionalIntensity: String,
+NESTED at line 389 2         val pacingHeatmap: String, val continuityWarnings: String,
+NESTED at line 390 2         val createdAt: Long, val lastModifiedAt: Long
+NESTED at line 391 2     )
+NESTED at line 392 2 
+NESTED at line 393 2     @Serializable
+NESTED at line 394 2     data class ChapterPayload(
+NESTED at line 395 2         val chapterNumber: Int,
+NESTED at line 396 2         val title: String,
+NESTED at line 397 2         val content: String,
+NESTED at line 398 2         val summary: String,
+NESTED at line 399 2         val status: String,
+NESTED at line 400 2         val writerConfirmed: Boolean,
+NESTED at line 401 2         val draftStatus: String,
+NESTED at line 402 2         val arcId: Int?,
+NESTED at line 403 2         val endingType: String?,
+NESTED at line 404 2         val beatCoverage: String?,
+NESTED at line 405 2         val balanceShares: String?,
+NESTED at line 406 2         val worksheet: String?,
+NESTED at line 407 2         val qcScores: String?,
+NESTED at line 408 2         val qcTotal: Int?,
+NESTED at line 409 2         val hookCheck: String?,
+NESTED at line 410 2         val ctaNote: String?,
+NESTED at line 411 2         val pollJson: String?,
+NESTED at line 412 2         val createdAt: Long
+NESTED at line 413 2     )
+NESTED at line 414 2 
+NESTED at line 415 2     @Serializable
+NESTED at line 416 2     data class LorebookPayload(val key: String, val value: String)
+NESTED at line 417 2 
+NESTED at line 418 2     @Serializable
+NESTED at line 419 2     data class ArcPayload(
+NESTED at line 420 2         val arcIndex: Int, val conflict: String, val questionRef: Int?,
+NESTED at line 421 2         val phaseBounds: String, val answeredQuestionRef: Int?,
+NESTED at line 422 2         val contribution: String, val seeds: String
+NESTED at line 423 2     )
+NESTED at line 424 2 
+NESTED at line 425 2     @Serializable
+NESTED at line 426 2     data class GunPayload(
+NESTED at line 427 2         val name: String, val description: String, val status: String,
+NESTED at line 428 2         val introducedChapter: Int, val escalationChapters: String, val resolvedChapter: I
+NESTED at line 429 2         val quote: String, val severity: String, val waiveNote: String
+NESTED at line 430 2     )
+NESTED at line 431 2 
+NESTED at line 432 2     @Serializable
+NESTED at line 433 2     data class QuestionPayload(
+NESTED at line 434 2         val level: String, val text: String, val openedChapter: Int,
+NESTED at line 435 2         val dueChapter: Int?, val answeredChapter: Int?, val answeredByReveal: Int?
+NESTED at line 436 2     )
+NESTED at line 437 2 
+NESTED at line 438 2     @Serializable
+NESTED at line 439 2     data class PronunciationRules(val projectTitle: String, val rules: List<Rule>) {
+NESTED at line 440 2         @Serializable
+NESTED at line 441 2         data class Rule(val term: String, val ipa: String, val respelling: String, val app
+NESTED at line 442 2     }
+NESTED at line 443 2 
+NESTED at line 444 2     @Serializable data class LorebookList(val lorebook: List<LorebookPayload>)
+NESTED at line 445 2     @Serializable data class ArcList(val arcs: List<ArcPayload>)
+NESTED at line 446 2     @Serializable data class GunList(val guns: List<GunPayload>)
+NESTED at line 447 2     @Serializable data class QuestionList(val questions: List<QuestionPayload>)
+NESTED at line 448 2 
+NESTED at line 449 2     private fun com.example.data.model.Book.toPayload() = BookPayload(
+NESTED at line 450 2         id = id, title = title, genre = genre, synopsis = synopsis, outline = outline,
+NESTED at line 451 2         personaId = personaId, format = format, targetWordCount = targetWordCount,
+NESTED at line 452 2         narrativeStructure = narrativeStructure, chapterLength = chapterLength,
+NESTED at line 453 2         isSerialized = isSerialized, targetChapters = targetChapters,
+NESTED at line 454 2         releaseSchedule = releaseSchedule, freeTierChapters = freeTierChapters,
+NESTED at line 455 2         wordMin = wordMin, wordMax = wordMax, bufferTarget = bufferTarget,
+NESTED at line 456 2         exportProfile = exportProfile, compiledManuscript = compiledManuscript,
+NESTED at line 457 2         currentPhase = currentPhase, storyBible = storyBible,
+NESTED at line 458 2         characterBible = characterBible, worldBible = worldBible,
+NESTED at line 459 2         plotPointsHistory = plotPointsHistory, memoryState = memoryState,
+NESTED at line 460 2         agentLogs = agentLogs, marketingMaterials = marketingMaterials,
+NESTED at line 461 2         coverPrompt = coverPrompt, completionPercentage = completionPercentage,
+NESTED at line 462 2         wordsPerMinute = wordsPerMinute, readabilityScore = readabilityScore,
+NESTED at line 463 2         emotionalIntensity = emotionalIntensity, pacingHeatmap = pacingHeatmap,
+NESTED at line 464 2         continuityWarnings = continuityWarnings, createdAt = createdAt,
+NESTED at line 465 2         lastModifiedAt = lastModifiedAt
+NESTED at line 466 2     )
+NESTED at line 467 2 
+NESTED at line 468 2     private fun BookPayload.toEntity() = com.example.data.model.Book(
+NESTED at line 469 2         id = 0, // Room re-assigns on import; container identity is title + createdAt
+NESTED at line 470 2         title = title, genre = genre, synopsis = synopsis, outline = outline,
+NESTED at line 471 2         personaId = personaId, format = format, targetWordCount = targetWordCount,
+NESTED at line 472 2         narrativeStructure = narrativeStructure, chapterLength = chapterLength,
+NESTED at line 473 2         isSerialized = isSerialized, targetChapters = targetChapters,
+NESTED at line 474 2         releaseSchedule = releaseSchedule, freeTierChapters = freeTierChapters,
+NESTED at line 475 2         wordMin = wordMin, wordMax = wordMax, bufferTarget = bufferTarget,
+NESTED at line 476 2         exportProfile = exportProfile, compiledManuscript = compiledManuscript,
+NESTED at line 477 2         currentPhase = currentPhase, storyBible = storyBible,
+NESTED at line 478 2         characterBible = characterBible, worldBible = worldBible,
+NESTED at line 479 2         plotPointsHistory = plotPointsHistory, memoryState = memoryState,
+NESTED at line 480 2         agentLogs = agentLogs, marketingMaterials = marketingMaterials,
+NESTED at line 481 2         coverPrompt = coverPrompt, completionPercentage = completionPercentage,
+NESTED at line 482 2         wordsPerMinute = wordsPerMinute, readabilityScore = readabilityScore,
+NESTED at line 483 2         emotionalIntensity = emotionalIntensity, pacingHeatmap = pacingHeatmap,
+NESTED at line 484 2         continuityWarnings = continuityWarnings, createdAt = createdAt,
+NESTED at line 485 2         lastModifiedAt = lastModifiedAt
+NESTED at line 486 2     )
+NESTED at line 487 2 
+NESTED at line 488 2     private fun com.example.data.model.Chapter.toPayload() = ChapterPayload(
+NESTED at line 489 2         chapterNumber = chapterNumber, title = title, content = content,
+NESTED at line 490 2         summary = summary, status = status, writerConfirmed = writerConfirmed,
+NESTED at line 491 2         draftStatus = draftStatus, arcId = arcId, endingType = endingType,
+NESTED at line 492 2         beatCoverage = beatCoverage, balanceShares = balanceShares, worksheet = worksheet,
+NESTED at line 493 2         qcScores = qcScores, qcTotal = qcTotal, hookCheck = hookCheck,
+NESTED at line 494 2         ctaNote = ctaNote, pollJson = pollJson, createdAt = createdAt
+NESTED at line 495 2     )
+NESTED at line 496 2 
+NESTED at line 497 2     private fun ChapterPayload.toEntity() = com.example.data.model.Chapter(
+NESTED at line 498 2         bookId = 0, // re-linked to the imported book's id by the caller (AppRepository)
+NESTED at line 499 2         chapterNumber = chapterNumber, title = title, content = content,
+NESTED at line 500 2         summary = summary, status = status, writerConfirmed = writerConfirmed,
+NESTED at line 501 2         draftStatus = draftStatus, arcId = arcId, endingType = endingType,
+NESTED at line 502 2         beatCoverage = beatCoverage, balanceShares = balanceShares, worksheet = worksheet,
+NESTED at line 503 2         qcScores = qcScores, qcTotal = qcTotal, hookCheck = hookCheck,
+NESTED at line 504 2         ctaNote = ctaNote, pollJson = pollJson, createdAt = createdAt
+NESTED at line 505 2     )
+NESTED at line 506 2 
+NESTED at line 507 2     private fun com.example.data.model.Lorebook.toPayload() = LorebookPayload(key, value)
+NESTED at line 508 2     private fun LorebookPayload.toEntity() = com.example.data.model.Lorebook(bookId = 0, k
+NESTED at line 509 2 
+NESTED at line 510 2     private fun com.example.data.model.SerialArc.toPayload() = ArcPayload(
+NESTED at line 511 2         arcIndex, conflict, questionRef, phaseBounds, answeredQuestionRef, contribution, s
+NESTED at line 512 2     )
+NESTED at line 513 2     private fun ArcPayload.toEntity() = com.example.data.model.SerialArc(
+NESTED at line 514 2         bookId = 0, arcIndex = arcIndex, conflict = conflict, questionRef = questionRef,
+NESTED at line 515 2         phaseBounds = phaseBounds, answeredQuestionRef = answeredQuestionRef,
+NESTED at line 516 2         contribution = contribution, seeds = seeds
+NESTED at line 517 2     )
+NESTED at line 518 2 
+NESTED at line 519 2     private fun com.example.data.model.ChekhovGun.toPayload() = GunPayload(
+NESTED at line 520 2         name, description, status, introducedChapter, escalationChapters, resolvedChapter,
+NESTED at line 521 2     )
+NESTED at line 522 2     private fun GunPayload.toEntity() = com.example.data.model.ChekhovGun(
+NESTED at line 523 2         bookId = 0, name = name, description = description, status = status,
+NESTED at line 524 2         introducedChapter = introducedChapter, escalationChapters = escalationChapters,
+NESTED at line 525 2         resolvedChapter = resolvedChapter, quote = quote, severity = severity, waiveNote =
+NESTED at line 526 2     )
+NESTED at line 527 2 
+NESTED at line 528 2     private fun com.example.data.model.QuestionEntry.toPayload() = QuestionPayload(
+NESTED at line 529 2         level, text, openedChapter, dueChapter, answeredChapter, answeredByReveal
+NESTED at line 530 2     )
+NESTED at line 531 2     private fun QuestionPayload.toEntity() = com.example.data.model.QuestionEntry(
+NESTED at line 532 2         bookId = 0, level = level, text = text, openedChapter = openedChapter,
+NESTED at line 533 2         dueChapter = dueChapter, answeredChapter = answeredChapter, answeredByReveal = ans
+NESTED at line 534 2     )
+NESTED at line 535 2 
+NESTED at line 536 2     // ---------------------------------------------------------------------
+NESTED at line 537 2     // Helpers
+NESTED at line 538 2     // ---------------------------------------------------------------------
+NESTED at line 539 2 
+NESTED at line 540 2     @Serializable private data class StringEnvelope(val data: String)
+NESTED at line 541 2 
+NESTED at line 542 2     private fun stringPayload(content: String): String =
+NESTED at line 543 2         json.encodeToString(StringEnvelope.serializer(), StringEnvelope(content))
+NESTED at line 544 2 
+NESTED at line 545 2     private fun readStringPayload(f: File?): String =
+NESTED at line 546 2         f?.takeIf { it.exists() }
+NESTED at line 547 2             ?.let { json.decodeFromString(StringEnvelope.serializer(), it.readText()).data
+NESTED at line 548 2             ?: ""
+NESTED at line 549 2 
+NESTED at line 550 2     private fun readManuscriptTitle(root: File): String? =
+NESTED at line 551 2         File(root, "manuscript/manuscript.md").takeIf { it.exists() }
+NESTED at line 552 2             ?.useLines { lines -> lines.firstOrNull { it.startsWith("# ") } }
+NESTED at line 553 2             ?.removePrefix("# ")?.trim()
+NESTED at line 554 2 
+NESTED at line 555 2     private fun dir(parent: File, name: String): File =
+NESTED at line 556 2         File(parent, name).apply { mkdirs() }
+NESTED at line 557 2 
+NESTED at line 558 2     fun sha256(file: File): String {
+NESTED at line 559 2         val digest = MessageDigest.getInstance("SHA-256")
+NESTED at line 560 2         file.inputStream().use { input ->
+NESTED at line 561 2             val buf = ByteArray(8192)
+NESTED at line 562 2             while (true) {
+NESTED at line 563 2                 val n = input.read(buf); if (n < 0) break
+NESTED at line 564 2                 digest.update(buf, 0, n)
+NESTED at line 565 2             }
+NESTED at line 566 2         }
+NESTED at line 567 2         return digest.digest().joinToString("") { "%02x".format(it) }
+NESTED at line 568 2     }
+NESTED at line 569 2 }
+final depth: 2
+    public fun bindBlob(@IntRange(from = 1) index: Int, value: ByteArray)
+    public fun bindDouble(@IntRange(from = 1) index: Int, value: Double)
+    public fun bindFloat(@IntRange(from = 1) index: Int, value: Float) {
+    public fun bindLong(@IntRange(from = 1) index: Int, value: Long)
+    public fun bindInt(@IntRange(from = 1) index: Int, value: Int) {
+    public fun bindBoolean(@IntRange(from = 1) index: Int, value: Boolean) {
+    public fun bindText(@IntRange(from = 1) index: Int, value: String)
+    public fun bindNull(@IntRange(from = 1) index: Int)
