@@ -4,11 +4,13 @@ import com.example.data.local.AudioTrackDao
 import com.example.data.local.StoryDao
 import com.example.data.local.BookDao
 import com.example.data.local.ChapterDao
+import com.example.data.local.ChekhovGunDao
 import com.example.data.local.LorebookDao
 import com.example.data.model.AudioTrack
 import com.example.data.model.Story
 import com.example.data.model.Book
 import com.example.data.model.Chapter
+import com.example.data.model.ChekhovGun
 import com.example.data.model.Lorebook
 import kotlinx.coroutines.flow.Flow
 
@@ -17,7 +19,8 @@ class AppRepository(
     private val audioTrackDao: AudioTrackDao,
     val bookDao: BookDao,
     private val chapterDao: ChapterDao,
-    private val lorebookDao: LorebookDao
+    private val lorebookDao: LorebookDao,
+    private val chekhovGunDao: ChekhovGunDao? = null
 ) {
     val allStories: Flow<List<Story>> = storyDao.getAllStories()
     val allAudioTracks: Flow<List<AudioTrack>> = audioTrackDao.getAllAudioTracks()
@@ -78,6 +81,7 @@ class AppRepository(
     // Chapter methods
     fun getChaptersForBook(bookId: Int): Flow<List<Chapter>> = chapterDao.getChaptersForBook(bookId)
     suspend fun getChaptersForBookSync(bookId: Int): List<Chapter> = chapterDao.getChaptersForBookSync(bookId)
+    suspend fun getProposedChaptersForBookSync(bookId: Int): List<Chapter> = chapterDao.getProposedChaptersForBookSync(bookId)
     suspend fun getChapterById(id: Int): Chapter? = chapterDao.getChapterById(id)
     suspend fun insertChapter(chapter: Chapter): Long = chapterDao.insertChapter(chapter)
     suspend fun insertChapters(chapters: List<Chapter>) = chapterDao.insertChapters(chapters)
@@ -91,4 +95,20 @@ class AppRepository(
     suspend fun insertLorebooks(lorebooks: List<Lorebook>) = lorebookDao.insertLorebooks(lorebooks)
     suspend fun updateLorebook(lorebook: Lorebook) = lorebookDao.updateLorebook(lorebook)
     suspend fun deleteLorebook(id: Int) = lorebookDao.deleteLorebook(id)
+
+    // Chekhov continuity ledger methods (v3.0, plan §5.2; nullable DAO keeps
+    // older construction sites and JVM tests without a ledger working).
+    fun getGunsForBook(bookId: Int): Flow<List<ChekhovGun>> =
+        chekhovGunDao?.getGunsForBook(bookId) ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun getUnresolvedGuns(bookId: Int): List<ChekhovGun> =
+        chekhovGunDao?.getUnresolvedGuns(bookId) ?: emptyList()
+
+    suspend fun insertGun(gun: ChekhovGun): Long = chekhovGunDao?.insertGun(gun) ?: -1L
+
+    suspend fun insertGuns(guns: List<ChekhovGun>) { if (guns.isNotEmpty()) chekhovGunDao?.insertGuns(guns) }
+
+    suspend fun updateGun(gun: ChekhovGun) = chekhovGunDao?.updateGun(gun) ?: Unit
+
+    suspend fun deleteGun(id: Int) = chekhovGunDao?.deleteGun(id) ?: Unit
 }

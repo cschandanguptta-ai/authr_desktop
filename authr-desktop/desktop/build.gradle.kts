@@ -61,6 +61,7 @@ dependencies {
 
     // Unit tests (P0 gates: container round-trip, plugin schema)
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
 
 compose.desktop {

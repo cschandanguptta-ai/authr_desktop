@@ -16,6 +16,10 @@ interface ChapterDao {
     @Query("SELECT * FROM chapters WHERE bookId = :bookId ORDER BY chapterNumber ASC")
     suspend fun getChaptersForBookSync(bookId: Int): List<Chapter>
 
+    /** Writer Studio review queue: L4 drafts awaiting the confirm flow (plan §4.1). */
+    @Query("SELECT * FROM chapters WHERE bookId = :bookId AND draftStatus = 'PROPOSED' ORDER BY chapterNumber ASC")
+    suspend fun getProposedChaptersForBookSync(bookId: Int): List<Chapter>
+
     @Query("SELECT * FROM chapters WHERE id = :chapterId LIMIT 1")
     suspend fun getChapterById(chapterId: Int): Chapter?
 

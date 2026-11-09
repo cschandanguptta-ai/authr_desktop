@@ -55,6 +55,13 @@ class DraftingWorker(
                     continue
                 }
 
+                // v3.0 §4 (SCR-1): a pending L4 proposal is never overwritten
+                // by a re-run — the writer owns it until Confirm/Archive.
+                if (chapter.draftStatus == com.example.engine.DraftState.PROPOSED && !chapter.writerConfirmed) {
+                    logAgentChat(bookDao, bookId, "✍️ [Scene Composer]", "Chapter ${chapter.chapterNumber} already holds a PROPOSED draft — awaiting writer confirmation in the Writer Studio.")
+                    continue
+                }
+
                 if (isStopped) {
                     logAgentChat(bookDao, bookId, "⏸️ [System]", "Drafting process stopped by user.")
                     return@withContext Result.failure()
@@ -163,25 +170,24 @@ class DraftingWorker(
 
                 if (generatedContent.isNotEmpty()) {
                     val wordCount = generatedContent.trim().split("\\s+".toRegex()).count { it.isNotBlank() }
-                    chapterDao.updateChapter(chapter.copy(content = generatedContent.trim(), status = "Completed ($wordCount words)"))
-                    previousContext += "Chapter ${chapter.chapterNumber} (${chapter.title}): ${chapter.summary}\n"
-                    logAgentChat(bookDao, bookId, "✍️ [Scene Composer]", "Chapter ${chapter.chapterNumber}/${chapters.size} (\"${chapter.title}\") generated successfully ($wordCount words).")
+                    // v3.0 §4 (SCR-1): the L4 draft lands as PROPOSED — machine
+                    // text never enters canon without the writer's Confirm.
+                    chapterDao.updateChapter(chapter.copy(
+                        content = generatedContent.trim(),
+                        status = "Proposed ($wordCount words)",
+                        writerConfirmed = false,
+                        draftStatus = com.example.engine.DraftState.PROPOSED
+                    ))
+                    logAgentChat(bookDao, bookId, "✍️ [Scene Composer]", "Chapter ${chapter.chapterNumber}/${chapters.size} (\"${chapter.title}\") generated successfully ($wordCount words). PROPOSED — awaiting writer confirmation in the Writer Studio.")
 
-                    logAgentChat(bookDao, bookId, "🔎 [Continuity Manager]", "Analyzing chapter content to update persistent story memory...")
-                    val memoryPrompt = "You are the Continuity Manager. Analyze the following chapter content and provide an updated, compiled report tracking character statuses (appearance, injuries, emotional states, secrets), locations visited, rules discovered, and story promises/foreshadowing.\n\nPrevious Memory State:\n${if (memoryState.isEmpty()) "None" else memoryState}\n\nChapter Content:\n$generatedContent\n\nProvide ONLY the updated bulleted memory tracker report."
-                    memoryState = retryWithBackoff {
-                        LlmOrchestrator.callAgent(applicationContext, LlmOrchestrator.Agent.CONTINUITY, memoryPrompt)
-                    }
-                    
-                    logAgentChat(bookDao, bookId, "📐 [Plot Architect]", "Updating structured persistent Plot Points History with events from Chapter ${chapter.chapterNumber}...")
-                    val plotHistoryPrompt = "You are the Plot Architect. Update the running narrative history timeline of the novel with the events of Chapter ${chapter.chapterNumber} (\"${chapter.title}\").\n\nCurrent Plot Points History:\n$plotHist\n\nNew Chapter Content:\n$generatedContent\n\nProvide an updated, complete timeline of the novel's plot points history incorporating this new chapter. Be precise and keep it structured."
-                    plotHist = try {
-                        retryWithBackoff {
-                            LlmOrchestrator.callAgent(applicationContext, LlmOrchestrator.Agent.PLOT, plotHistoryPrompt)
-                        }
-                    } catch (e: Exception) { plotHist }
+                    // v3.0 §4 layer contract: the Continuity Manager (L6) and the
+                    // Plot Architect timeline consume CONFIRMED text only. The
+                    // fresh draft is a proposal, so persistent memory, plot
+                    // history, and the next chapter's context remain anchored to
+                    // canon; ledger annotation runs on confirm in the Studio.
+                    logAgentChat(bookDao, bookId, "🔎 [Continuity Manager]", "Chapter ${chapter.chapterNumber} is PROPOSED — continuity annotation is deferred until the writer confirms (L6 annotates confirmed text only).")
 
-                    val completionPct = (chapter.chapterNumber * 100) / chapters.size
+                    val completionPct = ((chapter.chapterNumber - 1) * 100) / chapters.size
                     val score = "Flesch-Kincaid: Grade ${7 + (chapter.chapterNumber % 3)}"
                     val emotional = when (chapter.chapterNumber % 3) {
                         0 -> "High Suspense / Tension"
@@ -196,15 +202,12 @@ class DraftingWorker(
 
                     val currentB = bookDao.getBookById(bookId) ?: book
                     bookDao.updateBook(currentB.copy(
-                        memoryState = memoryState,
-                        plotPointsHistory = plotHist,
                         completionPercentage = completionPct,
                         readabilityScore = score,
                         emotionalIntensity = emotional,
                         pacingHeatmap = pacingVal
                     ))
 
-                    logAgentChat(bookDao, bookId, "🔎 [Continuity Manager]", "Persistent story memory updated successfully.")
                     logAgentChat(bookDao, bookId, "📖 [Beta Reader]", "Completed reading Chapter ${chapter.chapterNumber}. Readability is calibrated to $score.")
                 } else {
                     Log.e("DraftingWorker", "Failed to generate content for chapter ${chapter.chapterNumber}")

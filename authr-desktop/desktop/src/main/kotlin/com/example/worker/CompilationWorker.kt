@@ -37,7 +37,14 @@ class CompilationWorker(
             val bookForCompiling = bookDao.getBookById(bookId) ?: book
             bookDao.updateBook(bookForCompiling.copy(currentPhase = "Compiling"))
 
-            val finalChapters = chapterDao.getChaptersForBookSync(bookId)
+            // v3.0 §4 P1 exit gate: no unconfirmed text reaches any export —
+            // the compiler consumes canon chapters only (plan Table 33).
+            val allChaptersForCompile = chapterDao.getChaptersForBookSync(bookId)
+            val finalChapters = com.example.engine.WriterGate.canonChapters(allChaptersForCompile)
+            val excluded = allChaptersForCompile.size - finalChapters.size
+            if (excluded > 0) {
+                logAgentChat(bookDao, bookId, "📚 [Publishing Agent]", "Writer gate: excluded $excluded unconfirmed chapter(s) from the compiled manuscript — confirm them in the Writer Studio and re-compile.")
+            }
             val manuscriptBuilder = StringBuilder()
             manuscriptBuilder.append("# ${book.title}\n")
             manuscriptBuilder.append("## Genre: ${book.genre} | Format: ${book.format}\n\n")

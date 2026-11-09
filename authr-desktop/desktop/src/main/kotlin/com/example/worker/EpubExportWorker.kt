@@ -33,7 +33,14 @@ class EpubExportWorker(
 
             if (bookId != -1) {
                 val book = repository.getBookById(bookId) ?: return@withContext Result.failure()
-                val chapters = repository.getChaptersForBookSync(bookId)
+                // v3.0 §4 P1 exit gate: no unconfirmed text reaches any export —
+                // the EPUB exporter consumes canon chapters only.
+                val allChapters = repository.getChaptersForBookSync(bookId)
+                val chapters = com.example.engine.WriterGate.canonChapters(allChapters)
+                if (chapters.size < allChapters.size) {
+                    android.util.Log.w("EpubExportWorker",
+                        "Writer gate: excluded ${allChapters.size - chapters.size} unconfirmed chapter(s) from the EPUB export.")
+                }
                 
                 // Construct a temporary Story object representation for EpubManager
                 val fullTextParts = chapters.map { "${it.title}\n\n${it.content}" }

@@ -38,7 +38,15 @@ class PolishingWorker(
             val bookForPolishing = bookDao.getBookById(bookId) ?: book
             bookDao.updateBook(bookForPolishing.copy(currentPhase = "Polishing"))
 
-            val chaptersToPolish = chapterDao.getChaptersForBookSync(bookId)
+            // v3.0 §4 layer contract: L5 (Style Polisher) consumes CONFIRMED
+            // drafts only — PROPOSED/ARCHIVED chapters are skipped and stay
+            // untouched for the writer (plan Table 4, L5 row).
+            val allChapters = chapterDao.getChaptersForBookSync(bookId)
+            val chaptersToPolish = com.example.engine.WriterGate.canonChapters(allChapters)
+            val skipped = allChapters.size - chaptersToPolish.size
+            if (skipped > 0) {
+                logAgentChat(bookDao, bookId, "📝 [Style Editor]", "Skipped $skipped non-canon chapter(s) — L5 polishes confirmed drafts only (writer sovereignty, plan §4).")
+            }
             for (chapter in chaptersToPolish) {
                 if (chapter.status == "Polished") continue
                 
@@ -80,8 +88,18 @@ class PolishingWorker(
                 }
                 
                 if (polishedContent.isNotEmpty()) {
-                    chapterDao.updateChapter(chapter.copy(content = polishedContent.trim(), status = "Polished"))
-                    logAgentChat(bookDao, bookId, "🔍 [Copy Editor]", "Completed spelling, punctuation, and structural refinement for Chapter ${chapter.chapterNumber}.")
+                    // v3.0 §4 (L5 gate — side-by-side diff; accept, edit, or
+                    // reject): the styled revision is a NEW PROPOSAL, never a
+                    // silent overwrite of canon. The writer accepts it in the
+                    // Writer Studio by confirming the chapter.
+                    val polishedWords = polishedContent.trim().split("\\s+".toRegex()).count { it.isNotBlank() }
+                    chapterDao.updateChapter(chapter.copy(
+                        content = polishedContent.trim(),
+                        status = "Proposed (polished, $polishedWords words)",
+                        writerConfirmed = false,
+                        draftStatus = com.example.engine.DraftState.PROPOSED
+                    ))
+                    logAgentChat(bookDao, bookId, "🔍 [Copy Editor]", "Styled revision for Chapter ${chapter.chapterNumber} landed as PROPOSED — accept it via Confirm in the Writer Studio.")
                 } else {
                     Log.e("PolishingWorker", "Failed to polish chapter ${chapter.chapterNumber}")
                     chapterDao.updateChapter(chapter.copy(status = "Failed"))
