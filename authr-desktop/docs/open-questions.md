@@ -16,9 +16,14 @@ Every UNKNOWN in one checklist for a human to answer. If you resolve one, move t
 | 10 | Git history contains UUID-named commits (e.g. `fac08d1 1b4a9c79-…`) alongside phase commits — is there a canonical history elsewhere (the original Android repo) that this port's history must be reconciled with? | Provenance for audits/ADR evidence. | `git log` of `authr-desktop/` | docs integrity |
 | 11 | The plan's P4 exit gate needs a Pocket TTS voice-pack distribution story (packs dir, model variants). Is the pack format/binary invocation protocol frozen yet? | P4 depends on a stable bridge. | `desktopbridge/PocketTtsBridge.kt` resolution order only; pack format UNKNOWN beyond `listVoicePacks` | P4 kickoff |
 | 12 | Beta program: the plan's success metric requires "three beta authors each ship one serial and one retail title end to end" — is beta staffing/scheduling decided? | Program-level acceptance. | plan §15 | release planning |
+| 13 | If Microsoft invalidates the reverse-engineered Edge TTS handshake (pinned `TRUSTED_CLIENT_TOKEN` + `Sec-MS-GEC` version), is losing the Edge engine acceptable, or does someone own updating the constants? | Three narration engines share it: `PocketTtsManager` falls back to Edge, the desktop `TextToSpeech` shim routes through Edge, and `StudioViewModel` calls it directly (FACT: call-site grep 2026-11-10). | `tts/EdgeTtsManager.kt` (`TRUSTED_CLIENT_TOKEN`, `generateGecToken`, pinned version header) | P4 audiobook work |
 
 ## Documented assumptions (INFERRED — confirm or refute)
 
 - Data root on Linux is `~/.local/share/authr` (observed in smoke logs; derived from the shim's `filesDir` wiring).
 - RESOLVED AS FACT (self-check): `RequestQueueManager` persists failed requests to prefs (`offline_queue_data`) and restores their COUNT on launch, but never re-executes them — `serializedRequests` has no replay consumer (`data/api/RequestQueueManager.kt`). Treat the queue length as accounting, not backlog.
 - The `source/` directory in the workspace is the original Android app used for parity reference only; it is not part of the desktop deliverable.
+
+## Self-check log
+
+- **2026-11-10 (doc Phase 3)**: sampled 3 modules at random — `data/model/ChekhovGun.kt`, `engine/serialization/QcScorecard.kt`, `tts/EdgeTtsManager.kt`. Gaps found and patched: change-impact.md (new ledger/arc-entity row; scorecard persisted-JSON-keys note; Edge TTS blast radius incl. shared OkHttp client + shim/Pocket callers), troubleshooting.md (scorecard `-1/14` null-card symptom; Edge TTS handshake failure + stale chunk cache), invariants-and-gotchas.md (dual-location ledger status strings; null-card gate shape; pinned Edge handshake). Core verdict: change-impact + troubleshooting held up well on the P1–P3 engine surface; the TTS layer was the thin spot.

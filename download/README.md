@@ -43,6 +43,13 @@ P2 exit-gate status (all green, see the report for evidence):
 3. Zero false compile blocks — empty / resolved / resolved-plus-waived ledgers compile clean;
    only genuinely unfired guns block, waivers always disclosed
 
+Implementation lives in authr-desktop/ — 63 unit tests green (34 P0/P1 unchanged + 29 P2), the
+188 MB distributable app rebuilds and the smoke run survives the 40-second window. New in
+P2: engine/ClicheCleaner + TokenBiasPolicy + ChekhovLedger + QuestionLedger, the Studio Continuity
+Ledger panel (guns with lifecycle actions, questions with due/overdue chips, compile-gate chip),
+prompt-level cliché constraints on the L4 route, logit_bias plumbing on the OpenAI-compatible
+family, and the final-act recovery gate inside CompilationWorker.
+
 ## Authr OS 3.0 — P3 Implementation Report (November 9, 2026)
 - Authr-OS-3.0-P3-Implementation-Report.docx — phase P3 deliverable report: Serialization —
   opening validators, seven-beat coverage and balance meter, ending advisor, micro-arc planner,
@@ -66,9 +73,21 @@ suite report with dismissal, worksheet/scorecard editors, paste-ready exports), 
 artifacts persisted at confirm time, the Blueprint 2.0 drafting block replacing the 1.0
 cliffhanger score, the serial outline gate, and the serial export gates in CompilationWorker.
 
-Implementation lives in authr-desktop/ — 63 unit tests green (34 P0/P1 unchanged + 29 P2), the
-188 MB distributable app image rebuilds and the smoke run survives the 40-second window. New in
-P2: engine/ClicheCleaner + TokenBiasPolicy + ChekhovLedger + QuestionLedger, the Studio Continuity
-Ledger panel (guns with lifecycle actions, questions with due/overdue chips, compile-gate chip),
-prompt-level cliché constraints on the L4 route, logit_bias plumbing on the OpenAI-compatible
-family, and the final-act recovery gate inside CompilationWorker.
+## Authr OS 3.0 — AI Maintenance Documentation (November 10, 2026)
+- Authr-OS-AI-Maintenance-Docs/ — the "Document a Production App for Future AI Maintenance"
+  package for the authr-desktop production app: repo-root AGENTS.md (doc index, hard rules,
+  commands, workflow) + docs/ (system-map with Mermaid component diagram, change-impact blast
+  radii, invariants-and-gotchas, troubleshooting symptom tables, data-model with ER diagram +
+  migration rules, api-contracts, config-and-env, testing, tech-debt D-01..D-12,
+  open-questions, and 9 ADRs under docs/decisions/)
+- Authr-OS-AI-Maintenance-Docs.zip — the same package zipped
+
+Every claim is labeled FACT / INFERRED / UNKNOWN with file citations. The package passed the
+3-module random self-check (ChekhovGun.kt, QcScorecard.kt, EdgeTtsManager.kt): five real gaps
+were found and patched into change-impact.md / troubleshooting.md / invariants-and-gotchas.md
+(ledger status strings duplicated in Kotlin constants AND ChekhovGunDao raw SQL; scorecard
+null-card -1/14 symptom; qcScores persisted-JSON-key rename trap; Edge TTS reverse-engineered
+handshake fragility shared by three narration engines; stale Edge TTS chunk cache).
+Suite status re-verified from the recorded Nov 9 results: 130/130 green, 0 failures — no Kotlin
+source has been modified since. Canonical copies live in authr-desktop/ (AGENTS.md + docs/);
+that copy is the one maintainers must keep current.
