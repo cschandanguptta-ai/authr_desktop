@@ -95,6 +95,11 @@ flowchart LR
 | `engine/serialization/SerialExportProfiles.kt` | 6 paste-ready platform profiles, package builder, batch export | PreDraftWorksheet, OpeningValidators | dashboard |
 | `engine/serialization/SerialValidatorSuite.kt` | Orchestrator: PASS/INFO/WARN(dismissable)/HARD checks over a serial project; exit-gate predicate; Autonomous draft report | all serialization engines | dashboard, CompilationWorker |
 | `engine/serialization/GoldenSerial.kt` | Deterministic 15-chapter planted corpus + negative variants (withheld, beat-gap, scorecard bands) | all serialization engines | tests, probes |
+| `engine/audio/PronunciationPass.kt` | IPA pass (P4, plan §7.3): candidate scan (lorebook / mid-sentence capitals / coined tokens; possessives & contractions excluded), espeak-ng phonemizer, deterministic IPA→respelling table (maximal-onset syllabification), pre-synthesis normalization (approved rules only) | AuthrContainer rules, Chapter, EspeakLocator | audiobook renderer, tests |
+| `engine/audio/MasteringChain.kt` | Three-layer ffmpeg chain (P4, plan §7.5/Table 25): layer-1 sidechain bed ducking (−12 dB, 400 ms release, skipped bedless), layer-2 loudnorm I=−18 LUFS, layer-3 alimiter −3.1 dBFS; WAV concat; MP3 CBR 192 kbps delivery encode. `open` for test fakes | FfmpegLocator, ProcessBuilder | AudiobookRenderer, tests |
+| `engine/audio/AcxAudit.kt` | Retail audit (P4, plan §7.6): five criteria red/green with measured values — RMS −23..−18 dB (astats), true peak ≤ −3 dBFS (ebur128), noise floor ≤ −60 dB (min per-window RMS via ametadata), 44.1 kHz, MP3 CBR ≥ 192 kbps (ffprobe) | FfmpegLocator | AudiobookRenderer, tests, gate |
+| `engine/audio/SmilExporter.kt` | Read-along export (P4, plan §7.6): fragment split (paragraphs, sentence-split long ones), SMIL 3.0 overlay + paired EPUB XHTML, timing sanity check (contiguous, full coverage, last clipEnd == duration) | — | AudiobookRenderer, tests |
+| `engine/audio/AudiobookRenderer.kt` | Orchestrator (P4, plan §7): canon-only render → normalize → per-fragment synthesis (measured clip times; `Synthesizer` interface, continuity-mode contract) → join → chain per chapter + once more across master (layers 2-3) → ACX audit per chapter + master → SMIL; render report records engine, continuity mode, temperature, synthesis-speed factor. `EspeakSynthesizer` = bundled-local render engine | WriterGate, all engine/audio | tests, gate (`AudiobookGate.kt`) |
 | `data/repository/AppRepository.kt` | Single data facade over all DAOs (nullable ledger/arc DAOs keep JVM tests Room-free) | all DAOs | ViewModels, workers |
 | `data/local/AppDatabase.kt` | Room KMP DB, v15, 11 entities, migrations 12→15, `fallbackToDestructiveMigration(true)` | entities | repository |
 | `data/local/*Dao.kt` | DAOs: Story, AudioTrack, Book, Chapter, Lorebook, SerialArc, ChekhovGun, Question, Plugin | models | repository |
@@ -110,6 +115,7 @@ flowchart LR
 | `tts/*.kt` | PocketTtsManager (local), AndroidTtsManager, EdgeTtsManager, CloudTtsManager | desktopbridge, BuildConfig | AudioScreen/VMs |
 | `desktopbridge/PocketTtsBridge.kt` | Pocket TTS child-process bridge; binary resolution: bundled → `POCKET_TTS_BIN` → PATH → `~/.authr/pocket-tts` | ProcessBuilder | PocketTtsManager |
 | `desktopbridge/FfmpegLocator.kt` | ffmpeg resolution: bundled → `FFMPEG_HOME` → PATH | — | audio workers |
+| `desktopbridge/EspeakLocator.kt` | espeak-ng resolution (P4, plan §7.3 phonemizer): bundled → `ESPEAK_NG_BIN` → PATH → `~/.authr/espeak-ng`; accepts legacy `espeak` name | — | PronunciationPass, EspeakSynthesizer |
 | `utils/*` | EpubUtils/EpubManager, AudioEncoder/Mixer, WavUtils, ZipUtils, LocalVectorRag, JsonStructuralEnforcer, TxtManager | — | workers, VMs |
 
 ## Entry points

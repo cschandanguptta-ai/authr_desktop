@@ -1,2 +1,6 @@
 skills/
 node_modules/
+# P4 direct-compile toolchain + working dirs (fetched, not source)
+.build-extras/*.jar
+.build-extras/p4-classes/
+.build-extras/p4-gate-work/

@@ -13,6 +13,7 @@ Every env var, API key, preference key, and per-book config field. **Never inclu
 | `GOOGLE_TTS_API_KEY` | Cloud TTS | `BuildConfig` → `tts/CloudTtsManager` | No | That TTS engine unavailable |
 | `POCKET_TTS_BIN` | Explicit Pocket TTS binary override | `desktopbridge/PocketTtsBridge.locateBinary` | No | Bridge falls back to bundled/PATH/`~/.authr`; `Status.MISSING` if none |
 | `FFMPEG_HOME` | ffmpeg install root (`$FFMPEG_HOME/bin/ffmpeg`) | `desktopbridge/FfmpegLocator` | No | Falls back to bundled binary then PATH |
+| `ESPEAK_NG_BIN` | Explicit espeak-ng binary override (P4 phonemizer + local render engine) | `desktopbridge/EspeakLocator.espeakPath` | No | Falls back to bundled binary → PATH → `~/.authr/espeak-ng`; the IPA pass then finds no phonemizer (candidates drop out) and `EspeakSynthesizer` reports `espeak-ng not found` |
 | `DISPLAY` (Linux) | Compose UI windowing | skiko/awt | Yes for UI runs | `HeadlessException` at startup (headless smoke uses Xvfb) |
 | `LD_LIBRARY_PATH` | Native libs for software rendering in sandboxes | smoke harness only | No | GL fallback noise; skiko software rendering still works |
 

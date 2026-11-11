@@ -9,7 +9,7 @@ How tests are organized, what is and isn't covered, which tests guard which area
 - **ViewModels are testable** because they take injected scope + generators (`WriterStudioViewModel` takes `CoroutineScope`, `L4DraftGenerator`, optional `authrRoot`; `SerialDashboardViewModel` takes `CoroutineScope`, optional `exportDir`).
 - **Engine code is pure**: `engine/` and `engine/serialization/` have no Context dependencies by design.
 
-## Suite inventory (130 tests, all green as of P3)
+## Suite inventory (159 tests, all green as of P4)
 
 | Test class | Tests | Guards (exit gates in bold) |
 | --- | --- | --- |
@@ -31,6 +31,11 @@ How tests are organized, what is and isn't covered, which tests guard which area
 | `SerialExportProfilesTest` | 7 | per-platform paste-ready behaviors |
 | `EndingAdvisorBalanceWorksheetTest` | 10 | advisor, balance meter, worksheet |
 | `SerialDashboardTest` | 7 | dashboard VM over fakes (recompute, release, dismissal, persistence) |
+| `PronunciationPassTest` | 8 | **P4 primitives**: scan (lorebook/mid-sentence capitals/coined; possessives & contractions excluded), respell table incl. espeak ɹ/ɾ/ɚ symbols, verbatim normalization, container rules round-trip |
+| `MasteringChainTest` | 6 | **P4 gate primitives**: Table-25 parameter pinning (I=−18, TP=−3.1, limit 0.6998, duck −12 dB/400 ms), fixed layer order, bedless skip, real-ffmpeg smoke |
+| `AcxAuditTest` | 6 | **P4 gate primitives**: parser unit tests (astats/ebur128/ametadata/ffprobe), red/green boundaries on every criterion, real mastered-speech audit green by construction |
+| `SmilExporterTest` | 7 | **P4 gate primitives**: fragment split, word-weighted timings, SMIL/XHTML pairing, timing sanity accepts coverage & rejects gaps/overlaps/mismatched last clip |
+| `AudiobookRendererTest` | 8+ | **P4 gate: canon-only render, normalized synthesis vs canon display surface, measured clip times, continuity mode recorded, synthesis-speed factor, real espeak+ffmpeg 2-chapter integration (skipped when binaries absent)** |
 
 ## What is NOT covered (be honest before shipping a change)
 
@@ -52,14 +57,17 @@ How tests are organized, what is and isn't covered, which tests guard which area
 | entities/migrations/container | AuthrContainerRoundTripTest | full suite |
 | ViewModels | SerialDashboardTest (pattern) | full suite |
 | workers | engine classes behind them + compile | full suite + manual chain review |
+| `engine/audio/*` | the 5 P4 classes + `AudiobookRendererTest` (integration auto-skips without espeak/ffmpeg) | full suite, then `scripts/p4_gate.sh` (10-chapter gate render) |
 
 ## How to verify a change safely
 
 1. `./gradlew :desktop:compileKotlin :desktop:compileTestKotlin` — fast signal.
-2. `./gradlew :desktop:test` — 130/130 required. A red exit-gate test means the CODE moved; re-read `docs/change-impact.md` before touching either side of a cue-locked corpus.
-3. For serialization changes, re-run the corpus probe (`scripts/CorpusProbe.java` via jshell) and eyeball the suite verdict line (`passed=true exitGateGreen=true warnings=0`).
-4. For UI-affecting changes, run the Xvfb smoke (`scripts/p3_smoke.sh`) on a workstation and look at the screenshots in `/tmp/render-p3/`.
-5. If you added a planted corpus sentence, add or update the matching planted-cue assertion in the same commit (ADR-0004/0007).
+2. `./gradlew :desktop:test` — 159/159 required. A red exit-gate test means the CODE moved; re-read `docs/change-impact.md` before touching either side of a cue-locked corpus.
+3. In CI-less sandboxes where Gradle dependency resolution is blocked, the P4 suite runs without Gradle: `scripts/p4_direct_test.sh` (direct kotlinc + JUnitCore; fetches 5 jars via `scripts/p4_fetch_toolchain.sh`, keeps them in `.build-extras/`). The other suites need Gradle's dependency graph.
+4. For serialization changes, re-run the corpus probe (`scripts/CorpusProbe.java` via jshell) and eyeball the suite verdict line (`passed=true exitGateGreen=true warnings=0`).
+5. For UI-affecting changes, run the Xvfb smoke (`scripts/p3_smoke.sh`) on a workstation and look at the screenshots in `/tmp/render-p3/`.
+6. For audiobook changes, re-run the ten-chapter gate (`scripts/p4_gate.sh`) and check the five gate lines plus the per-chapter ACX tables in the output (evidence tree lands in `download/Authr-OS-3.0-P4-Audiobook-Gate/`).
+7. If you added a planted corpus sentence, add or update the matching planted-cue assertion in the same commit (ADR-0004/0007).
 
 ## Adding tests (house rules)
 

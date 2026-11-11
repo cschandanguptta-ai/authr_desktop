@@ -1,0 +1,158 @@
+=== P4 exit gate — ten-chapter audiobook render ===
+ffmpeg: /usr/bin/ffmpeg
+espeak: /usr/bin/espeak-ng
+
+--- Pronunciation pass: 13 candidates ---
+  Vaelmoor       [lorebook entry        ] vˈeɪlmɔːɹ        → VAYL-mawr
+  Aelyth         [lorebook entry        ] ˈeɪlɪθ           → AY-lith
+  Katharsis      [lorebook entry        ] kæθˈɑːɹsɪs       → ka-THAHR-sis
+  Shea'lyn       [lorebook entry        ] ʃˈiːlɪn          → SHEE-lin
+  iron-vein      [lorebook entry        ] ˈaɪɚnvˈeɪn       → EYE-ern-vayn
+  Prue           [capitalized token     ] pɹˈuː            → PROO
+  Mid-channel    [coined/hyphenated token] mˈɪdtʃˈænəl      → MID-cha-nuhl
+  Corin          [capitalized token     ] kˈɔːɹɪn          → KAW-rin
+  furnace-tender [coined/hyphenated token] fˈɜːnɪstˈɛndɚ    → FER-ni-sten-der
+  toll-keeper    [coined/hyphenated token] tˈoʊlkˈiːpɚ      → TOHL-kee-per
+  half-step      [coined/hyphenated token] hˈæfstˈɛp        → HAF-step
+  vein-shaft     [coined/hyphenated token] vˈeɪnʃˈæft       → VAYN-shaft
+  bell-clapper   [coined/hyphenated token] bˈɛlklˈæpɚ       → BEL-kla-per
+
+--- Ambient bed: ambient_bed.wav (deterministic pink noise, −55 dBFS RMS) ---
+
+--- Render summary ---
+Audiobook render — The Iron Vale
+  Engine: espeak-ng espeak-ng (en-us)
+  Continuity: espeak-ng local — the bundled desktop dependency; deterministic fixed-voice synthesis (render engine for CI-less environments)
+  Temperature: 0.0
+  Chapter 1 'Frost and Bells': 39.8s audio, audit GREEN, SMIL OK
+  Chapter 2 'The Ferryman's Widow': 45.5s audio, audit GREEN, SMIL OK
+  Chapter 3 'The Weighing House': 45.5s audio, audit GREEN, SMIL OK
+  Chapter 4 'Red Thread': 47.3s audio, audit GREEN, SMIL OK
+  Chapter 5 'The Toll Bridge': 45.2s audio, audit GREEN, SMIL OK
+  Chapter 6 'The Hearing Record': 49.0s audio, audit GREEN, SMIL OK
+  Chapter 7 'Metal Remembers': 50.1s audio, audit GREEN, SMIL OK
+  Chapter 8 'Two Keys': 44.8s audio, audit GREEN, SMIL OK
+  Chapter 9 'The Sealed Shaft': 49.8s audio, audit GREEN, SMIL OK
+  Chapter 10 'What the Vein Answered': 54.9s audio, audit GREEN, SMIL OK
+  Master: master.mp3, audit GREEN
+  Total audio: 471.9s, synthesis wall: 0.8s, speed 587.63x real time
+  ALL GREEN
+
+ACX audit — Chapter 1 (ch01.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.4 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.3 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -231.4 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 39.769s of 39.769s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 2 (ch02.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.5 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.4 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -239.0 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 45.543s of 45.543s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 3 (ch03.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.6 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.3 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -192.0 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 45.452s of 45.452s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 4 (ch04.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.3 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.3 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -263.3 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 47.301s of 47.301s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 5 (ch05.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.2 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.4 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -250.7 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 45.179s of 45.179s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 6 (ch06.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.4 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.3 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -191.2 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 48.997s of 48.997s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 7 (ch07.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.5 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.3 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -239.1 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 50.116s of 50.116s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 8 (ch08.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.3 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.4 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -218.6 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 44.832s of 44.832s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 9 (ch09.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.6 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.4 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -261.4 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 49.825s of 49.825s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Chapter 10 (ch10.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -19.5 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.3 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -233.3 dB
+  ALL GREEN
+  SMIL timing: 4 fragments, covered 54.852s of 54.852s — OK
+  Mastering: 1. Ambience ducking, 2. Loudness normalization, 3. True-peak limiting
+
+ACX audit — Whole master (master.mp3)
+  [GREEN] Sample rate                  requirement: 44100 Hz                       measured: 44100 Hz
+  [GREEN] Format / bitrate             requirement: MP3 CBR ≥ 192 kbps             measured: mp3 192 kbps
+  [GREEN] RMS level                    requirement: -23.0 to -18.0 dB              measured: -18.9 dB
+  [GREEN] Peaks                        requirement: at or below -3.0 dB            measured: -3.3 dBFS
+  [GREEN] Noise floor                  requirement: at or below -60.0 dB           measured: -255.9 dB
+  ALL GREEN
+
+--- Exit gate (plan §13 Table 33, P4) ---
+  [PASS] Ten chapters rendered
+  [PASS] ACX audit all-green (every chapter + master)
+  [PASS] Synthesis ≥ 2× real time
+  [PASS] SMIL timing sanity (every chapter)
+  [PASS] No failure notes
+
+Audiobook: 10 chapters, 7.9 min audio (master 7.9 min), synthesis 587.6x real time
+Evidence tree: /home/z/my-project/download/Authr-OS-3.0-P4-Audiobook-Gate
+P4 EXIT GATE: GREEN

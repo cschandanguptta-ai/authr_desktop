@@ -63,6 +63,18 @@ Symptom → likely cause → where to look → fix. Labeling: FACT / INFERRED. L
 | Annotator/linter sluggish on huge chapters | Regex scans over full text (echo detector is O(n·window)) | `LiveAstAnnotator.continuityFlags` | Cap chapter size (envelope advisory) or optimize the echo map. |
 | UI jank on the library screen | `StoryScreen` is 4,446 lines with heavy recomposition | `ui/screens/StoryScreen.kt` | Treat as tech-debt D-04 before optimizing locally. |
 
+### Audiobook render / ACX audit (P4)
+
+| Symptom | Likely cause | Where to look | Fix |
+| --- | --- | --- | --- |
+| ffmpeg exits 222 during mastering with an ambient bed | `sidechaincompress` `makeup` is a LINEAR gain with range [1, 64] — a dB-style 0 was rejected | `MasteringChain.duckingFilterGraph` | Keep makeup unset (default 1); the duck depth comes from the bed pre-gain (`volume=0.2512`). FACT: hit 2026-11-11, fixed same day. |
+| Chapter MP3 is as long as the ambient bed (minutes of noise tail) | Missing `-shortest` on the bed mix | `MasteringChain.master` | `-shortest` is applied whenever a bed is present — do not remove it. |
+| ACX RMS red (measured above −18 dB) | Material is not speech-like (pure tone) or loudnorm target moved | `MasteringChain.loudnessAndPeakFilters` (I=−18), `AcxAudit.overallRmsDb` | Keep I=−18: real espeak speech lands at ≈ −19 dB RMS, inside the window. Pure tones are not program material (P4 gate evidence). |
+| Every audit criterion says "measurement failed" | ffmpeg/ffprobe log-shape parsers broke after an ffmpeg upgrade (version-coupled, D-14) | `AcxAudit` companion parsers vs `ffmpeg -version` | Re-pin the regexes to the installed ffmpeg's output; check with `scripts/p4_direct_test.sh` parser tests. |
+| SMIL "last clipEnd != chapter duration" | Chapter duration swapped to the MP3 probe (LAME encoder padding ≈ 50 ms sits between the two) | `AudiobookRenderer` fragment block | The synthesized segment sum is the canonical duration; the MP3 probe is only the 0.25 s cross-check (ADR-0010). |
+| Pronunciation rules replace ordinary words ("Metal" → "ME-uhl") in narration | Scan offered sentence-initial-only capitals — an ordinary word capitalized at sentence start | `PronunciationPass.scan` | The two-pass scan offers a capital only mid-sentence (or from the lorebook); extend `COMMON_WORDS`, never auto-approve sentence-initial-only tokens. |
+| Read-along page shows "AY-lith" instead of "Aelyth" | Normalized text leaked into the display surface | `AudiobookRenderer` (`canonTexts` vs `texts`) | SMIL/XHTML always carry canon fragment text; only the synthesizer input is normalized. |
+
 ### Config/env mistakes
 
 | Symptom | Likely cause | Where to look | Fix |

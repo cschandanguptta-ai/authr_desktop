@@ -1,6 +1,6 @@
-# AGENTS.md — Authr OS Desktop (v3.0, phase P3 complete)
+# AGENTS.md — Authr OS Desktop (v3.0, phase P4 complete)
 
-Authr OS is a multi-agent AI authoring workstation ported from Android to desktop (Kotlin JVM + Compose Multiplatform). Six Weaver sub-agents (Executive, Plot Architect, Character Psychologist, World Builder, Scene Composer, Continuity Manager) run over a multi-provider LLM orchestrator (Gemini, Mistral, OpenRouter, Groq, NVIDIA, Custom OpenAI, Ollama) to plan, draft, quality-gate, serialize, and export books and web-novel serials. Every generated artifact is a PROPOSED proposal that becomes canon only when the writer confirms it (writer-sovereignty, `WriterGate`). Projects live in a Room SQLite database and travel as `.authr` container zip files.
+Authr OS is a multi-agent AI authoring workstation ported from Android to desktop (Kotlin JVM + Compose Multiplatform). Six Weaver sub-agents (Executive, Plot Architect, Character Psychologist, World Builder, Scene Composer, Continuity Manager) run over a multi-provider LLM orchestrator (Gemini, Mistral, OpenRouter, Groq, NVIDIA, Custom OpenAI, Ollama) to plan, draft, quality-gate, serialize, narrate, and export books and web-novel serials. Every generated artifact is a PROPOSED proposal that becomes canon only when the writer confirms it (writer-sovereignty, `WriterGate`). Projects live in a Room SQLite database and travel as `.authr` container zip files.
 
 ## Doc index — read this when…
 
@@ -33,11 +33,13 @@ Authr OS is a multi-agent AI authoring workstation ported from Android to deskto
 Run from `authr-desktop/` (Gradle 8.13, JDK 21; sandbox note: `org.gradle.java.home` in `gradle.properties` points to `/tmp/my-project/tools/jdk`):
 
 ```bash
-./gradlew :desktop:test                 # full test suite (130 tests as of P3)
+./gradlew :desktop:test                 # full test suite (159 tests as of P4)
 ./gradlew :desktop:compileKotlin        # fast compile check
 ./gradlew :desktop:createDistributable  # 188 MB app image → desktop/build/compose/binaries/main/app/AuthrOS
 ./gradlew :desktop:run                  # run the desktop app
 ```
+
+P4 sandbox fallback (Gradle deps blocked): `../scripts/p4_direct_test.sh` compiles the `engine/audio` suite with direct kotlinc + JUnitCore (jars via `../scripts/p4_fetch_toolchain.sh` into `../.build-extras/`); `../scripts/p4_gate.sh` runs the ten-chapter audiobook exit gate.
 
 There is no separate lint task (`kotlin.code.style=official` is set but no linter task configured — FACT: `desktop/build.gradle.kts`). There is no CI pipeline (FACT: no CI config files in the repo). Schema migration is manual: edit `AppDatabase.kt` (`version` + a new `Migration`); Room `exportSchema = false` (FACT: `data/local/AppDatabase.kt`).
 
@@ -45,6 +47,6 @@ There is no separate lint task (`kotlin.code.style=official` is set but no linte
 
 1. **Before changing code**: read `docs/change-impact.md` (blast radius) and the relevant module sections of `docs/system-map.md` + `docs/invariants-and-gotchas.md`.
 2. **Make the change** with tests: engine changes get unit tests in `desktop/src/test/kotlin/com/example/` (JVM-pure, Room-free fakes — see `docs/testing.md`).
-3. **Run** `./gradlew :desktop:test` — all 130 must stay green. Exit-gate suites are load-bearing; if you break one, fix the code, never weaken the assertion (see ADR-0007).
+3. **Run** `./gradlew :desktop:test` — all 159 must stay green. Exit-gate suites are load-bearing; if you break one, fix the code, never weaken the assertion (see ADR-0007).
 4. **After changing code**: update the affected docs in this folder (system-map table rows, change-impact rows, data-model if schema moved, config-and-env if config moved). An outdated doc is a bug.
 5. **After fixing a real incident**: add the symptom + fix to `docs/troubleshooting.md` and any new rule to `docs/invariants-and-gotchas.md`.

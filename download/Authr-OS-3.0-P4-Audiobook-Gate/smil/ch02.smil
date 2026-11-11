@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<smil xmlns="http://www.w3.org/ns/SMIL" xmlns:epub="http://www.idpf.org/2007/ops" version="3.0">
+  <body>
+    <seq epub:textref="ch02.xhtml" id="ch02">
+      <par id="frag-1">
+        <text src="ch02.xhtml#frag-1"/>
+        <audio src="audio/ch02.mp3" clipBegin="0.000s" clipEnd="10.115s"/>
+      </par>
+      <par id="frag-2">
+        <text src="ch02.xhtml#frag-2"/>
+        <audio src="audio/ch02.mp3" clipBegin="10.115s" clipEnd="22.413s"/>
+      </par>
+      <par id="frag-3">
+        <text src="ch02.xhtml#frag-3"/>
+        <audio src="audio/ch02.mp3" clipBegin="22.413s" clipEnd="32.924s"/>
+      </par>
+      <par id="frag-4">
+        <text src="ch02.xhtml#frag-4"/>
+        <audio src="audio/ch02.mp3" clipBegin="32.924s" clipEnd="45.543s"/>
+      </par>
+    </seq>
+  </body>
+</smil>

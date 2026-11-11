@@ -73,6 +73,32 @@ suite report with dismissal, worksheet/scorecard editors, paste-ready exports), 
 artifacts persisted at confirm time, the Blueprint 2.0 drafting block replacing the 1.0
 cliffhanger score, the serial outline gate, and the serial export gates in CompilationWorker.
 
+## Authr OS 3.0 — P4 Implementation Report (November 11, 2026)
+- Authr-OS-3.0-P4-Implementation-Report.docx — phase P4 deliverable report: Audiobook Engine —
+  IPA pronunciation pass, continuity contract, three-layer mastering chain, ACX compliance
+  audit, SMIL read-along export, the ten-chapter exit-gate render, docs/ADR updates
+- Authr-OS-3.0-P4-Implementation-Report.pdf — PDF render of the same document
+- Authr-OS-3.0-P4-Audiobook-Gate/ — the exit-gate evidence tree: 10 mastered chapter MP3s +
+  whole master (7.9 min, MP3 CBR 192 kbps / 44.1 kHz), 10 SMIL overlays + paired XHTML content
+  documents, pronunciation-rules.json (13 approved rules), gate-report.md (per-chapter ACX
+  tables with measured values)
+- Authr-OS-3.0-P4-Audiobook-Gate.gate-run.log — the full gate run log
+
+P4 exit-gate status (all green, plan §13 Table 33, see the report for evidence):
+1. A ten-chapter audiobook renders and passes the ACX audit all-green — 10/10 chapters + the
+   joined master, every criterion green (RMS −18.9…−19.6 dB in the −23…−18 window, true peaks
+   −3.3/−3.4 dBFS ≤ −3, noise floors ≤ −191 dB ≤ −60, 44.1 kHz, MP3 CBR 192 kbps)
+2. Synthesis ≥ 2× real time — 587.6× measured on the gate render through the bundled espeak-ng
+   route (Pocket TTS production engine: 7.3× from the P0 spike on the reference machine)
+3. SMIL timing sanity — 10/10 chapters: measured per-fragment clip times, contiguous coverage,
+   last clipEnd equals chapter duration
+
+Implementation lives in authr-desktop/ — 159 unit tests green (130 P0–P3 unchanged + 29 new P4,
+run via the direct kotlinc/JUnitCore route after Maven Central rate-limiting blocked Gradle).
+New in P4: engine/audio package (PronunciationPass, MasteringChain, AcxAudit, SmilExporter,
+AudiobookRenderer + EspeakSynthesizer), desktopbridge/EspeakLocator.kt, gate + toolchain
+scripts, ADR-0010, tech-debt D-13/D-14, open questions OQ-14.
+
 ## Authr OS 3.0 — AI Maintenance Documentation (November 10, 2026)
 - Authr-OS-AI-Maintenance-Docs/ — the "Document a Production App for Future AI Maintenance"
   package for the authr-desktop production app: repo-root AGENTS.md (doc index, hard rules,
