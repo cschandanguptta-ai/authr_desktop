@@ -277,9 +277,14 @@ object ClicheCleaner {
         val sorted = hits.sortedWith(
             compareBy({ it.first }, { -it.third.severity.ordinal }, { it.third.clicheClass })
         )
+        // O(1) overlap check (D-08 hardening, provably equivalent to the
+        // former kept.none { … } sweep): kept spans are pairwise
+        // non-overlapping and sorted by start, so their ends ascend too and
+        // the LAST kept span carries the maximum end — a new hit overlaps
+        // something iff it starts before that maximum end.
         val kept = mutableListOf<Triple<Int, Int, ClichePattern>>()
         for (hit in sorted) {
-            if (kept.none { k -> hit.first < k.second && k.first < hit.second }) {
+            if (kept.isEmpty() || kept.last().second <= hit.first) {
                 kept.add(hit)
             }
         }

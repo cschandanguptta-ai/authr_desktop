@@ -1,6 +1,18 @@
 skills/
 node_modules/
-# P4 direct-compile toolchain + working dirs (fetched, not source)
-.build-extras/*.jar
-.build-extras/p4-classes/
-.build-extras/p4-gate-work/
+
+# --- P6 workspace hygiene (2026-11-11): fetched/forged toolchain + build state ---
+# The direct-compile toolchain (kotlin compiler, junit, pdfbox, epubcheck dist)
+# is restorable any time via scripts/p5_fetch_toolchain.sh — never track jars.
+/.build-extras/
+# Stale agent tool outputs and one-off compiled probes.
+/tool-results/
+/scripts/p3-smoke-classes/
+# Machine-local Gradle/Kotlin session state (locks, caches).
+/authr-desktop/.gradle/
+/authr-desktop/.kotlin/
+
+# NOTE: authr-desktop/desktop/build IS intentionally tracked — the direct
+# kotlinc test route (scripts/p5_direct_test.sh, p6_direct_test.sh) compiles
+# against the app image jars and compiled main classes inside it, and Gradle
+# cannot run in the gate sandbox. Do not gitignore it.

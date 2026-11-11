@@ -84,10 +84,45 @@ object PrintInterior {
         val seriesName: String = "",
         val seriesNumber: Int? = null,
         val chapters: List<ChapterSource>,
-        /** Embedded body serif; sandbox default DejaVu Serif. */
-        val fontRegularPath: String = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
-        val fontBoldPath: String = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
+        /** Embedded body serif. Empty means auto-resolve across machines
+         *  (D-16 step: see [resolveFontPath]); a non-empty path is strict —
+         *  a CJK manuscript's Noto face is never silently swapped. */
+        val fontRegularPath: String = "",
+        val fontBoldPath: String = ""
     )
+
+    /**
+     * D-16 remediation step: resolve the embedded serif across machines.
+     * An explicit non-empty path is STRICT (it must exist — the writer's
+     * configured face must never be silently substituted); empty means
+     * auto-resolve through known install locations, failing LOUDLY with the
+     * full search list so the print verdict turns FAILED, never silent.
+     * (Full fix — bundling the TTFs as installer resources — stays tracked
+     * as D-16; this makes non-Linux machines work without code changes.)
+     */
+    fun resolveFontPath(explicitPath: String, bold: Boolean): String {
+        val face = if (bold) "DejaVuSerif-Bold.ttf" else "DejaVuSerif.ttf"
+        if (explicitPath.isNotEmpty()) {
+            require(File(explicitPath).isFile) {
+                "print interior font not found at the configured path: $explicitPath"
+            }
+            return explicitPath
+        }
+        val home = System.getProperty("user.home") ?: "."
+        val candidates = listOf(
+            "$home/.authr/fonts/$face",
+            "/usr/share/fonts/truetype/dejavu/$face",
+            "/usr/local/share/fonts/$face",
+            "C:\\Windows\\Fonts\\$face",
+            "/Library/Fonts/$face"
+        )
+        candidates.firstOrNull { File(it).isFile }?.let { return it }
+        throw IllegalStateException(
+            "print interior font \"$face\" not found — searched: ${candidates.joinToString(", ")}. " +
+                "Pass PrintInterior.Input.font${if (bold) "Bold" else "Regular"}Path explicitly " +
+                "(e.g. an installer-bundled face or a Noto face for CJK manuscripts)."
+        )
+    }
 
     data class Result(
         val file: File,
@@ -133,8 +168,8 @@ object PrintInterior {
     private fun paginateTo(input: Input, gutterIn: Double, outFile: File, save: Boolean): Int {
         val doc = PDDocument()
         try {
-            val regular = PDType0Font.load(doc, File(input.fontRegularPath))
-            val bold = PDType0Font.load(doc, File(input.fontBoldPath))
+            val regular = PDType0Font.load(doc, File(resolveFontPath(input.fontRegularPath, bold = false)))
+            val bold = PDType0Font.load(doc, File(resolveFontPath(input.fontBoldPath, bold = true)))
             val st = Cursor(doc, regular, bold, gutterIn)
 
             newPage(st)

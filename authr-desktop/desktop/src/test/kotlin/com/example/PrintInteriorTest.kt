@@ -6,6 +6,7 @@ import org.apache.pdfbox.text.PDFTextStripper
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -99,6 +100,50 @@ class PrintInteriorTest {
         assertTrue(r.paginationPasses >= 2, "at least paginate + recheck")
         assertTrue(r.gutterCompliant)
         out.deleteRecursively()
+    }
+
+    // ---- font resolution (D-16 step) --------------------------------------
+
+    @Test
+    fun `empty font path auto-resolves to an existing serif on this machine`() {
+        val resolved = PrintInterior.resolveFontPath(explicitPath = "", bold = false)
+        assertTrue(java.io.File(resolved).isFile, "auto-resolve must land on a real file, got $resolved")
+        assertTrue(resolved.endsWith("DejaVuSerif.ttf"), "regular face resolves to DejaVuSerif.ttf, got $resolved")
+        val bold = PrintInterior.resolveFontPath(explicitPath = "", bold = true)
+        assertTrue(bold.endsWith("DejaVuSerif-Bold.ttf") && java.io.File(bold).isFile,
+            "bold face resolves to a real DejaVuSerif-Bold.ttf, got $bold")
+    }
+
+    @Test
+    fun `explicit font path is strict — missing file fails loudly with the path`() {
+        val exc = assertNotNull(runCatching {
+            PrintInterior.resolveFontPath(explicitPath = "/no/such/NotoSerif.ttf", bold = false)
+        }.exceptionOrNull(), "a missing explicit face must fail, not silently substitute")
+        assertTrue(exc!!.message!!.contains("/no/such/NotoSerif.ttf"),
+            "the error names the configured path so the writer can fix it")
+    }
+
+    @Test
+    fun `auto-resolve total miss fails loudly with the search list`() {
+        // Force every candidate to miss via a bogus user.home; machines whose
+        // system font dirs still satisfy the search skip honestly (the
+        // RetailPackager epubcheck test uses the same assume pattern).
+        val origHome = System.getProperty("user.home")
+        System.setProperty("user.home", "/nonexistent-authr-home")
+        try {
+            val result = runCatching { PrintInterior.resolveFontPath(explicitPath = "", bold = false) }
+            if (result.isSuccess) {
+                org.junit.Assume.assumeTrue(
+                    "system dejavu fonts present outside user.home — total-miss path not exercisable here",
+                    false)
+                return
+            }
+            val exc = result.exceptionOrNull()!!
+            assertTrue(exc.message!!.contains("searched:"), "error lists the searched locations")
+            assertTrue(exc.message!!.contains(".authr/fonts"), "search list includes the per-user font dir")
+        } finally {
+            System.setProperty("user.home", origHome)
+        }
     }
 
     @Test

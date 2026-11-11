@@ -1,4 +1,4 @@
-# AGENTS.md — Authr OS Desktop (v3.0, phase P5 complete — all plan phases P0–P5 implemented)
+# AGENTS.md — Authr OS Desktop (v3.0, P5 complete + post-P5 maintenance slice: D-08 latency, D-15/D-16 steps, OQ-16 resolution, workspace hygiene)
 
 Authr OS is a multi-agent AI authoring workstation ported from Android to desktop (Kotlin JVM + Compose Multiplatform). Six Weaver sub-agents (Executive, Plot Architect, Character Psychologist, World Builder, Scene Composer, Continuity Manager) run over a multi-provider LLM orchestrator (Gemini, Mistral, OpenRouter, Groq, NVIDIA, Custom OpenAI, Ollama) to plan, draft, quality-gate, serialize, narrate, and export books and web-novel serials. Every generated artifact is a PROPOSED proposal that becomes canon only when the writer confirms it (writer-sovereignty, `WriterGate`). Projects live in a Room SQLite database and travel as `.authr` container zip files.
 
@@ -33,13 +33,15 @@ Authr OS is a multi-agent AI authoring workstation ported from Android to deskto
 Run from `authr-desktop/` (Gradle 8.13, JDK 21; sandbox note: `org.gradle.java.home` in `gradle.properties` points to `/tmp/my-project/tools/jdk`):
 
 ```bash
-./gradlew :desktop:test                 # full test suite (209 tests as of P5)
+./gradlew :desktop:test                 # full test suite (221 tests as of the post-P5 maintenance slice)
 ./gradlew :desktop:compileKotlin        # fast compile check
 ./gradlew :desktop:createDistributable  # 188 MB app image → desktop/build/compose/binaries/main/app/AuthrOS
 ./gradlew :desktop:run                  # run the desktop app
 ```
 
-P4/P5 sandbox fallback (Gradle deps blocked): `../scripts/p4_direct_test.sh` compiles the `engine/audio` suite with direct kotlinc + JUnitCore (jars via `../scripts/p4_fetch_toolchain.sh` into `../.build-extras/`); `../scripts/p4_gate.sh` runs the ten-chapter audiobook exit gate. `../scripts/p5_direct_test.sh` / `../scripts/p5_gate.sh` do the same for the publishing engine (extra jars: pdfbox/fontbox, the kotlinx-serialization compiler plugin, and the epubcheck 5.2.1 dist under `.build-extras/epubcheck-dist/`); the P5 gate produces full retail packages for a novel + a serial with the real epubcheck verdicts and all four gutter-ladder bands.
+P4/P5 sandbox fallback (Gradle deps blocked): `../scripts/p4_direct_test.sh` compiles the `engine/audio` suite with direct kotlinc + JUnitCore (jars via `../scripts/p4_fetch_toolchain.sh` into `../.build-extras/`); `../scripts/p4_gate.sh` runs the ten-chapter audiobook exit gate. `../scripts/p5_direct_test.sh` / `../scripts/p5_gate.sh` do the same for the publishing engine (extra jars: pdfbox/fontbox, the kotlinx-serialization compiler plugin, and the epubcheck 5.2.1 dist under `.build-extras/epubcheck-dist/`); the P5 gate produces full retail packages for a novel + a serial with the real epubcheck verdicts and all four gutter-ladder bands. The post-P5 maintenance slice adds `../scripts/p6_direct_test.sh` (annotator latency D-08 + print font resolver D-16) and `../scripts/p6_probe.sh` (the measured before/after D-08 probe).
+
+Workspace note (P6 hygiene, 2026-11-11): `.build-extras/` is NO LONGER in git — the toolchain is restorable any time via the fetch scripts; after a sandbox recycle run `bash scripts/p5_fetch_toolchain.sh` before the direct routes. `authr-desktop/desktop/build` IS intentionally tracked: the direct routes compile against its app image jars and main classes, and Gradle cannot run in the gate sandbox.
 
 There is no separate lint task (`kotlin.code.style=official` is set but no linter task configured — FACT: `desktop/build.gradle.kts`). There is no CI pipeline (FACT: no CI config files in the repo). Schema migration is manual: edit `AppDatabase.kt` (`version` + a new `Migration`); Room `exportSchema = false` (FACT: `data/local/AppDatabase.kt`).
 

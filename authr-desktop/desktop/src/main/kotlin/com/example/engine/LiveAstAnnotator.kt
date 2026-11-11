@@ -11,8 +11,34 @@ import com.example.data.model.Lorebook
  * drafts so the rail and statistics always reflect canon rather than
  * proposals. Every detector below is a pure function of the text (and, for
  * lore matching, the project lorebook); no model calls, no network.
+ *
+ * Latency contract (D-08 remediation, ADR-0012 — measured, not estimated):
+ * the full scan of a 20,000-word chapter costs ~470 ms cold (154-pattern
+ * cliché matrix dominates), so [annotate] memoizes the annotation list per
+ * (text hash, lorebook hash) in a bounded LRU (32 entries). Recomposing the
+ * rail on unchanged text — the hot UI path — is a cache hit and returns the
+ * same immutable list instance. Any edit changes the text hash and misses.
  */
 object LiveAstAnnotator {
+
+    // ------------------------------------------------------------------
+    // Annotation cache — D-08 "memoize per text-hash"
+    // ------------------------------------------------------------------
+
+    private const val CACHE_MAX = 32
+    private val cacheLock = Any()
+    private val annotationCache = object : LinkedHashMap<String, List<AstAnnotation>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<AstAnnotation>>): Boolean =
+            size > CACHE_MAX
+    }
+
+    /** Test hook: drop all cached annotation lists (cache-behavior tests). */
+    fun clearAnnotationCache() = synchronized(cacheLock) { annotationCache.clear() }
+
+    private fun cacheKey(content: String, lorebook: List<Lorebook>): String {
+        val loreFingerprint = lorebook.joinToString("\u0000") { "${it.id}:${it.key}:${it.value}" }
+        return textHash(content) + "#" + textHash(loreFingerprint)
+    }
 
     // ------------------------------------------------------------------
     // Entry point
@@ -30,21 +56,34 @@ object LiveAstAnnotator {
                     "(writerConfirmed=${chapter.writerConfirmed}); the annotator annotates confirmed text only."
             ))
         } else {
-            val annotations = buildList {
-                addAll(beatCoverage(chapter.content))
-                addAll(clicheHits(chapter.content))
-                addAll(chekhovPromises(chapter.content))
-                addAll(loreReferences(chapter.content, lorebook))
-                addAll(endingSignal(chapter.content))
-                addAll(continuityFlags(chapter.content))
-            }.sortedBy { it.start }
             RefusalOrAst(ast = ManuscriptAst(
                 chapterId = chapter.id,
                 chapterNumber = chapter.chapterNumber,
                 textHash = textHash(chapter.content),
-                annotations = annotations
+                annotations = cachedAnnotations(chapter.content, lorebook)
             ))
         }
+
+    /**
+     * The memoized half of [annotate]. Returns the SAME immutable list
+     * instance on a cache hit (observable in tests via identity); computes
+     * and stores it on a miss. The expensive computation runs outside the
+     * lock so parallel rails on different chapters never serialize.
+     */
+    private fun cachedAnnotations(content: String, lorebook: List<Lorebook>): List<AstAnnotation> {
+        val key = cacheKey(content, lorebook)
+        synchronized(cacheLock) { annotationCache[key] }?.let { return it }
+        val computed = buildList {
+            addAll(beatCoverage(content))
+            addAll(clicheHits(content))
+            addAll(chekhovPromises(content))
+            addAll(loreReferences(content, lorebook))
+            addAll(endingSignal(content))
+            addAll(continuityFlags(content))
+        }.sortedBy { it.start }
+        synchronized(cacheLock) { annotationCache[key] = computed }
+        return computed
+    }
 
     data class Refusal(val chapterId: Int, val reason: String)
     data class RefusalOrAst(val ast: ManuscriptAst? = null, val refusal: Refusal? = null) {
@@ -308,17 +347,23 @@ object LiveAstAnnotator {
     // 6. Continuity flags — deterministic local checks (L6 input)
     // ------------------------------------------------------------------
 
+    /** Hoisted once (D-08): was recompiled inside the per-position loop. */
+    private val NON_WORD = Regex("""[^\w\s]""")
+    private val WHITESPACE_RUN = Regex("""\s+""")
+    private val POV_FIRST = Regex("""\b(I|me|my|mine)\b""")
+    private val POV_THIRD = Regex("""\b(he|she|his|her|they|them)\b""", RegexOption.IGNORE_CASE)
+
     /** Echo: the same 5+ word phrase appearing twice within the chapter. */
     fun continuityFlags(text: String): List<AstAnnotation> {
         val nodes = mutableListOf<AstAnnotation>()
-        val normalized = text.lowercase().replace(Regex("""\s+"""), " ")
+        val normalized = text.lowercase().replace(WHITESPACE_RUN, " ")
         val words = normalized.split(" ").filter { it.isNotBlank() }
         if (words.size >= 10) {
             val seen = HashMap<String, Int>() // phrase -> first index
             val window = 5
             for (i in 0..words.size - window) {
                 val phrase = words.subList(i, i + window).joinToString(" ")
-                    .replace(Regex("""[^\w\s]"""), "").trim()
+                    .replace(NON_WORD, "").trim()
                 if (phrase.split(" ").count { it.isNotBlank() } < window) continue
                 val first = seen[phrase]
                 if (first == null) {
@@ -340,8 +385,8 @@ object LiveAstAnnotator {
             }
         }
         // POV drift: first-person and third-person narration mixed heavily.
-        val firstPerson = Regex("""\b(I|me|my|mine)\b""").findAll(text).count()
-        val thirdPerson = Regex("""\b(he|she|his|her|they|them)\b""", RegexOption.IGNORE_CASE).findAll(text).count()
+        val firstPerson = POV_FIRST.findAll(text).count()
+        val thirdPerson = POV_THIRD.findAll(text).count()
         if (firstPerson > 12 && thirdPerson > 12) {
             val ratio = firstPerson.coerceAtLeast(thirdPerson).toDouble() / firstPerson.coerceAtMost(thirdPerson)
             if (ratio < 2.0) {

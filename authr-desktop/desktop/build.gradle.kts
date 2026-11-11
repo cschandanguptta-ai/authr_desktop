@@ -51,6 +51,11 @@ dependencies {
     // MP3 decoding for the MediaPlayer shim (Edge TTS / Pocket TTS playback)
     implementation("com.googlecode.soundlibs:jlayer:1.0.1.4")
 
+    // Print-interior PDF writer (engine/publishing; P5 exit gate compiles the
+    // direct route against the fetched jar — D-15 remediation step: the Gradle
+    // route needs this dependency declared)
+    implementation("org.apache.pdfbox:pdfbox:2.0.33")
+
     // Room database (KMP / JVM)
     implementation("androidx.room:room-runtime:2.8.5")
     implementation("androidx.sqlite:sqlite-bundled:2.6.2")
