@@ -31,6 +31,9 @@ import java.io.File
  *     when the tool is absent the verdict is UNVERIFIED and the package is
  *     NOT clean — disclosed, never silently green (ADR-0010 discipline);
  *  5. the print interior renders with the gutter ladder;
+ *     (4 and 5 run CONCURRENTLY on a small pool — the measured gate cost is
+ *     ~7 s of the tool's own CPU per EPUB — with the verdict order kept:
+ *     epub results in volume order, then the print verdict);
  *  6. the pricing record quotes both royalty brackets against the print
  *     cost (§11.2);
  *  7. the ship report composes artifacts, verdicts, waivers, notes and
@@ -149,50 +152,27 @@ object RetailPackager {
             epubResults = listOf(Epub3Exporter.export(one, File(epubDir, "${sanitize(input.bookTitle)}.epub")))
         }
 
-        // 4. epubcheck gate — external, VERIFIED or disclosed UNVERIFIED
+        // 4+5. the epubcheck gate (external) and the print interior run
+        //     CONCURRENTLY (ADR-0010, measured 2026-11-12): one epubcheck run
+        //     costs ~7 s of the tool's own CPU on the gate hardware (JVM spawn
+        //     0.10 s + tool init 0.16 s are noise — the check itself dominates),
+        //     so N volume checks overlap on a small pool and the print render
+        //     overlaps the gate too. Verdict ORDER is preserved (epub results
+        //     in volume order, then the print verdict) — only the wall clock
+        //     shrinks; the 2-volume serial measured 14.2 s → 7.4 s.
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(minOf(4, epubResults.size + 1))
+        val epubFutures = epubResults.map { er ->
+            pool.submit(java.util.concurrent.Callable { runEpubCheck(er) })
+        }
+        val printFuture = pool.submit(java.util.concurrent.Callable { renderPrintStage(wb, input, canon, outDir) })
+        val epubVerdicts = epubFutures.map { it.get() }
+        val printStage = printFuture.get()
+        pool.shutdown()
         val verdicts = mutableListOf<ShipReport.GateVerdict>()
-        for (er in epubResults) {
-            verdicts += runEpubCheck(er)
-        }
-
-        // 5. print interior (whole book, gutter ladder)
-        var printResult: PrintInterior.Result? = null
-        var printQuote: RoyaltySimulator.PrintQuote? = null
-        try {
-            val printDir = File(outDir, "print")
-            printResult = PrintInterior.render(
-                PrintInterior.Input(
-                    title = wb.title.ifBlank { input.bookTitle },
-                    author = wb.author,
-                    subtitle = wb.subtitle,
-                    copyrightLine = wb.copyrightLine,
-                    isbn = wb.isbn,
-                    publisher = wb.publisher,
-                    seriesName = wb.seriesName,
-                    seriesNumber = wb.seriesNumber,
-                    chapters = canon.map {
-                        PrintInterior.ChapterSource(it.chapterNumber, it.title, it.content)
-                    }
-                ),
-                File(printDir, "interior.pdf")
-            )
-            verdicts += ShipReport.GateVerdict(
-                artifact = printResult!!.file.name,
-                gate = "Gutter ladder (plan §11.1)",
-                passed = printResult.gutterCompliant,
-                status = "VERIFIED",
-                detail = "${printResult.pageCount} pages, trim ${printResult.trimWidthIn}×${printResult.trimHeightIn} in, gutter ${printResult.gutterInches} in (ladder: ${PrintInterior.gutterForPageCount(printResult.pageCount)} in), ${printResult.paginationPasses} pagination pass(es)"
-            )
-            printQuote = RoyaltySimulator.printQuote(printResult.pageCount, wb.listPriceUsd)
-        } catch (e: Exception) {
-            verdicts += ShipReport.GateVerdict(
-                artifact = "interior.pdf",
-                gate = "Gutter ladder (plan §11.1)",
-                passed = false,
-                status = "FAILED",
-                detail = "render failed: ${e.message}"
-            )
-        }
+        verdicts += epubVerdicts
+        verdicts += printStage.verdict
+        val printResult = printStage.result
+        val printQuote = printStage.quote
 
         // 6. pricing record
         val ebookQuote = epubResults.maxByOrNull { it.sizeBytes }?.let {
@@ -255,6 +235,61 @@ object RetailPackager {
             shipReport = reportFile,
             clean = ShipReport.isClean(verdicts),
             disclosures = disclosures
+        )
+    }
+
+    /** The print-interior stage (render + verdict + quote), runnable off-thread. */
+    private data class PrintStage(
+        val result: PrintInterior.Result?,
+        val quote: RoyaltySimulator.PrintQuote?,
+        val verdict: ShipReport.GateVerdict
+    )
+
+    private fun renderPrintStage(
+        wb: KdpWorkbench,
+        input: Input,
+        canon: List<Chapter>,
+        outDir: File
+    ): PrintStage = try {
+        val printDir = File(outDir, "print")
+        val printResult = PrintInterior.render(
+            PrintInterior.Input(
+                title = wb.title.ifBlank { input.bookTitle },
+                author = wb.author,
+                subtitle = wb.subtitle,
+                copyrightLine = wb.copyrightLine,
+                isbn = wb.isbn,
+                publisher = wb.publisher,
+                seriesName = wb.seriesName,
+                seriesNumber = wb.seriesNumber,
+                chapters = canon.map {
+                    PrintInterior.ChapterSource(it.chapterNumber, it.title, it.content)
+                }
+            ),
+            File(printDir, "interior.pdf")
+        )
+        PrintStage(
+            result = printResult,
+            quote = RoyaltySimulator.printQuote(printResult.pageCount, wb.listPriceUsd),
+            verdict = ShipReport.GateVerdict(
+                artifact = printResult.file.name,
+                gate = "Gutter ladder (plan §11.1)",
+                passed = printResult.gutterCompliant,
+                status = "VERIFIED",
+                detail = "${printResult.pageCount} pages, trim ${printResult.trimWidthIn}×${printResult.trimHeightIn} in, gutter ${printResult.gutterInches} in (ladder: ${PrintInterior.gutterForPageCount(printResult.pageCount)} in), ${printResult.paginationPasses} pagination pass(es)"
+            )
+        )
+    } catch (e: Exception) {
+        PrintStage(
+            result = null,
+            quote = null,
+            verdict = ShipReport.GateVerdict(
+                artifact = "interior.pdf",
+                gate = "Gutter ladder (plan §11.1)",
+                passed = false,
+                status = "FAILED",
+                detail = "render failed: ${e.message}"
+            )
         )
     }
 

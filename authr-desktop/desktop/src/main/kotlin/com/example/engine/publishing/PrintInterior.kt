@@ -92,13 +92,14 @@ object PrintInterior {
     )
 
     /**
-     * D-16 remediation step: resolve the embedded serif across machines.
+     * D-16 remediation: resolve the embedded serif across machines.
      * An explicit non-empty path is STRICT (it must exist — the writer's
      * configured face must never be silently substituted); empty means
-     * auto-resolve through known install locations, failing LOUDLY with the
-     * full search list so the print verdict turns FAILED, never silent.
-     * (Full fix — bundling the TTFs as installer resources — stays tracked
-     * as D-16; this makes non-Linux machines work without code changes.)
+     * auto-resolve through known install locations — the per-user override
+     * (~/.authr/fonts), the BUNDLED app-dir fonts/ (the packaged image
+     * ships it; the EpubCheckLocator pattern), then the system dirs —
+     * failing LOUDLY with the full search list so the print verdict turns
+     * FAILED, never silent.
      */
     fun resolveFontPath(explicitPath: String, bold: Boolean): String {
         val face = if (bold) "DejaVuSerif-Bold.ttf" else "DejaVuSerif.ttf"
@@ -109,13 +110,25 @@ object PrintInterior {
             return explicitPath
         }
         val home = System.getProperty("user.home") ?: "."
-        val candidates = listOf(
-            "$home/.authr/fonts/$face",
-            "/usr/share/fonts/truetype/dejavu/$face",
-            "/usr/local/share/fonts/$face",
-            "C:\\Windows\\Fonts\\$face",
-            "/Library/Fonts/$face"
-        )
+        // App-dir candidates FIRST after the user override (the D-16 bundle:
+        // the packaged app ships fonts/ beside the app jar — the same
+        // locator pattern as EpubCheckLocator), then the system dirs.
+        val appDirs = ArrayList<String>()
+        System.getProperty("compose.application.resources.dir")?.let { appDirs += it }
+        runCatching {
+            PrintInterior::class.java.protectionDomain?.codeSource?.location?.toURI()?.let { uri ->
+                File(uri).parentFile?.let { appDirs += it.absolutePath }
+            }
+        }
+        appDirs += System.getProperty("user.dir")
+        val candidates = buildList {
+            add("$home/.authr/fonts/$face")
+            appDirs.forEach { add("$it/fonts/$face") }
+            add("/usr/share/fonts/truetype/dejavu/$face")
+            add("/usr/local/share/fonts/$face")
+            add("C:\\Windows\\Fonts\\$face")
+            add("/Library/Fonts/$face")
+        }
         candidates.firstOrNull { File(it).isFile }?.let { return it }
         throw IllegalStateException(
             "print interior font \"$face\" not found — searched: ${candidates.joinToString(", ")}. " +

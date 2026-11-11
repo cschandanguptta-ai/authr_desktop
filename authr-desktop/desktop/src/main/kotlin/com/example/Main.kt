@@ -30,12 +30,14 @@ import com.example.domain.usecase.GetChaptersUseCase
 import com.example.engine.L4LlmDraftGenerator
 import com.example.ui.screens.AudioScreen
 import com.example.ui.screens.MetadataScreen
+import com.example.ui.screens.PublishingScreen
 import com.example.ui.screens.SerialDashboardScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.StoryScreen
 import com.example.ui.screens.TranslateScreen
 import com.example.ui.screens.WriterStudioScreen
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.viewmodel.PublishingViewModel
 import com.example.ui.viewmodel.SerialDashboardViewModel
 import com.example.ui.viewmodel.SettingsViewModel
 import com.example.ui.viewmodel.StudioViewModel
@@ -126,6 +128,12 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
         repository = repository,
         exportDir = app.filesDir
     )
+    // Publishing workbench (v3.0 D-15, the P5 report handoff): metadata
+    // workbench editor + one-action retail packaging + ship-report viewer.
+    val publishingViewModel = PublishingViewModel(
+        repository = repository,
+        authrRoot = app.filesDir
+    )
 
     // Scaffold the .authr plugin library on first launch (P0, plan §8):
     // the shipped 16 structures + 22 personas land in the data root's
@@ -166,6 +174,10 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
                                 viewModel = serialDashboardViewModel,
                                 onBack = { viewModel.selectTab(0) }
                             )
+                            8 -> PublishingScreen(
+                                viewModel = publishingViewModel,
+                                onBack = { viewModel.selectTab(0) }
+                            )
                             else -> StoryScreen(viewModel = viewModel) // 0: Story, 4: recommendations live in the Story workspace
                         }
                     }
@@ -188,6 +200,7 @@ private fun GlobalWorkspaceBar(currentTab: Int, onSelect: (Int) -> Unit) {
         3 to "Metadata",
         6 to "Writer Studio",
         7 to "Serial",
+        8 to "Publishing",
         5 to "Settings"
     )
     Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {

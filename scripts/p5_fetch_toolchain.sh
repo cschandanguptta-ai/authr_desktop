@@ -40,6 +40,21 @@ fetch "org/apache/pdfbox/pdfbox/2.0.33/pdfbox-2.0.33.jar"
 fetch "org/apache/pdfbox/fontbox/2.0.33/fontbox-2.0.33.jar"
 fetch "commons-logging/commons-logging/1.2/commons-logging-1.2.jar"
 
+# --- compose compiler plugin (D-15 UI slice: compiles @Composable sources
+#     through the direct kotlinc route; version rides the Kotlin plugin
+#     "org.jetbrains.kotlin.plugin.compose" 2.2.10 in desktop/build.gradle.kts) ---
+fetch "org/jetbrains/kotlin/kotlin-compose-compiler-plugin-embeddable/2.2.10/kotlin-compose-compiler-plugin-embeddable-2.2.10.jar"
+
+# --- kotlinx.serialization compiler plugin (the container/workbench code
+#     needs -Xplugin:serialization; p5_direct_test.sh line 59 references it —
+#     restore-path bug fixed 2026-11-12: no fetcher carried this jar before) ---
+fetch "org/jetbrains/kotlin/kotlin-maven-serialization/2.2.10/kotlin-maven-serialization-2.2.10.jar"
+
+# --- kotlinx-coroutines-test (runTest for the ViewModel state-machine tests;
+#     restore-path gap fixed 2026-11-12 — version matches the app image's
+#     kotlinx-coroutines-core-jvm-1.10.2) ---
+fetch "org/jetbrains/kotlinx/kotlinx-coroutines-test-jvm/1.10.2/kotlinx-coroutines-test-jvm-1.10.2.jar"
+
 # --- epubcheck 5.2.1 standalone (fat jar inside the dist zip) ---
 if [ ! -s "$DEST/epubcheck.jar" ]; then
   Z="$DEST/epubcheck-5.2.1.zip"

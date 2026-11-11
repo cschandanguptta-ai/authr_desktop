@@ -115,6 +115,35 @@ class PrintInteriorTest {
     }
 
     @Test
+    fun `bundled app-dir fonts are found — the packaged image layout`() {
+        // Stage a face into <code-source parent>/fonts/ exactly where the
+        // packaged image ships it, and make ~/.authr miss, so the app-dir
+        // candidate (the D-16 bundle, the EpubCheckLocator pattern) is the
+        // one that satisfies the search — before the system dirs.
+        val parent = PrintInterior::class.java.protectionDomain.codeSource?.location
+            ?.toURI()?.let { java.io.File(it).parentFile }
+        org.junit.Assume.assumeTrue("code source has no parent dir (jar-in-jar layout)", parent != null)
+        val src = java.io.File("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf")
+        org.junit.Assume.assumeTrue("dejavu serif not present on this machine", src.isFile)
+        val staged = java.io.File(java.io.File(parent!!, "fonts"), "DejaVuSerif.ttf")
+        staged.parentFile.mkdirs()
+        // The app-dir candidate is the BUNDLED image's fonts/ dir — the file
+        // may already exist there (D-16 bundle). Back it up and restore it:
+        // a test must never consume the shipped bundle.
+        val backup = staged.takeIf { it.isFile }?.readBytes()
+        staged.writeBytes(src.readBytes())
+        val origHome = System.getProperty("user.home")
+        System.setProperty("user.home", "/nonexistent-authr-home")
+        try {
+            val resolved = PrintInterior.resolveFontPath(explicitPath = "", bold = false)
+            assertEquals(staged.absolutePath, resolved, "the bundled app-dir face wins before the system dirs")
+        } finally {
+            System.setProperty("user.home", origHome)
+            if (backup != null) staged.writeBytes(backup) else staged.delete()
+        }
+    }
+
+    @Test
     fun `explicit font path is strict — missing file fails loudly with the path`() {
         val exc = assertNotNull(runCatching {
             PrintInterior.resolveFontPath(explicitPath = "/no/such/NotoSerif.ttf", bold = false)
