@@ -94,7 +94,7 @@ class Epub3ExporterTest {
                 assertTrue(nav.contains(escapeExpected("Chapter $i & <Title>")))
             }
             val opf = zf.getInputStream(zf.getEntry("OEBPS/content.opf")).readBytes().decodeToString()
-            assertTrue(opf.contains("<itemref idref=\"nav\" linear=\"no\"/>"))
+            assertTrue(opf.contains("<itemref idref=\"nav\"/>"))
         }
         out.deleteRecursively()
     }

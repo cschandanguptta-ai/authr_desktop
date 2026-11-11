@@ -151,6 +151,9 @@ fun main(args: Array<String>) {
         "the per-platform blurb variant did not survive the container round-trip (§11.2)"
     }
     log("  volume EPUBs: ${serialPackage.result.epubResults.size} (per micro-arc), each epubcheck VERIFIED")
+    check(serialPackage.result.epubResults.size == 2) {
+        "expected two arc volumes, got ${serialPackage.result.epubResults.size} — arc ids must survive the container round-trip"
+    }
     log("  print interior: ${serialPackage.result.printResult!!.pageCount} pages @ ${serialPackage.result.printResult.gutterInches} in gutter")
     val metaJson = File(serialPackage.result.outDir, "metadata.json").readText()
     check(metaJson.contains("Punchier storefront blurb")) { "blurb variant missing from the metadata bundle" }
@@ -260,6 +263,7 @@ private fun runOneAction(
         arcs = arcs,
         publishing = workbench
     )
+    containerFile.parentFile?.mkdirs()
     AuthrContainer.export(snapshot, containerFile)
     val imported = AuthrContainer.import(containerFile)
     log("  .authr container: ${containerFile.name} (${containerFile.length()} bytes), schema v${imported.manifest.schemaVersion}, checksum warnings=${imported.checksumWarnings.size}")
@@ -287,20 +291,29 @@ private fun bandRange(probeIndex: Int): IntRange = when (probeIndex) {
 
 /**
  * Renders one synthetic interior calibrated to land inside ladder band
- * [probeIndex]. The filler body is padded from a measured words-per-page
- * constant and re-measured once, so the probe converges regardless of the
- * font metrics of the sandbox.
+ * [probeIndex]. Words-per-page is measured empirically: render, then scale
+ * the word count by target/actual and re-render until the interior lands
+ * inside the band (converges in two passes regardless of font metrics).
  */
 private fun renderBandProbe(probeDir: File, probeIndex: Int, targetPages: Int): PrintInterior.Result {
     probeDir.mkdirs()
-    val wordsPerPage = 400
-    val body = (1..(targetPages * wordsPerPage)).joinToString(" ") { i -> "band${probeIndex}word${(i * 7) % 991}" }
-    val chapter = PrintInterior.ChapterSource(1, "Band Probe $probeIndex", body)
-    return PrintInterior.render(
-        PrintInterior.Input(
-            title = "Ladder Band Probe $probeIndex",
-            chapters = listOf(chapter)
-        ),
-        File(probeDir, "band_probe_$probeIndex.pdf")
-    )
+    fun render(words: Int): PrintInterior.Result {
+        val body = (1..words).joinToString(" ") { i -> "band${probeIndex}word${(i * 7) % 991}" }
+        return PrintInterior.render(
+            PrintInterior.Input(
+                title = "Ladder Band Probe $probeIndex",
+                chapters = listOf(PrintInterior.ChapterSource(1, "Band Probe $probeIndex", body))
+            ),
+            File(probeDir, "band_probe_$probeIndex.pdf")
+        )
+    }
+    var words = targetPages * 150
+    var result = render(words)
+    var tries = 1
+    while (result.pageCount !in bandRange(probeIndex) && tries < 4) {
+        words = (words * targetPages.toDouble() / result.pageCount).toInt().coerceAtLeast(1000)
+        result = render(words)
+        tries++
+    }
+    return result
 }

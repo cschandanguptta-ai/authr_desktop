@@ -220,7 +220,10 @@ object Epub3Exporter {
 
         append("  <spine>\n")
         if (hasCover) append("    <itemref idref=\"cover-page\"/>\n")
-        append("    <itemref idref=\"nav\" linear=\"no\"/>\n")
+        // nav stays linear: EPUB 3.3 (OPF-096) requires non-linear content
+        // to be reachable by hyperlink — a linear TOC page is the simplest
+        // always-valid shape.
+        append("    <itemref idref=\"nav\"/>\n")
         for (ch in input.chapters) {
             append("    <itemref idref=\"ch").append("%03d".format(ch.number)).append("\"/>\n")
         }

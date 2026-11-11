@@ -1,0 +1,56 @@
+=== P5 exit gate — retail package in one action ===
+epubcheck: EPUBCheck v5.2.1
+epubcheck jar: /home/z/my-project/.build-extras/epubcheck-dist/epubcheck-5.2.1/epubcheck.jar
+
+--- Novel: The Iron Vale (10 confirmed chapters) ---
+  .authr container: The_Iron_Vale.authr (17307 bytes), schema v2, checksum warnings=0
+  container round-trip: workbench preserved (7 keywords, ISBN 978-3-16-148410-0)
+  novel EPUB: The_Iron_Vale.epub — 10 chapters, 10399 bytes
+  print interior: 13 pages @ 0.375 in gutter — compliant=true
+
+--- Serial: The Estate of Fallingwater Dike (15 canon chapters — completed serial, 2 volumes) ---
+  .authr container: The_Estate_of_Fallingwater_Dike.authr (73066 bytes), schema v2, checksum warnings=0
+  volume EPUBs: 2 (per micro-arc), each epubcheck VERIFIED
+  print interior: 63 pages @ 0.375 in gutter
+  blurb variant (royal_road) carried beside the KDP canonical — OK
+
+--- Gutter ladder band probes (plan §11.1 table) ---
+  band 24–150 pages: probe 85 pages, gutter 0.375 in → GREEN (expected gutter 0.375 in)
+  band 151–300 pages: probe 206 pages, gutter 0.5 in → GREEN (expected gutter 0.5 in)
+  band 301–500 pages: probe 389 pages, gutter 0.625 in → GREEN (expected gutter 0.625 in)
+  band 501–700 pages: probe 571 pages, gutter 0.75 in → GREEN (expected gutter 0.75 in)
+
+--- Exit gate (plan §13 Table 33, P5) ---
+  [PASS] epubcheck zero errors on every EPUB (novel + 2 serial volumes)
+  [PASS] print interior gutter ladder — all four bands exercised and compliant
+  [PASS] one action: complete .authr project → full retail package (novel + serial)
+  [PASS] ship report per project — clean, disclosures present
+  Note: the KDP Print Previewer runs at upload time on KDP's site; the interior geometry is verified here against the plan's ladder.
+
+--- Novel ship report (excerpt) ---
+  | # Ship Report — The Iron Vale
+  | 
+  | - Author: A. Writer
+  | - Generated: 2026-11-11T11:33:01Z
+  | - Generator: Authr OS 3.0.0-alpha (P5 retail packager)
+  | - Action: one RetailPackager.packageRetail invocation — canon gate, EPUB export, epubcheck, print interior, pricing, this report
+  | 
+  | ## Retail artifacts
+  | 
+  | | Artifact | Kind | Bytes |
+  | | --- | --- | --- |
+  | | epub/The_Iron_Vale.epub | EPUB 3 | 10399 |
+  | | print/interior.pdf | Print interior PDF | 37442 |
+  | | metadata.json | Workbench bundle | 1520 |
+  | 
+  | ## Gate verdicts
+  | 
+  | | Artifact | Gate | Verdict | Status | Detail |
+  | | --- | --- | --- | --- | --- |
+  | | The_Iron_Vale.epub | epubcheck (EPUB 3 conformance, plan §11.1) | GREEN | VERIFIED | zero errors, zero warnings — Messages: 0 fatals / 0 errors / 0 warnings / 0 infos |
+  | | interior.pdf | Gutter ladder (plan §11.1) | GREEN | VERIFIED | 13 pages, trim 6.0×9.0 in, gutter 0.375 in (ladder: 0.375 in), 3 pagination pass(es) |
+  | 
+  | **Package verdict: CLEAN — the export behind this report is defensible**
+  | 
+
+P5 EXIT GATE: GREEN

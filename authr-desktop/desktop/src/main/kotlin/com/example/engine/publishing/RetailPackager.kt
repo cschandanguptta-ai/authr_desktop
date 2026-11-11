@@ -234,6 +234,7 @@ object RetailPackager {
             scorecardNotes = input.scorecardNotes,
             cadenceLines = input.cadenceLines,
             pricingLines = pricingLines,
+            disclosures = disclosures,
             oneActionSummary = "one RetailPackager.packageRetail invocation — canon gate, EPUB export, epubcheck, print interior, pricing, this report"
         )
         val reportFile = File(outDir, "ship-report.md")
@@ -270,23 +271,32 @@ object RetailPackager {
         return try {
             val proc = ProcessBuilder(cmd).redirectErrorStream(true).start()
             val out = proc.inputStream.bufferedReader().readText()
-            val code = proc.waitFor()
+            proc.waitFor()
+            // epubcheck's own summary line is the verdict source (its exit
+            // codes vary across versions — 5.x returns 1 for errors too):
+            //   "Messages: 0 fatals / 1 error / 0 warnings / 0 infos"
+            val counts = Regex("Messages:\\s*(\\d+) fatals / (\\d+) errors? / (\\d+) warnings? / (\\d+) infos?")
+                .find(out)?.groupValues
+            val fatals = counts?.get(1)?.toIntOrNull() ?: if (out.contains("FATAL")) 1 else 0
+            val errors = counts?.get(2)?.toIntOrNull() ?: if (out.contains("ERROR")) 1 else 0
+            val warnings = counts?.get(3)?.toIntOrNull() ?: if (out.contains("WARNING")) 1 else 0
             when {
-                code == 0 -> ShipReport.GateVerdict(
+                fatals == 0 && errors == 0 && warnings == 0 -> ShipReport.GateVerdict(
                     artifact = er.file.name, gate = "epubcheck (EPUB 3 conformance, plan §11.1)",
                     passed = true, status = "VERIFIED",
-                    detail = "zero errors, zero warnings (exit 0)"
+                    detail = "zero errors, zero warnings — " + (out.lineSequence()
+                        .firstOrNull { it.contains("Messages:") } ?: "Messages: 0 fatals / 0 errors / 0 warnings / 0 infos")
                 )
-                code == 1 -> ShipReport.GateVerdict(
+                fatals == 0 && errors == 0 -> ShipReport.GateVerdict(
                     artifact = er.file.name, gate = "epubcheck (EPUB 3 conformance, plan §11.1)",
                     passed = true, status = "VERIFIED-WARN",
-                    detail = "zero errors, warnings present (exit 1): " + out.lineSequence()
+                    detail = "zero errors, $warnings warning(s): " + out.lineSequence()
                         .filter { it.contains("WARNING") }.take(3).joinToString("; ").ifBlank { "warnings" }
                 )
                 else -> ShipReport.GateVerdict(
                     artifact = er.file.name, gate = "epubcheck (EPUB 3 conformance, plan §11.1)",
                     passed = false, status = "FAILED",
-                    detail = "exit $code — " + out.lineSequence()
+                    detail = "$fatals fatal(s), $errors error(s) — " + out.lineSequence()
                         .filter { it.contains("ERROR") || it.contains("FATAL") }.take(5).joinToString("; ").ifBlank { "errors" }
                 )
             }

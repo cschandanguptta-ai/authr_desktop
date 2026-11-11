@@ -1,0 +1,53 @@
+{
+    "schema": "retail_metadata/1",
+    "generatorVersion": "3.0.0-alpha",
+    "workbench": {
+        "title": "The Estate of Fallingwater Dike",
+        "author": "K. Author",
+        "description": "The retail blurb — measured, complete sentences.",
+        "keywords": [
+            "serial",
+            "family drama",
+            "mystery",
+            "river town",
+            "completed",
+            "web novel",
+            "volumes"
+        ],
+        "listPriceUsd": 3.99,
+        "blurbVariants": {
+            "royal_road": "Punchier storefront blurb — short lines, high tension."
+        }
+    },
+    "artifacts": [
+        {
+            "path": "epub/volume_01.epub",
+            "kind": "EPUB 3",
+            "sizeBytes": 25681
+        },
+        {
+            "path": "epub/volume_02.epub",
+            "kind": "EPUB 3",
+            "sizeBytes": 28833
+        },
+        {
+            "path": "print/interior.pdf",
+            "kind": "Print interior PDF",
+            "sizeBytes": 136729
+        }
+    ],
+    "ebookQuote": {
+        "option": "SEVENTY",
+        "listPriceUsd": 3.99,
+        "royaltyPerUnitUsd": 2.6430000000000002,
+        "deliveryCostUsd": 0.15,
+        "bandCompliant": true
+    },
+    "printQuote": {
+        "pageCount": 63,
+        "printCostUsd": 1.6059999999999999,
+        "listPriceUsd": 3.99,
+        "royaltyPerUnitUsd": 0.7880000000000003,
+        "breakEvenListUsd": 2.6766666666666667
+    }
+}

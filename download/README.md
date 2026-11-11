@@ -99,6 +99,40 @@ New in P4: engine/audio package (PronunciationPass, MasteringChain, AcxAudit, Sm
 AudiobookRenderer + EspeakSynthesizer), desktopbridge/EspeakLocator.kt, gate + toolchain
 scripts, ADR-0010, tech-debt D-13/D-14, open questions OQ-14.
 
+## Authr OS 3.0 — P5 Implementation Report (November 11, 2026)
+- Authr-OS-3.0-P5-Implementation-Report.docx — phase P5 deliverable report: Publishing —
+  EPUB 3 exporter, print interior with gutter ladder, metadata workbench, pricing
+  simulator, volume bundling, ship report, one-action retail packager, docs/ADR updates,
+  and the program-completion P0–P5 summary
+- Authr-OS-3.0-P5-Implementation-Report.pdf — PDF render of the same document
+- Authr-OS-3.0-P5-Retail-Package/ — the exit-gate evidence tree: novel/ and serial/
+  retail packages (EPUBs, print/interior.pdf, metadata.json, ship-report.md each, plus
+  the source .authr containers), probes/ (the four gutter-ladder band interiors),
+  gate-report.md
+- Authr-OS-3.0-P5-Retail-Package.gate-run.log — the full gate run log (suite + gate)
+
+P5 exit-gate status (all green, plan §13 Table 33, see the report for evidence):
+1. epubcheck zero errors — the real epubcheck 5.2.1 tool on the novel EPUB and both
+   serial volume EPUBs (0 fatals / 0 errors / 0 warnings each); a deliberately broken
+   EPUB confirmed failures block the clean verdict
+2. KDP Print Previewer contract — 6×9 in trim on every page; gutter ladder verified on
+   all four bands (85/206/389/571-page probes → 0.375/0.5/0.625/0.75 in); the Previewer
+   run itself is an upload-time, Amazon-side step (OQ-15)
+3. One action — both projects round-tripped through real .authr containers, then one
+   RetailPackager call each produced the full retail package; ship reports CLEAN with
+   disclosures (canon exclusions, workbench derivation, Chekhov waivers, pricing record)
+
+Implementation lives in authr-desktop/ — 209 unit tests green (159 P0–P4 unchanged +
+50 new P5, run via the direct kotlinc/JUnitCore route `scripts/p5_direct_test.sh`;
+epubcheck + pdfbox jars via `scripts/p5_fetch_toolchain.sh`). New in P5:
+engine/publishing (PublishingMetadata + RoyaltySimulator + WorkbenchStore, Epub3Exporter,
+PrintInterior, VolumeBundler, ShipReport, RetailPackager), desktopbridge/EpubCheckLocator.kt,
+structured KdpWorkbench in the .authr container (additive; legacy stub still readable),
+ArcPayload.id for round-trip-safe arc joins, gate + toolchain scripts, ADR-0011,
+tech-debt D-15/D-16, open questions OQ-9 (resolved) / OQ-15 / OQ-16.
+
+PROGRAM STATUS: all six plan phases (P0–P5) are implemented with green exit gates.
+
 ## Authr OS 3.0 — AI Maintenance Documentation (November 10, 2026)
 - Authr-OS-AI-Maintenance-Docs/ — the "Document a Production App for Future AI Maintenance"
   package for the authr-desktop production app: repo-root AGENTS.md (doc index, hard rules,

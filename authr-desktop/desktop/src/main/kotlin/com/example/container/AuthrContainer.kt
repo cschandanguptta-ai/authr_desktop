@@ -442,6 +442,10 @@ object AuthrContainer {
 
     @Serializable
     data class ArcPayload(
+        /** v3.0 P5: the arc id rides along (additive, default 0 for older
+         *  containers) — chapters reference arcs by id (arcId) and the retail
+         *  volume bundler joins on it after a round-trip. */
+        val id: Int = 0,
         val arcIndex: Int, val conflict: String, val questionRef: Int?,
         val phaseBounds: String, val answeredQuestionRef: Int?,
         val contribution: String, val seeds: String
@@ -533,10 +537,10 @@ object AuthrContainer {
     private fun LorebookPayload.toEntity() = com.example.data.model.Lorebook(bookId = 0, key = key, value = value)
 
     private fun com.example.data.model.SerialArc.toPayload() = ArcPayload(
-        arcIndex, conflict, questionRef, phaseBounds, answeredQuestionRef, contribution, seeds
+        id, arcIndex, conflict, questionRef, phaseBounds, answeredQuestionRef, contribution, seeds
     )
     private fun ArcPayload.toEntity() = com.example.data.model.SerialArc(
-        bookId = 0, arcIndex = arcIndex, conflict = conflict, questionRef = questionRef,
+        id = id, bookId = 0, arcIndex = arcIndex, conflict = conflict, questionRef = questionRef,
         phaseBounds = phaseBounds, answeredQuestionRef = answeredQuestionRef,
         contribution = contribution, seeds = seeds
     )

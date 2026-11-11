@@ -36,22 +36,26 @@ class RetailPackagerTest {
             draftStatus = if (canon) DraftState.CONFIRMED else DraftState.PROPOSED
         )
 
-    private fun novelInput(chapters: Int = 4, workbench: KdpWorkbench? = null) = RetailPackager.Input(
+    /** The fully edited workbench most tests package with. */
+    private fun fullWorkbench() = KdpWorkbench(
+        title = "The Iron Vale",
+        subtitle = "A mining ballad",
+        author = "A. Writer",
+        description = "A blurb.",
+        keywords = List(7) { "kw$it" },
+        isbn = "978-3-16-148410-0",
+        publisher = "Iron Vale Press",
+        copyrightLine = "Copyright © 2026 A. Writer",
+        listPriceUsd = 6.99
+    )
+
+    /** workbench = null exercises the derive-from-project-record path (OQ-9). */
+    private fun novelInput(chapters: Int = 4, workbench: KdpWorkbench? = fullWorkbench()) = RetailPackager.Input(
         bookTitle = "The Iron Vale",
         author = "A. Writer",
         isSerial = false,
         chapters = (1..chapters).map { chapter(it) },
-        workbench = workbench ?: KdpWorkbench(
-            title = "The Iron Vale",
-            subtitle = "A mining ballad",
-            author = "A. Writer",
-            description = "A blurb.",
-            keywords = List(7) { "kw$it" },
-            isbn = "978-3-16-148410-0",
-            publisher = "Iron Vale Press",
-            copyrightLine = "Copyright © 2026 A. Writer",
-            listPriceUsd = 6.99
-        )
+        workbench = workbench
     )
 
     @Test

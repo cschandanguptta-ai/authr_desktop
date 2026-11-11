@@ -1,0 +1,52 @@
+{
+    "schema": "retail_metadata/1",
+    "generatorVersion": "3.0.0-alpha",
+    "workbench": {
+        "title": "The Iron Vale",
+        "subtitle": "A mining ballad",
+        "author": "A. Writer",
+        "description": "A blurb-walker's guide to the iron country: bells, ferries, foundries, and one ledger that will not stay closed.",
+        "keywords": [
+            "fantasy",
+            "industrial",
+            "sister quest",
+            "found family",
+            "slow burn",
+            "standalone",
+            "speculative"
+        ],
+        "categories": [
+            "Fiction / Fantasy / Historical"
+        ],
+        "isbn": "978-3-16-148410-0",
+        "publisher": "Iron Vale Press",
+        "copyrightLine": "Copyright © 2026 A. Writer. All rights reserved.",
+        "listPriceUsd": 6.99
+    },
+    "artifacts": [
+        {
+            "path": "epub/The_Iron_Vale.epub",
+            "kind": "EPUB 3",
+            "sizeBytes": 10399
+        },
+        {
+            "path": "print/interior.pdf",
+            "kind": "Print interior PDF",
+            "sizeBytes": 37442
+        }
+    ],
+    "ebookQuote": {
+        "option": "SEVENTY",
+        "listPriceUsd": 6.99,
+        "royaltyPerUnitUsd": 4.742999999999999,
+        "deliveryCostUsd": 0.15,
+        "bandCompliant": true
+    },
+    "printQuote": {
+        "pageCount": 13,
+        "printCostUsd": 1.006,
+        "listPriceUsd": 6.99,
+        "royaltyPerUnitUsd": 3.1879999999999997,
+        "breakEvenListUsd": 1.6766666666666667
+    }
+}
