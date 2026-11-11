@@ -1,5 +1,7 @@
 package com.example.container
 
+import com.example.engine.publishing.KdpWorkbench
+import com.example.engine.publishing.WorkbenchStore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -24,6 +26,12 @@ import java.util.zip.ZipOutputStream
  *   /plugins/             structures/ + personas/ JSON plugin files (user-extensible)
  *   /exports/             epub/, print/, serial/, audio/ — regenerable outputs
  *   /metadata/            book.json (full project record) + KDP workbench data
+ *
+ * v3.0 P5 (plan §11.2, additive like the P4 pronunciation rules):
+ * metadata/kdp_workbench.json upgrades from the v2.3 StringEnvelope stub to
+ * the structured KdpWorkbench when the snapshot carries one. The reader
+ * accepts BOTH forms (openers migrate forward, never downgrade); the
+ * workbench is the authoritative retail-metadata source (OQ-9).
  *
  * Guarantees required by the plan (§10, risk register):
  *   - openers migrate forward on load, never silently downgrade;
@@ -94,7 +102,9 @@ object AuthrContainer {
         val arcs: List<com.example.data.model.SerialArc> = emptyList(),
         val guns: List<com.example.data.model.ChekhovGun> = emptyList(),
         val questions: List<com.example.data.model.QuestionEntry> = emptyList(),
-        val plugins: List<com.example.data.model.PluginRecord> = emptyList()
+        val plugins: List<com.example.data.model.PluginRecord> = emptyList(),
+        /** v3.0 P5: the structured metadata workbench; null = legacy stub. */
+        val publishing: KdpWorkbench? = null
     )
 
     // ---------------------------------------------------------------------
@@ -160,7 +170,14 @@ object AuthrContainer {
         // 1. Full project record — the lossless source of truth.
         dir(root, "metadata").also { meta ->
             File(meta, "book.json").writeText(json.encodeToString(BookPayload.serializer(), b.toPayload()))
-            File(meta, "kdp_workbench.json").writeText(stringPayload(b.marketingMaterials))
+            // v3.0 P5: the structured workbench wins when present; otherwise
+            // the v2.3 StringEnvelope stub is written unchanged.
+            val wb = snapshot.publishing
+            if (wb != null) {
+                WorkbenchStore.write(root, wb)
+            } else {
+                File(meta, "kdp_workbench.json").writeText(stringPayload(b.marketingMaterials))
+            }
             File(meta, "cover_prompt.json").writeText(stringPayload(b.coverPrompt))
         }
 
@@ -371,7 +388,8 @@ object AuthrContainer {
             lorebook = lorebook,
             arcs = arcs,
             guns = guns,
-            questions = questions
+            questions = questions,
+            publishing = WorkbenchStore.read(root)
         )
     }
 

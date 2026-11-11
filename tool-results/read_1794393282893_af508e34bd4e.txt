@@ -1,0 +1,872 @@
+     1→package com.example.managers
+     2→
+     3→import android.content.ContentValues
+     4→import android.content.Context
+     5→import android.graphics.BitmapFactory
+     6→import android.net.Uri
+     7→import android.os.Build
+     8→import android.os.Environment
+     9→import android.provider.MediaStore
+    10→import android.util.Log
+    11→import com.example.data.model.Story
+    12→import java.io.File
+    13→import java.io.OutputStream
+    14→import java.text.SimpleDateFormat
+    15→import java.util.Date
+    16→import java.util.Locale
+    17→import java.util.TimeZone
+    18→import java.util.UUID
+    19→import java.util.zip.ZipEntry
+    20→import java.util.zip.ZipOutputStream
+    21→
+    22→data class ImageValidationResult(
+    23→    val isValid: Boolean,
+    24→    val width: Int,
+    25→    val height: Int,
+    26→    val aspectRatio: Float,
+    27→    val warningMessage: String?
+    28→)
+    29→
+    30→fun Story.getChapters(): List<String> {
+    31→    return listOf(part1, part2, part3, part4, part5).filter { it.isNotEmpty() }
+    32→}
+    33→
+    34→object EpubManager {
+    35→
+    36→    /**
+    37→     * Sanitizes strings for safe inclusion in XML elements and attributes.
+    38→     */
+    39→    fun escapeXml(text: String): String {
+    40→        if (text.isEmpty()) return ""
+    41→        return text
+    42→            .replace("&", "&amp;")
+    43→            .replace("<", "&lt;")
+    44→            .replace(">", "&gt;")
+    45→            .replace("\"", "&quot;")
+    46→            .replace("'", "&apos;")
+    47→    }
+    48→
+    49→    /**
+    50→     * Copy picked cover image to the local stories assets directory
+    51→     */
+    52→    fun saveCoverImage(context: Context, storyId: Int, uri: Uri): Boolean {
+    53→        return try {
+    54→            val inputStream = context.contentResolver.openInputStream(uri) ?: return false
+    55→            val coverFile = File(context.filesDir, "story_${storyId}_cover.jpg")
+    56→            coverFile.outputStream().use { outputStream ->
+    57→                inputStream.copyTo(outputStream)
+    58→            }
+    59→            Log.d("EpubManager", "Successfully saved cover image for story $storyId to ${coverFile.absolutePath}")
+    60→            true
+    61→        } catch (e: Exception) {
+    62→            Log.e("EpubManager", "Failed to save cover image", e)
+    63→            false
+    64→        }
+    65→    }
+    66→
+    67→    /**
+    68→     * Export complete book package as a compressed .zip archive containing TXT, Markdown, Story Bible, and Outline.
+    69→     */
+    70→    fun exportBookToZipPackage(context: Context, bookTitle: String, manuscript: String, bible: String, outline: String): String? {
+    71→        return try {
+    72→            val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    73→            val studioDir = File(downloads, "Weaver_Studio")
+    74→            studioDir.mkdirs()
+    75→            val safeTitle = bookTitle.replace(Regex("[^a-zA-Z0-9_\\-]"), "_")
+    76→            val zipFile = File(studioDir, "${safeTitle}_Package.zip")
+    77→            ZipOutputStream(zipFile.outputStream().buffered()).use { zip ->
+    78→                zip.putNextEntry(ZipEntry("Manuscript.txt"))
+    79→                zip.write(manuscript.toByteArray())
+    80→                zip.closeEntry()
+    81→
+    82→                zip.putNextEntry(ZipEntry("Manuscript.md"))
+    83→                zip.write("# $bookTitle\n\n$manuscript".toByteArray())
+    84→                zip.closeEntry()
+    85→
+    86→                zip.putNextEntry(ZipEntry("StoryBible.txt"))
+    87→                zip.write(bible.toByteArray())
+    88→                zip.closeEntry()
+    89→
+    90→                zip.putNextEntry(ZipEntry("Outline.txt"))
+    91→                zip.write(outline.toByteArray())
+    92→                zip.closeEntry()
+    93→            }
+    94→            zipFile.absolutePath
+    95→        } catch (e: Exception) {
+    96→            Log.e("EpubManager", "Failed to export ZIP package", e)
+    97→            null
+    98→        }
+    99→    }
+   100→
+   101→    /**
+   102→     * Validate the saved cover image's resolution and aspect ratio
+   103→     */
+   104→    fun validateCoverImage(context: Context, storyId: Int): ImageValidationResult {
+   105→        val coverFile = File(context.filesDir, "story_${storyId}_cover.jpg")
+   106→        if (!coverFile.exists()) {
+   107→            return ImageValidationResult(
+   108→                isValid = false,
+   109→                width = 0,
+   110→                height = 0,
+   111→                aspectRatio = 0f,
+   112→                warningMessage = "No cover image file uploaded. The eBook will use a dynamically generated typography cover."
+   113→            )
+   114→        }
+   115→        return try {
+   116→            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+   117→            BitmapFactory.decodeFile(coverFile.absolutePath, options)
+   118→            val width = options.outWidth
+   119→            val height = options.outHeight
+   120→            if (width <= 0 || height <= 0) {
+   121→                ImageValidationResult(
+   122→                    isValid = false,
+   123→                    width = 0,
+   124→                    height = 0,
+   125→                    aspectRatio = 0f,
+   126→                    warningMessage = "Invalid image format or corrupt file."
+   127→                )
+   128→            } else {
+   129→                val ratio = height.toFloat() / width
+   130→                var warning: String? = null
+   131→                if (width < 1400 || height < 2100) {
+   132→                    warning = "Low resolution: Recommended cover resolution is at least 1400x2100 px for professional platforms (current: ${width}x${height} px)."
+   133→                } else if (ratio < 1.4f || ratio > 1.7f) {
+   134→                    warning = "Suboptimal aspect ratio: Recommended aspect ratio is 1:1.5 to 1:1.6 (current: 1:${String.format(Locale.US, "%.2f", ratio)}). Cover may scale awkwardly on some eReaders."
+   135→                }
+   136→                ImageValidationResult(
+   137→                    isValid = true,
+   138→                    width = width,
+   139→                    height = height,
+   140→                    aspectRatio = ratio,
+   141→                    warningMessage = warning
+   142→                )
+   143→            }
+   144→        } catch (e: Exception) {
+   145→            ImageValidationResult(
+   146→                isValid = false,
+   147→                width = 0,
+   148→                height = 0,
+   149→                aspectRatio = 0f,
+   150→                warningMessage = "Error validating cover image: ${e.message}"
+   151→            )
+   152→        }
+   153→    }
+   154→
+   155→    /**
+   156→     * Generate an ultra-detailed cover art concept for Midjourney/ChatGPT/Gemini
+   157→     */
+   158→    fun generateCoverPrompt(story: Story): String {
+   159→        val title = story.title
+   160→        val genres = story.genres.ifEmpty { "Fiction" }
+   161→        val hero = story.heroName.ifEmpty { "a protagonist" }
+   162→        val hook = story.hook.ifEmpty { "an epic adventure" }
+   163→        val extras = story.extras.ifEmpty { "" }
+   164→        val mood = when {
+   165→            genres.contains("Thriller", true) || genres.contains("Horror", true) -> "dark, mysterious, suspenseful, tense"
+   166→            genres.contains("Fantasy", true) || genres.contains("Sci-Fi", true) -> "epic, mystical, wonderous, celestial"
+   167→            genres.contains("Romance", true) -> "emotional, romantic, intimate, soft, warm"
+   168→            else -> "compelling, cinematic, dramatic"
+   169→        }
+   170→        val artStyle = when {
+   171→            genres.contains("Fantasy", true) -> "Dramatic digital fantasy illustration, high-fantasy style, highly detailed"
+   172→            genres.contains("Sci-Fi", true) -> "Futuristic cinematic concept art, sci-fi cyberpunk aesthetic, sleek rendering"
+   173→            genres.contains("Thriller", true) -> "Chiaroscuro film noir, dramatic shadows, mysterious realism"
+   174→            genres.contains("Romance", true) -> "Soft focus impressionistic digital painting, warm pastel color palette"
+   175→            else -> "Cinematic oil painting style, masterpiece digital art, volumetric lighting"
+   176→        }
+   177→        
+   178→        return """
+   179→            EBook Cover Art Concept for "$title" (Genre: $genres)
+   180→            --------------------------------------------------
+   181→            Artistic Style: $artStyle.
+   182→            Subject & Character: A highly detailed depiction of $hero, matching the central premise: "$hook".
+   183→            Atmosphere & Mood: $mood, evocative, captivating.
+   184→            Color Palette: Masterful lighting with contrasting tones, color-graded to match the thematic depth of the story.
+   185→            Composition & Camera Angle: Centered single-focus composition with generous negative space at the top and bottom for title typography placement. High contrast between subject and background.
+   186→            Visual Symbolism: Incorporating elements representing: $extras.
+   187→            Rendering Instructions: Extremely detailed rendering, volumetric lighting, photorealistic textures, 8k resolution concept art. No watermarks, no embedded text, no logos, no typography. Perfect aspect ratio for eBook cover (2:3 aspect ratio).
+   188→        """.trimIndent()
+   189→    }
+   190→
+   191→    /**
+   192→     * Main EPUB 3 generation pipeline, returning whether export was successful
+   193→     */
+   194→    fun exportToEpub(
+   195→        context: Context, 
+   196→        story: Story,
+   197→        authorName: String = "",
+   198→        authorPenName: String = "",
+   199→        authorBio: String = "",
+   200→        authorPublisher: String = "",
+   201→        authorWebsite: String = "",
+   202→        authorSocial: String = "",
+   203→        subtitle: String = "",
+   204→        seriesTitle: String = "",
+   205→        volumeNumber: String = "",
+   206→        edition: String = "First Edition",
+   207→        isbn: String = "",
+   208→        dedication: String = "",
+   209→        acknowledgements: String = "",
+   210→        audioFiles: List<File>? = null
+   211→    ): Boolean {
+   212→        val cleanTitle = story.title.replace("[^a-zA-Z0-9]".toRegex(), "_")
+   213→        val fileName = "${cleanTitle}_eBook.epub"
+   214→        var savedSuccess = false
+   215→        
+   216→        try {
+   217→            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+   218→                val resolver = context.contentResolver
+   219→                val contentValues = ContentValues().apply {
+   220→                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+   221→                    put(MediaStore.Downloads.MIME_TYPE, "application/epub+zip")
+   222→                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+   223→                }
+   224→                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+   225→                if (uri != null) {
+   226→                    resolver.openOutputStream(uri)?.use { out ->
+   227→                        writeEpubToStream(
+   228→                            context = context,
+   229→                            story = story,
+   230→                            out = out,
+   231→                            authorName = authorName,
+   232→                            authorPenName = authorPenName,
+   233→                            authorBio = authorBio,
+   234→                            authorPublisher = authorPublisher,
+   235→                            authorWebsite = authorWebsite,
+   236→                            authorSocial = authorSocial,
+   237→                            subtitle = subtitle,
+   238→                            seriesTitle = seriesTitle,
+   239→                            volumeNumber = volumeNumber,
+   240→                            edition = edition,
+   241→                            isbn = isbn,
+   242→                            dedication = dedication,
+   243→                            acknowledgements = acknowledgements
+   244→                        )
+   245→                    }
+   246→                    savedSuccess = true
+   247→                }
+   248→            } else {
+   249→                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+   250→                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+   251→                val destFile = File(downloadsDir, fileName)
+   252→                destFile.outputStream().use { out ->
+   253→                    writeEpubToStream(
+   254→                        context = context,
+   255→                        story = story,
+   256→                        out = out,
+   257→                        authorName = authorName,
+   258→                        authorPenName = authorPenName,
+   259→                        authorBio = authorBio,
+   260→                        authorPublisher = authorPublisher,
+   261→                        authorWebsite = authorWebsite,
+   262→                        authorSocial = authorSocial,
+   263→                        subtitle = subtitle,
+   264→                        seriesTitle = seriesTitle,
+   265→                        volumeNumber = volumeNumber,
+   266→                        edition = edition,
+   267→                        isbn = isbn,
+   268→                        dedication = dedication,
+   269→                        acknowledgements = acknowledgements
+   270→                    )
+   271→                }
+   272→                savedSuccess = true
+   273→            }
+   274→        } catch (e: Exception) {
+   275→            Log.e("EpubManager", "Failed exporting EPUB", e)
+   276→            savedSuccess = false
+   277→        }
+   278→        return savedSuccess
+   279→    }
+   280→
+   281→    fun exportToEpubFile(
+   282→        context: Context,
+   283→        story: Story,
+   284→        destFile: File,
+   285→        authorName: String = "",
+   286→        authorPenName: String = "",
+   287→        authorBio: String = "",
+   288→        authorPublisher: String = "",
+   289→        authorWebsite: String = "",
+   290→        authorSocial: String = "",
+   291→        subtitle: String = "",
+   292→        seriesTitle: String = "",
+   293→        volumeNumber: String = "",
+   294→        edition: String = "First Edition",
+   295→        isbn: String = "",
+   296→        dedication: String = "",
+   297→        acknowledgements: String = "",
+   298→        audioFiles: List<File>? = null
+   299→    ): Boolean {
+   300→        return try {
+   301→            destFile.outputStream().use { out ->
+   302→                writeEpubToStream(
+   303→                    context, story, out, authorName, authorPenName, authorBio, authorPublisher,
+   304→                    authorWebsite, authorSocial, subtitle, seriesTitle, volumeNumber, edition,
+   305→                    isbn, dedication, acknowledgements
+   306→                )
+   307→            }
+   308→            true
+   309→        } catch (e: Exception) {
+   310→            Log.e("EpubManager", "Failed to write EPUB to file", e)
+   311→            false
+   312→        }
+   313→    }
+   314→
+   315→    fun writeEpubToStream(
+   316→        context: Context,
+   317→        story: Story,
+   318→        out: OutputStream,
+   319→        authorName: String,
+   320→        authorPenName: String,
+   321→        authorBio: String,
+   322→        authorPublisher: String,
+   323→        authorWebsite: String,
+   324→        authorSocial: String,
+   325→        subtitle: String,
+   326→        seriesTitle: String,
+   327→        volumeNumber: String,
+   328→        edition: String,
+   329→        isbn: String,
+   330→        dedication: String,
+   331→        acknowledgements: String,
+   332→        audioFiles: List<File>? = null
+   333→    ) {
+   334→        val zos = ZipOutputStream(out)
+   335→        
+   336→        // 1. mimetype (Must be first, completely uncompressed)
+   337→        val mimeEntry = ZipEntry("mimetype").apply { method = ZipEntry.STORED }
+   338→        val mimeBytes = "application/epub+zip".toByteArray()
+   339→        mimeEntry.size = mimeBytes.size.toLong()
+   340→        mimeEntry.crc = getCrc(mimeBytes)
+   341→        zos.putNextEntry(mimeEntry)
+   342→        zos.write(mimeBytes)
+   343→        zos.closeEntry()
+   344→
+   345→        // 2. META-INF/container.xml
+   346→        zos.putNextEntry(ZipEntry("META-INF/container.xml"))
+   347→        val containerXml = """<?xml version="1.0"?>
+   348→<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+   349→    <rootfiles>
+   350→        <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+   351→    </rootfiles>
+   352→</container>""".trimIndent()
+   353→        zos.write(containerXml.toByteArray())
+   354→        zos.closeEntry()
+   355→
+   356→        // Setup dynamic properties
+   357→        val primaryAuthor = authorPenName.ifEmpty { authorName.ifEmpty { "Unknown Author" } }
+   358→        val publisherVal = authorPublisher.ifEmpty { "Audio Novel Studio" }
+   359→        val finalSubtitle = subtitle.ifEmpty { story.genres + " Novel" }
+   360→        val currentYear = SimpleDateFormat("yyyy", Locale.US).format(Date())
+   361→        val isoDate = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+   362→            timeZone = TimeZone.getTimeZone("UTC")
+   363→        }.format(Date())
+   364→        val bookUuid = "urn:uuid:" + UUID.nameUUIDFromBytes(story.title.toByteArray()).toString()
+   365→        val coverFile = File(context.filesDir, "story_${story.id}_cover.jpg")
+   366→        val hasCoverFile = coverFile.exists()
+   367→
+   368→        // 3. Write CSS Stylesheet
+   369→        zos.putNextEntry(ZipEntry("OEBPS/css/stylesheet.css"))
+   370→        val cssContent = """
+   371→            body {
+   372→                font-family: "Georgia", "Times New Roman", serif;
+   373→                line-height: 1.6;
+   374→                margin: 5% 8%;
+   375→                color: #111111;
+   376→                background-color: #FFFFFF;
+   377→            }
+   378→            h1, h2, h3 {
+   379→                font-family: "Helvetica Neue", "Arial", sans-serif;
+   380→                text-align: center;
+   381→                color: #2c3e50;
+   382→                margin-top: 1.5em;
+   383→                margin-bottom: 0.8em;
+   384→            }
+   385→            h1 {
+   386→                font-size: 1.8em;
+   387→                border-bottom: 1px solid #ecf0f1;
+   388→                padding-bottom: 0.3em;
+   389→            }
+   390→            h2 {
+   391→                font-size: 1.4em;
+   392→            }
+   393→            p {
+   394→                text-indent: 1.5em;
+   395→                margin: 0;
+   396→                text-align: justify;
+   397→            }
+   398→            p.first-paragraph {
+   399→                text-indent: 0;
+   400→                margin-top: 1.5em;
+   401→            }
+   402→            p.first-paragraph:first-letter {
+   403→                font-size: 3.2em;
+   404→                float: left;
+   405→                margin: 0.1em 0.1em 0 0;
+   406→                line-height: 0.85;
+   407→                font-weight: bold;
+   408→                color: #2c3e50;
+   409→                font-family: "Georgia", serif;
+   410→            }
+   411→            .scene-break {
+   412→                text-align: center;
+   413→                margin: 2em 0;
+   414→                font-size: 1.4em;
+   415→                letter-spacing: 0.5em;
+   416→                color: #7f8c8d;
+   417→            }
+   418→            .center-text {
+   419→                text-align: center;
+   420→                text-indent: 0;
+   421→            }
+   422→            .dedication {
+   423→                font-style: italic;
+   424→                text-align: center;
+   425→                margin-top: 5em;
+   426→                line-height: 1.8;
+   427→            }
+   428→            .copyright-info {
+   429→                font-size: 0.9em;
+   430→                color: #34495e;
+   431→                line-height: 1.8;
+   432→                text-indent: 0;
+   433→                margin-bottom: 1em;
+   434→            }
+   435→            .about-author-section {
+   436→                margin-top: 2em;
+   437→            }
+   438→            .cover-img {
+   439→                display: block;
+   440→                max-width: 100%;
+   441→                max-height: 100%;
+   442→                margin: 0 auto;
+   443→            }
+   444→        """.trimIndent()
+   445→        zos.write(cssContent.toByteArray())
+   446→        zos.closeEntry()
+   447→
+   448→        // 4. Write cover image if it exists
+   449→        if (hasCoverFile) {
+   450→            zos.putNextEntry(ZipEntry("OEBPS/images/cover.jpg"))
+   451→            coverFile.inputStream().use { input ->
+   452→                input.copyTo(zos)
+   453→            }
+   454→            zos.closeEntry()
+   455→        }
+   456→
+   457→        // 5. OEBPS/content.opf (Manifest and Spine)
+   458→        zos.putNextEntry(ZipEntry("OEBPS/content.opf"))
+   459→        val chapters = story.getChapters()
+   460→        val manifestItems = StringBuilder()
+   461→        val spineItems = StringBuilder()
+   462→
+   463→        chapters.forEachIndexed { idx, _ ->
+   464→            val hasAudio = audioFiles != null && audioFiles.size > idx
+   465→            val mediaOverlay = if (hasAudio) " media-overlay=\"smil-chapter${idx+1}\"" else ""
+   466→            
+   467→            manifestItems.append("""<item id="chapter${idx+1}" href="chapter${idx+1}.xhtml" media-type="application/xhtml+xml"$mediaOverlay/>""").append("\n        ")
+   468→            
+   469→            if (hasAudio) {
+   470→                val audioFile = audioFiles!![idx]
+   471→                val ext = audioFile.extension.ifEmpty { "mp3" }
+   472→                val mediaType = if (ext.lowercase() == "wav") "audio/wav" else "audio/mpeg"
+   473→                manifestItems.append("""<item id="smil-chapter${idx+1}" href="smil/chapter${idx+1}.smil" media-type="application/smil+xml"/>""").append("\n        ")
+   474→                manifestItems.append("""<item id="audio-chapter${idx+1}" href="audio/chapter${idx+1}.$ext" media-type="$mediaType"/>""").append("\n        ")
+   475→            }
+   476→            
+   477→            spineItems.append("""<itemref idref="chapter${idx+1}"/>""").append("\n        ")
+   478→        }
+   479→
+   480→        val coverImageManifestItem = if (hasCoverFile) {
+   481→            """<item id="cover-image" href="images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>"""
+   482→        } else ""
+   483→
+   484→        val contentOpf = """<?xml version="1.0" encoding="UTF-8"?>
+   485→<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">
+   486→    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+   487→        <dc:title>${story.title}</dc:title>
+   488→        <dc:creator id="creator">${primaryAuthor}</dc:creator>
+   489→        <dc:language>en</dc:language>
+   490→        <dc:identifier id="BookId">${bookUuid}</dc:identifier>
+   491→        <dc:publisher>${publisherVal}</dc:publisher>
+   492→        <dc:date>${isoDate}</dc:date>
+   493→        <dc:description>${story.metaDesc.ifEmpty { story.hook }}</dc:description>
+   494→        <dc:subject>${story.genres}</dc:subject>
+   495→        <meta property="dcterms:modified">${isoDate}</meta>
+   496→        ${if (hasCoverFile) """<meta name="cover" content="cover-image"/>""" else ""}
+   497→    </metadata>
+   498→    <manifest>
+   499→        <item id="stylesheet" href="css/stylesheet.css" media-type="text/css"/>
+   500→        <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+   501→        <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+   502→        <item id="cover-page" href="cover.xhtml" media-type="application/xhtml+xml"/>
+   503→        <item id="title-page" href="title_page.xhtml" media-type="application/xhtml+xml"/>
+   504→        <item id="copyright-page" href="copyright.xhtml" media-type="application/xhtml+xml"/>
+   505→        <item id="dedication-page" href="dedication.xhtml" media-type="application/xhtml+xml"/>
+   506→        $manifestItems
+   507→        <item id="acknowledgements-page" href="acknowledgements.xhtml" media-type="application/xhtml+xml"/>
+   508→        <item id="about-author-page" href="about_author.xhtml" media-type="application/xhtml+xml"/>
+   509→        <item id="promo-page" href="promo.xhtml" media-type="application/xhtml+xml"/>
+   510→        $coverImageManifestItem
+   511→    </manifest>
+   512→    <spine toc="ncx">
+   513→        <itemref idref="cover-page"/>
+   514→        <itemref idref="title-page"/>
+   515→        <itemref idref="copyright-page"/>
+   516→        <itemref idref="dedication-page"/>
+   517→        $spineItems
+   518→        <itemref idref="acknowledgements-page"/>
+   519→        <itemref idref="about-author-page"/>
+   520→        <itemref idref="promo-page"/>
+   521→    </spine>
+   522→</package>""".trimIndent()
+   523→        zos.write(contentOpf.toByteArray())
+   524→        zos.closeEntry()
+   525→
+   526→        // 6. OEBPS/nav.xhtml (MANDATORY EPUB 3 Navigation Document)
+   527→        zos.putNextEntry(ZipEntry("OEBPS/nav.xhtml"))
+   528→        val navChapters = StringBuilder()
+   529→        chapters.forEachIndexed { idx, _ ->
+   530→            navChapters.append("""<li><a href="chapter${idx+1}.xhtml">Chapter ${idx+1}</a></li>""").append("\n            ")
+   531→        }
+   532→
+   533→        val navXhtml = """<?xml version="1.0" encoding="UTF-8"?>
+   534→<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">
+   535→<head>
+   536→    <title>Navigation</title>
+   537→    <meta charset="utf-8" />
+   538→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   539→</head>
+   540→<body>
+   541→    <nav epub:type="toc" id="toc">
+   542→        <h1>Table of Contents</h1>
+   543→        <ol>
+   544→            <li><a href="cover.xhtml">Cover</a></li>
+   545→            <li><a href="title_page.xhtml">Title Page</a></li>
+   546→            <li><a href="copyright.xhtml">Copyright</a></li>
+   547→            <li><a href="dedication.xhtml">Dedication</a></li>
+   548→            $navChapters
+   549→            <li><a href="acknowledgements.xhtml">Acknowledgements</a></li>
+   550→            <li><a href="about_author.xhtml">About the Author</a></li>
+   551→            <li><a href="promo.xhtml">Other Works</a></li>
+   552→        </ol>
+   553→    </nav>
+   554→</body>
+   555→</html>""".trimIndent()
+   556→        zos.write(navXhtml.toByteArray())
+   557→        zos.closeEntry()
+   558→
+   559→        // 7. OEBPS/toc.ncx (EPUB 2 backward compatibility)
+   560→        zos.putNextEntry(ZipEntry("OEBPS/toc.ncx"))
+   561→        val navPoints = StringBuilder()
+   562→        navPoints.append("""
+   563→        <navPoint id="navPoint-cover" playOrder="1">
+   564→            <navLabel><text>Cover</text></navLabel>
+   565→            <content src="cover.xhtml"/>
+   566→        </navPoint>
+   567→        <navPoint id="navPoint-title" playOrder="2">
+   568→            <navLabel><text>Title Page</text></navLabel>
+   569→            <content src="title_page.xhtml"/>
+   570→        </navPoint>
+   571→        <navPoint id="navPoint-copyright" playOrder="3">
+   572→            <navLabel><text>Copyright</text></navLabel>
+   573→            <content src="copyright.xhtml"/>
+   574→        </navPoint>
+   575→        <navPoint id="navPoint-dedication" playOrder="4">
+   576→            <navLabel><text>Dedication</text></navLabel>
+   577→            <content src="dedication.xhtml"/>
+   578→        </navPoint>""")
+   579→
+   580→        var playOrder = 5
+   581→        chapters.forEachIndexed { idx, _ ->
+   582→            navPoints.append("""
+   583→        <navPoint id="navPoint-chapter-${idx+1}" playOrder="${playOrder++}">
+   584→            <navLabel><text>Chapter ${idx+1}</text></navLabel>
+   585→            <content src="chapter${idx+1}.xhtml"/>
+   586→        </navPoint>""")
+   587→        }
+   588→
+   589→        navPoints.append("""
+   590→        <navPoint id="navPoint-acknowledgements" playOrder="${playOrder++}">
+   591→            <navLabel><text>Acknowledgements</text></navLabel>
+   592→            <content src="acknowledgements.xhtml"/>
+   593→        </navPoint>
+   594→        <navPoint id="navPoint-about" playOrder="${playOrder++}">
+   595→            <navLabel><text>About the Author</text></navLabel>
+   596→            <content src="about_author.xhtml"/>
+   597→        </navPoint>
+   598→        <navPoint id="navPoint-promo" playOrder="${playOrder}">
+   599→            <navLabel><text>Other Works</text></navLabel>
+   600→            <content src="promo.xhtml"/>
+   601→        </navPoint>""")
+   602→
+   603→        val tocNcx = """<?xml version="1.0" encoding="UTF-8"?>
+   604→<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+   605→    <head>
+   606→        <meta name="dtb:uid" content="${bookUuid}"/>
+   607→    </head>
+   608→    <docTitle><text>${story.title}</text></docTitle>
+   609→    <navMap>
+   610→        $navPoints
+   611→    </navMap>
+   612→</ncx>""".trimIndent()
+   613→        zos.write(tocNcx.toByteArray())
+   614→        zos.closeEntry()
+   615→
+   616→        // 8. OEBPS/cover.xhtml
+   617→        zos.putNextEntry(ZipEntry("OEBPS/cover.xhtml"))
+   618→        val coverContent = if (hasCoverFile) {
+   619→            """<img class="cover-img" src="images/cover.jpg" alt="Cover Image"/>"""
+   620→        } else {
+   621→            """
+   622→            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" width="100%" height="100%">
+   623→                <rect width="600" height="900" fill="#1e272e"/>
+   624→                <rect x="20" y="20" width="560" height="860" fill="none" stroke="#d2dae2" stroke-width="2"/>
+   625→                <text x="300" y="250" font-family="'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="bold" fill="#ffffff" text-anchor="middle">${story.title}</text>
+   626→                <text x="300" y="310" font-family="'Georgia', serif" font-size="20" font-style="italic" fill="#ffdd59" text-anchor="middle">${finalSubtitle}</text>
+   627→                <line x1="150" y1="450" x2="450" y2="450" stroke="#ffdd59" stroke-width="2"/>
+   628→                <text x="300" y="600" font-family="'Helvetica Neue', Arial, sans-serif" font-size="24" fill="#ffffff" text-anchor="middle">BY</text>
+   629→                <text x="300" y="650" font-family="'Georgia', serif" font-size="28" font-weight="bold" fill="#ffdd59" text-anchor="middle">${primaryAuthor}</text>
+   630→                <text x="300" y="800" font-family="'Helvetica Neue', Arial, sans-serif" font-size="16" fill="#808e9b" text-anchor="middle">${publisherVal}</text>
+   631→            </svg>
+   632→            """.trimIndent()
+   633→        }
+   634→
+   635→        val coverXhtml = """<?xml version="1.0" encoding="UTF-8"?>
+   636→<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+   637→<head>
+   638→    <title>Cover</title>
+   639→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   640→    <style type="text/css">
+   641→        @page { padding: 0; margin: 0; }
+   642→        body { padding: 0; margin: 0; text-align: center; background-color: #111111; }
+   643→        .cover-container { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
+   644→    </style>
+   645→</head>
+   646→<body>
+   647→    <div class="cover-container">
+   648→        $coverContent
+   649→    </div>
+   650→</body>
+   651→</html>""".trimIndent()
+   652→        zos.write(coverXhtml.toByteArray())
+   653→        zos.closeEntry()
+   654→
+   655→        // 9. OEBPS/title_page.xhtml
+   656→        zos.putNextEntry(ZipEntry("OEBPS/title_page.xhtml"))
+   657→        val titlePageHtml = """<?xml version="1.0" encoding="UTF-8"?>
+   658→<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+   659→<head>
+   660→    <title>Title Page</title>
+   661→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   662→</head>
+   663→<body>
+   664→    <div style="text-align: center; margin-top: 5em;">
+   665→        <h1 style="font-size: 2.5em; border: none; margin-bottom: 0.2em;">${story.title}</h1>
+   666→        <h3 style="font-style: italic; margin-top: 0; color: #555;">$finalSubtitle</h3>
+   667→        ${if (seriesTitle.isNotEmpty()) """<h4 style="margin-top: 1em; color: #7f8c8d;">${seriesTitle}${if (volumeNumber.isNotEmpty()) " (Vol. $volumeNumber)" else ""}</h4>""" else ""}
+   668→        
+   669→        <div style="margin-top: 8em; font-size: 1.2em;">
+   670→            <p class="center-text">By</p>
+   671→            <h2 style="margin-top: 0.5em; font-size: 1.8em;">$primaryAuthor</h2>
+   672→        </div>
+   673→        
+   674→        <div style="margin-top: 10em; font-size: 0.9em; color: #7f8c8d;">
+   675→            <p class="center-text">$publisherVal</p>
+   676→        </div>
+   677→    </div>
+   678→</body>
+   679→</html>""".trimIndent()
+   680→        zos.write(titlePageHtml.toByteArray())
+   681→        zos.closeEntry()
+   682→
+   683→        // 10. OEBPS/copyright.xhtml
+   684→        zos.putNextEntry(ZipEntry("OEBPS/copyright.xhtml"))
+   685→        val copyrightHtml = """<?xml version="1.0" encoding="UTF-8"?>
+   686→<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+   687→<head>
+   688→    <title>Copyright</title>
+   689→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   690→</head>
+   691→<body>
+   692→    <h1>Copyright Notice</h1>
+   693→    <div class="copyright-info" style="margin-top: 3em;">
+   694→        <p class="center-text"><strong>${story.title}</strong></p>
+   695→        <p class="center-text">By $primaryAuthor</p>
+   696→        <p class="center-text" style="margin-top: 2em;">Copyright © $currentYear by $primaryAuthor</p>
+   697→        <p class="center-text">All rights reserved.</p>
+   698→        
+   699→        <div style="margin-top: 3em; border-top: 1px solid #eee; padding-top: 2em; font-size: 0.85em;">
+   700→            <p>No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other noncommercial uses permitted by copyright law.</p>
+   701→            <p style="margin-top: 1.5em;"><strong>Publisher:</strong> $publisherVal</p>
+   702→            <p style="margin-top: 0.5em;"><strong>Edition:</strong> $edition</p>
+   703→            <p style="margin-top: 0.5em;"><strong>Publication Date:</strong> ${SimpleDateFormat("MMMM d, yyyy", Locale.US).format(Date())}</p>
+   704→            <p style="margin-top: 0.5em;"><strong>ISBN:</strong> ${isbn.ifEmpty { "978-0-000000-00-0 (eBook Placeholder)" }}</p>
+   705→        </div>
+   706→    </div>
+   707→</body>
+   708→</html>""".trimIndent()
+   709→        zos.write(copyrightHtml.toByteArray())
+   710→        zos.closeEntry()
+   711→
+   712→        // 11. OEBPS/dedication.xhtml
+   713→        zos.putNextEntry(ZipEntry("OEBPS/dedication.xhtml"))
+   714→        val finalDedication = dedication.ifEmpty { "Dedicated to dreamers and storytellers everywhere, whose worlds inspire our own." }
+   715→        val dedicationHtml = """<?xml version="1.0" encoding="UTF-8"?>
+   716→<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+   717→<head>
+   718→    <title>Dedication</title>
+   719→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   720→</head>
+   721→<body>
+   722→    <div class="dedication">
+   723→        <p>$finalDedication</p>
+   724→    </div>
+   725→</body>
+   726→</html>""".trimIndent()
+   727→        zos.write(dedicationHtml.toByteArray())
+   728→        zos.closeEntry()
+   729→
+   730→        // 12. Chapters & Media Overlays
+   731→        chapters.forEachIndexed { idx, text ->
+   732→            val hasAudio = audioFiles != null && audioFiles.size > idx
+   733→            var currentAudioExt = "mp3"
+   734→            
+   735→            if (hasAudio) {
+   736→                val audioFile = audioFiles!![idx]
+   737→                currentAudioExt = audioFile.extension.ifEmpty { "mp3" }
+   738→                
+   739→                // Write Audio File
+   740→                zos.putNextEntry(ZipEntry("OEBPS/audio/chapter${idx+1}.$currentAudioExt"))
+   741→                try {
+   742→                    audioFile.inputStream().use { it.copyTo(zos) }
+   743→                } catch (e: Exception) {
+   744→                    e.printStackTrace()
+   745→                }
+   746→                zos.closeEntry()
+   747→                
+   748→                // Write SMIL File
+   749→                zos.putNextEntry(ZipEntry("OEBPS/smil/chapter${idx+1}.smil"))
+   750→                val smilHtml = """<?xml version="1.0" encoding="UTF-8"?>
+   751→<smil xmlns="http://www.w3.org/ns/SMIL" xmlns:epub="http://www.idpf.org/2007/ops" version="3.0">
+   752→    <body>
+   753→        <seq id="seq1" epub:textref="../chapter${idx+1}.xhtml">
+   754→            <par id="par1">
+   755→                <text src="../chapter${idx+1}.xhtml#chapter-content"/>
+   756→                <audio src="../audio/chapter${idx+1}.$currentAudioExt"/>
+   757→            </par>
+   758→        </seq>
+   759→    </body>
+   760→</smil>""".trimIndent()
+   761→                zos.write(smilHtml.toByteArray())
+   762→                zos.closeEntry()
+   763→            }
+   764→
+   765→            zos.putNextEntry(ZipEntry("OEBPS/chapter${idx+1}.xhtml"))
+   766→            val paragraphs = text.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+   767→            val formattedParagraphs = paragraphs.mapIndexed { pIdx, pText ->
+   768→                when {
+   769→                    pText == "***" || pText == "---" || pText == "###" -> {
+   770→                        """<div class="scene-break">***</div>"""
+   771→                    }
+   772→                    pIdx == 0 -> {
+   773→                        """<p class="first-paragraph">${pText.replace("<", "&lt;").replace(">", "&gt;")}</p>"""
+   774→                    }
+   775→                    else -> {
+   776→                        """<p>${pText.replace("<", "&lt;").replace(">", "&gt;")}</p>"""
+   777→                    }
+   778→                }
+   779→            }.joinToString("\n")
+   780→
+   781→            val chapterHtml = """<?xml version="1.0" encoding="UTF-8"?>
+   782→<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+   783→<head>
+   784→    <title>Chapter ${idx+1}</title>
+   785→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   786→</head>
+   787→<body id="chapter-content">
+   788→    <h1>Chapter ${idx+1}</h1>
+   789→    $formattedParagraphs
+   790→</body>
+   791→</html>""".trimIndent()
+   792→            zos.write(chapterHtml.toByteArray())
+   793→            zos.closeEntry()
+   794→        }
+   795→
+   796→        // 13. OEBPS/acknowledgements.xhtml
+   797→        zos.putNextEntry(ZipEntry("OEBPS/acknowledgements.xhtml"))
+   798→        val finalAcknowledgements = acknowledgements.ifEmpty { "Special thanks to the creative minds behind the Audio Novel Studio platform, whose tools and resources made this publication-ready creation possible. To our families, friends, and early readers: thank you for your support." }
+   799→        val acknowledgementsHtml = """<?xml version="1.0" encoding="UTF-8"?>
+   800→<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+   801→<head>
+   802→    <title>Acknowledgements</title>
+   803→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   804→</head>
+   805→<body>
+   806→    <h1>Acknowledgements</h1>
+   807→    <div style="margin-top: 2em; line-height: 1.8;">
+   808→        <p>$finalAcknowledgements</p>
+   809→    </div>
+   810→</body>
+   811→</html>""".trimIndent()
+   812→        zos.write(acknowledgementsHtml.toByteArray())
+   813→        zos.closeEntry()
+   814→
+   815→        // 14. OEBPS/about_author.xhtml
+   816→        zos.putNextEntry(ZipEntry("OEBPS/about_author.xhtml"))
+   817→        val finalBio = authorBio.ifEmpty { "A visionary writer who explores characters and concepts in depth, weaving beautiful tales of imagination. This book is a testament to the pursuit of high-fidelity storytelling, blended with modern creative technology." }
+   818→        val finalWebsite = authorWebsite.ifEmpty { "https://audionovelstudio.com" }
+   819→        val finalSocial = authorSocial.ifEmpty { "Follow us on Twitter, Substack, and Instagram." }
+   820→        val aboutAuthorHtml = """<?xml version="1.0" encoding="UTF-8"?>
+   821→<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+   822→<head>
+   823→    <title>About the Author</title>
+   824→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   825→</head>
+   826→<body>
+   827→    <h1>About the Author</h1>
+   828→    <div class="about-author-section">
+   829→        <p>$finalBio</p>
+   830→        <div style="margin-top: 3em; border-top: 1px solid #eee; padding-top: 1.5em; font-size: 0.9em;">
+   831→            <p style="text-indent: 0;"><strong>Connect with the Author:</strong></p>
+   832→            <p style="text-indent: 0; margin-top: 0.5em;">Website: <a href="$finalWebsite">$finalWebsite</a></p>
+   833→            <p style="text-indent: 0; margin-top: 0.5em;">Socials: $finalSocial</p>
+   834→        </div>
+   835→    </div>
+   836→</body>
+   837→</html>""".trimIndent()
+   838→        zos.write(aboutAuthorHtml.toByteArray())
+   839→        zos.closeEntry()
+   840→
+   841→        // 15. OEBPS/promo.xhtml
+   842→        zos.putNextEntry(ZipEntry("OEBPS/promo.xhtml"))
+   843→        val promoHtml = """<?xml version="1.0" encoding="UTF-8"?>
+   844→<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+   845→<head>
+   846→    <title>Other Works</title>
+   847→    <link rel="stylesheet" href="css/stylesheet.css" type="text/css"/>
+   848→</head>
+   849→<body>
+   850→    <h1>Other Works by the Author</h1>
+   851→    <p class="center-text" style="margin-top: 2em; font-style: italic;">Discover more stories and join our reader community!</p>
+   852→    
+   853→    <div style="margin-top: 3em; border: 1px solid #ecf0f1; padding: 2em; text-align: center; background-color: #fcfcfc;">
+   854→        <h2 style="margin-top: 0; color: #2c3e50;">Join the VIP Newsletter</h2>
+   855→        <p style="text-indent: 0; margin-bottom: 1.5em;">Be the first to hear about new releases, exclusive previews, and behind-the-scenes content direct from the author.</p>
+   856→        <p style="text-indent: 0;"><a href="$finalWebsite" style="background-color: #2c3e50; color: #ffffff; padding: 0.8em 1.5em; text-decoration: none; font-weight: bold; border-radius: 4px;">Join the Newsletter</a></p>
+   857→    </div>
+   858→</body>
+   859→</html>""".trimIndent()
+   860→        zos.write(promoHtml.toByteArray())
+   861→        zos.closeEntry()
+   862→
+   863→        zos.finish()
+   864→    }
+   865→
+   866→    private fun getCrc(bytes: ByteArray): Long {
+   867→        val crc32 = java.util.zip.CRC32()
+   868→        crc32.update(bytes)
+   869→        return crc32.value
+   870→    }
+   871→}
+   872→
