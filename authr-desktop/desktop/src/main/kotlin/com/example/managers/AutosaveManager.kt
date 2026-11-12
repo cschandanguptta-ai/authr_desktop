@@ -89,7 +89,9 @@ class AutosaveManager(private val context: Context) {
             genres = prefs[stringPreferencesKey("genres")] ?: "System Power-Up",
             plotArc = prefs[stringPreferencesKey("plot_arc")] ?: "Automatic (Recommended)",
             allowHybridPlotArcs = prefs[booleanPreferencesKey("allow_hybrid_plot_arcs")] ?: false,
-            authorPersona = prefs[stringPreferencesKey("author_persona")] ?: "None (Weaver Agent Default)",
+            // Registry id default (audit #3): legacy sentinel values still load —
+            // StudioViewModel's migration maps them on read.
+            authorPersona = prefs[stringPreferencesKey("author_persona")] ?: com.example.engine.PersonaRegistry.STANDARD_ID,
             duration = prefs[stringPreferencesKey("duration")] ?: "30 min",
             hook = prefs[stringPreferencesKey("hook")] ?: "",
             extras = prefs[stringPreferencesKey("extras")] ?: "",

@@ -386,7 +386,10 @@ class StudioViewModel(
     val selectedGenres = MutableStateFlow(setOf("System Power-Up"))
     val selectedPlotArc = MutableStateFlow("Automatic (Recommended)")
     val allowHybridPlotArcs = MutableStateFlow(false)
-    val selectedAuthorPersona = MutableStateFlow("None (Weaver Agent Default)")
+    // Registry ids end to end (audit #3); "standard" replaces the legacy
+    // "None (Weaver Agent Default)" sentinel as the neutral default, and the
+    // migration in loadAutosaveDraft maps any legacy stored value on load.
+    val selectedAuthorPersona = MutableStateFlow(com.example.engine.PersonaRegistry.STANDARD_ID)
     val selectedDuration = MutableStateFlow("30 min") // 30, 45, 60, 90 min
     val customHook = MutableStateFlow("")
     val customExtras = MutableStateFlow("")

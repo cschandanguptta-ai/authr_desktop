@@ -228,15 +228,20 @@ fun StoryScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    val presets = listOf(
-                        "Sultry" to Triple("Titillation", "Rain & Wind", "Velvet"),
-                        "Thriller" to Triple("Locked-Room Thriller", "Dark Dungeon Drone", "Hitchcock"),
-                        "Noir" to Triple("Noir Detective", "Rain & Wind", "Poe"),
-                        "Sci-Fi" to Triple("Speculative Sci-Fi", "Cyberpunk Neon Drone", "BlackMirror"),
-                        "Horror" to Triple("Cosmic Horror", "Deep Forest Wind", "Lovecraft"),
-                        "Cozy Mystery" to Triple("Cozy Mystery", "Busy Cafe Atmosphere", "Standard"),
-                        "Rom-Com" to Triple("Meet-Cute Rom-Com", "Enchanted Lofi", "MeetCute")
-                    )
+                    // 2026-11-12 audit (#4 follow-up): the Sultry preset
+                    // auto-selects the ADULT Velvet persona — it stays hidden
+                    // behind the 18+ acknowledgment like every other adult
+                    // entry point.
+                    val presetAdultAck = remember { com.example.utils.PersonaResolver.adultAcknowledged(context) }
+                    val presets = buildList {
+                        if (presetAdultAck) add("Sultry" to Triple("Titillation", "Rain & Wind", "Velvet"))
+                        add("Thriller" to Triple("Locked-Room Thriller", "Dark Dungeon Drone", "Hitchcock"))
+                        add("Noir" to Triple("Noir Detective", "Rain & Wind", "Poe"))
+                        add("Sci-Fi" to Triple("Speculative Sci-Fi", "Cyberpunk Neon Drone", "BlackMirror"))
+                        add("Horror" to Triple("Cosmic Horror", "Deep Forest Wind", "Lovecraft"))
+                        add("Cozy Mystery" to Triple("Cozy Mystery", "Busy Cafe Atmosphere", "Standard"))
+                        add("Rom-Com" to Triple("Meet-Cute Rom-Com", "Enchanted Lofi", "MeetCute"))
+                    }
 
                     Row(
                         modifier = Modifier
@@ -803,34 +808,29 @@ fun StoryScreen(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf("Standard", "Velvet", "Weaver", "NightKing", "Mastram", "Hitchcock", "Poe", "BlackMirror", "Lovecraft", "MeetCute", "Synapse").forEach { persona ->
-                        val selected = selectedPersonaVal == persona
+                    // 2026-11-12 audit (#1/#4 follow-up): the chip row renders the
+                    // registry (gated by the 18+ acknowledgment) instead of a
+                    // hardcoded display-name list — adult personas stay hidden here.
+                    val personaChips = remember(context) {
+                        com.example.utils.PersonaResolver.availableStoryPersonas(context)
+                    }
+                    personaChips.forEach { persona ->
+                        val selected = selectedPersonaVal == persona.name
                         FilterChip(
                             selected = selected,
-                            onClick = { viewModel.selectedPersona.value = persona },
-                            label = {
-                                Text(
-                                    text = when (persona) {
-                                        "Velvet" -> "/velvet (Sultry)"
-                                        "Weaver" -> "/weaver (Cognitive Agent)"
-                                        "NightKing" -> "/NightKing (Slow-Burn)"
-                                        "Mastram" -> "/mastram (Pulp)"
-                                        "Hitchcock" -> "/hitchcock (Suspense)"
-                                        "Poe" -> "/poe (Noir Detective)"
-                                        "BlackMirror" -> "/blackmirror (Sci-Fi)"
-                                        "Lovecraft" -> "/lovecraft (Cosmic)"
-                                        "MeetCute" -> "/meet-cute (Rom-Com)"
-                                        "Synapse" -> "/synapse (Neuro-Narrative)"
-                                        else -> "Standard"
-                                    }
-                                )
-                            },
-                            modifier = Modifier.testTag("persona_chip_$persona")
+                            onClick = { viewModel.selectedPersona.value = persona.name },
+                            label = { Text("/${persona.id} (${persona.mode.substringBefore(" (")})") },
+                            modifier = Modifier.testTag("persona_chip_${persona.id}")
                         )
                     }
                 }
 
                 if (selectedPersonaVal != "Standard") {
+                    // The detail card reads the SAME registry card the prompts use
+                    // (audit #1: no more parallel hardcoded copies).
+                    val activePersona = remember(selectedPersonaVal, context) {
+                        com.example.utils.PersonaResolver.resolveByName(context, selectedPersonaVal)
+                    }
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -841,77 +841,18 @@ fun StoryScreen(
                     ) {
                         Column(modifier = Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = "Active Style: /${selectedPersonaVal.lowercase()} Persona",
+                                text = "Active Style: ${activePersona.name} (${activePersona.mode})",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.secondary
                             )
-                            val details = when (selectedPersonaVal) {
-                                "Weaver" -> listOf(
-                                    "✨ Mode" to "Cognitive Simulation (Deep Arousal)",
-                                    "⏳ Pacing" to "Anticipation architecture, dopamine curves, long slow builds",
-                                    "👁️ Focus" to "Emotional interiority, vulnerability, subtext over action",
-                                    "🌧️ Aesthetic" to "Precise sensory details, textural, kinaesthetic, thermal",
-                                    "🗣️ Voice" to "Co-creative, ambiguous, suggestive, intimate"
-                                )
-                                "NightKing" -> listOf(
-                                    "✨ Mode" to "Slow-Burn Atmospheric Erotica (Restrained longing)",
-                                    "⏳ Pacing" to "Deliberate, restrained, 60% Shringar (buildup)",
-                                    "👁️ Focus" to "Environmental mood, psychological tension, subtle bilingual intimacy",
-                                    "🌧️ Aesthetic" to "Monsoon light, silk, ceiling fans, modern interiors",
-                                    "🗣️ Voice" to "Poetic, introspective, emotionally precise"
-                                )
-                                "Synapse" -> listOf(
-                                    "✨ Mode" to "Cognitive Romance (Neuro-psychological Arousal)",
-                                    "⏳ Pacing" to "Anticipation architecture, 70/30 dopamine curve, hook latency",
-                                    "👁️ Focus" to "Emotional nakedness, Limbic system engagement, mirror neurons",
-                                    "🌧️ Aesthetic" to "5-Channel micro-sensation (tactile, thermal, respiratory, kinetic, pulse)",
-                                    "🗣️ Voice" to "Concrete sensory anchors, suggestiveness over clinical precision"
-                                )
-                                "Mastram" -> listOf(
-                                    "✨ Mode" to "Pulp-Era Sensual Realism (Forbidden sparks)",
-                                    "⏳ Pacing" to "Urgent, emotionally heightened, classic desi pulp rhythm",
-                                    "👁️ Focus" to "Bold desire, chance proximity, nostalgic pulp tropes",
-                                    "🕯️ Aesthetic" to "Kerosene flicker, newsprint ink, monsoon platforms, heavy attar",
-                                    "🗣️ Voice" to "Direct, passionate, slightly melodramatic, culturally grounded"
-                                )
-                                "Hitchcock" -> listOf(
-                                    "✨ Mode" to "Locked-Room Thriller & Suspense (Claustrophobic)",
-                                    "⏳ Pacing" to "Real-time escalation, highly compressed, intense ticking clock",
-                                    "👁️ Focus" to "Trapped in single location with a killer/secret, escape rooms, dinner parties",
-                                    "🚪 Aesthetic" to "Low light, echoing footsteps, heavy silence, pounding pulse",
-                                    "🗣️ Voice" to "Tense, sharp, cold, hyper-observant of physical cues"
-                                )
-                                "Poe" -> listOf(
-                                    "✨ Mode" to "Noir Detective & True Crime Fiction (Investigation)",
-                                    "⏳ Pacing" to "Gritty, fast-paced investigation of a singular, localized crime",
-                                    "👁️ Focus" to "Noir detectives, solving cold cases, small-town secrets, cyber-heists",
-                                    "🚬 Aesthetic" to "Cigarette smoke, neon in rain puddles, low-lit interrogation rooms",
-                                    "🗣️ Voice" to "Cynical, hard-boiled, street-smart, rhythmic noir monologue"
-                                )
-                                "BlackMirror" -> listOf(
-                                    "✨ Mode" to "Speculative & Hard Sci-Fi (Dystopian Dilemmas)",
-                                    "⏳ Pacing" to "High-concept speculative anthology, rapid escalation to mind-bending twist",
-                                    "👁️ Focus" to "Memory alterations, rogue AI, social credit systems, ethical questions",
-                                    "🔬 Aesthetic" to "Fluorescent sterile labs, sleek metallic screens, holographic hums",
-                                    "🗣️ Voice" to "Intellectually analytical, detached yet increasingly panicked"
-                                )
-                                "Lovecraft" -> listOf(
-                                    "✨ Mode" to "Cosmic Horror & Ghost Anthologies (Auditory isolation)",
-                                    "⏳ Pacing" to "Atmosphere-driven slow burn building to a terrifying payoff",
-                                    "👁️ Focus" to "Haunted audios, anomalous dark web sites, isolated wilderness survival",
-                                    "🌫️ Aesthetic" to "Foggy wilderness, unexplained low frequencies, ancient decay",
-                                    "🗣️ Voice" to "Eerie, breathless, trembling with primal fear, isolated"
-                                )
-                                "MeetCute" -> listOf(
-                                    "✨ Mode" to "High-Concept Romantic Comedy (Forced proximity)",
-                                    "⏳ Pacing" to "Charming, fast-paced, high-density witty dialogue",
-                                    "👁️ Focus" to "Strangers stuck overnight in an airport, stalled elevator, shared road trip",
-                                    "☕ Aesthetic" to "Warm coffee steam, cozy winter scarves, soft warm lighting",
-                                    "🗣️ Voice" to "Playful, charming, quick-witted, intense chemistry"
-                                )
-                                else -> emptyList()
-                            }
+                            val details = listOf(
+                                "✨ Mode" to activePersona.mode,
+                                "⏳ Pacing" to activePersona.pacing,
+                                "👁️ Focus" to activePersona.focus,
+                                "🌧️ Aesthetic" to activePersona.aesthetic,
+                                "🗣️ Voice" to activePersona.voice
+                            )
                             details.forEach { (label, value) ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1206,6 +1147,8 @@ fun StoryScreen(
                     Text("Allow Hybrid Plot Arcs (e.g. Hero's Journey + Save the Cat)", style = MaterialTheme.typography.bodySmall)
                 }
                 
+                // The author-integration roles apply to the Weaver-family voices
+                // (adult personas — the row is only reachable behind the 18+ gate).
                 if (selectedPersonaVal == "Weaver") {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Author Persona Integration", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -1219,9 +1162,14 @@ fun StoryScreen(
                     }
 
                     var expandedAuthorPersona by remember { mutableStateOf(false) }
+                    // Display the persona NAME, never the raw registry id the
+                    // picker now stores (audit #3 follow-up).
+                    val selectedAuthorPersonaDisplay = remember(selectedAuthorPersonaVal, context) {
+                        com.example.utils.PersonaResolver.resolve(context, selectedAuthorPersonaVal).name
+                    }
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
-                            value = selectedAuthorPersonaVal,
+                            value = selectedAuthorPersonaDisplay,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = {
