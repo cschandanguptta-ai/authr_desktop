@@ -12,6 +12,16 @@ node_modules/
 /authr-desktop/.gradle/
 /authr-desktop/.kotlin/
 
+# --- Release packaging (2026-11-12) ---
+# The release zip is byte-size-stable-regenerable from the TRACKED app image
+# via scripts/d16_package_zip.sh; never bloat history with 145 MB duplicates
+# of blobs that are already tracked in authr-desktop/desktop/build.
+/download/authr-os-desktop-*.zip
+/download/authr-os-desktop-*.zip.sha256
+# The user's original v2.3 upload, copied verbatim for re-download; its
+# canonical copy is upload/ (untouched).
+/download/authr-source-v2.3-original-upload.zip
+
 # NOTE: authr-desktop/desktop/build IS intentionally tracked — the direct
 # kotlinc test route (scripts/p5_direct_test.sh, p6_direct_test.sh) compiles
 # against the app image jars and compiled main classes inside it, and Gradle

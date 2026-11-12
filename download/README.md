@@ -1,5 +1,23 @@
 # Deliverables
 
+## Authr OS — Desktop App Release (November 12, 2026)
+- authr-os-desktop-linux-x64-3.0.0.zip — the runnable Linux x64 desktop app
+  (145 MB): self-contained jpackage image with bundled Java 21 runtime,
+  epubcheck 5.2.1, print fonts, and the full v3.0 engine (Writer Studio,
+  Serial Dashboard, audiobook engine, Publishing workbench). INSTALL.md is
+  inside the zip. Verified: unzip integrity OK, launcher exec bits preserved,
+  fresh-extraction launch under Xvfb stays alive with zero fatal lines.
+- authr-os-desktop-linux-x64-3.0.0.zip.sha256 — release checksum
+- authr-source-v2.3-original-upload.zip — the original v2.3 Android source
+  project, exactly as uploaded (re-downloadable copy). Note: there was never
+  a 2.3.0 *desktop* build — the desktop edition is new in 3.0; naming follows
+  the platform-version pattern the release series uses.
+
+Quick start: `unzip authr-os-desktop-linux-x64-3.0.0.zip -d ~/apps && ~/apps/AuthrOS/bin/AuthrOS`
+(requires glibc >= 2.38 and a graphical session; no Java install needed).
+The packaging script lives at `scripts/d16_package_zip.sh` (version read from
+the image's own AuthrOS.cfg; rebuild is byte-size-stable).
+
 ## Authr OS 3.0 — Improvement Plan (Rev 2)
 - Authr-OS-3.0-Improvement-Plan-Rev2.docx — the v3.0 improvement plan, Revision 2 (42 pages, 35 content tables, 2 charts)
 - Authr-OS-3.0-Improvement-Plan-Rev2.pdf — PDF render of the same document
