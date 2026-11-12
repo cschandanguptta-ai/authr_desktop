@@ -1001,6 +1001,10 @@ fun StoryScreen(
                 }
 
                 var genreTabState by remember { mutableIntStateOf(0) }
+                // 2026-11-12 audit (#4): the erotica genre browser (and the adult
+                // persona presets) stay hidden until the 18+ acknowledgment in
+                // Settings; PersonaResolver also gates every generation path.
+                val adultAck = remember { com.example.utils.PersonaResolver.adultAcknowledged(context) }
                 val eroticaCategories = remember {
                     mapOf(
                         "Core Romance" to listOf(
@@ -1043,17 +1047,19 @@ fun StoryScreen(
                         onClick = { genreTabState = 0 },
                         text = { Text("Standard Genres", style = MaterialTheme.typography.labelSmall) }
                     )
-                    Tab(
-                        selected = genreTabState == 1,
-                        onClick = { genreTabState = 1 },
-                        text = { 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🌶️", style = MaterialTheme.typography.labelSmall)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Special Erotica", style = MaterialTheme.typography.labelSmall)
+                    if (adultAck) {
+                        Tab(
+                            selected = genreTabState == 1,
+                            onClick = { genreTabState = 1 },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("🌶️", style = MaterialTheme.typography.labelSmall)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Special Erotica", style = MaterialTheme.typography.labelSmall)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1092,8 +1098,8 @@ fun StoryScreen(
                             )
                         }
                     }
-                } else {
-                    // Erotica Section
+                } else if (adultAck) {
+                    // Erotica Section (18+ acknowledged only)
                     Column(modifier = Modifier.fillMaxWidth()) {
                         // Category Selection
                         Row(
@@ -1203,12 +1209,14 @@ fun StoryScreen(
                 if (selectedPersonaVal == "Weaver") {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Author Persona Integration", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    val authorPersonas = listOf(
-                        "None (Weaver Agent Default)", "Classical Epic Author", "Commercial Bestseller Author",
-                        "Literary Fiction Author", "Golden Age Mystery Author", "Modern Thriller Author",
-                        "Dark Fantasy Author", "Cozy Romance Author", "Psychological Drama Author",
-                        "Cinematic Blockbuster Writer", "Experimental Fiction Author"
-                    )
+                    // 2026-11-12 audit (#3/#6): options come from the persona
+                    // registry and store ids (the old display-name strings
+                    // matched no card and silently degraded to Standard);
+                    // adult presets are hidden until the 18+ acknowledgment.
+                    val context = LocalContext.current
+                    val authorPersonas = remember(context) {
+                        com.example.utils.PersonaResolver.availableAuthorPersonas(context)
+                    }
 
                     var expandedAuthorPersona by remember { mutableStateOf(false) }
                     Box(modifier = Modifier.fillMaxWidth()) {
@@ -1228,11 +1236,18 @@ fun StoryScreen(
                             onDismissRequest = { expandedAuthorPersona = false },
                             modifier = Modifier.fillMaxWidth(0.9f)
                         ) {
-                            authorPersonas.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text("Standard (Balanced, Plot-Driven)") },
+                                onClick = {
+                                    viewModel.selectedAuthorPersona.value = com.example.engine.PersonaRegistry.STANDARD_ID
+                                    expandedAuthorPersona = false
+                                }
+                            )
+                            authorPersonas.forEach { persona ->
                                 DropdownMenuItem(
-                                    text = { Text(selectionOption) },
+                                    text = { Text("${persona.name} — ${persona.mode}") },
                                     onClick = {
-                                        viewModel.selectedAuthorPersona.value = selectionOption
+                                        viewModel.selectedAuthorPersona.value = persona.id
                                         expandedAuthorPersona = false
                                     }
                                 )
@@ -2680,6 +2695,8 @@ modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                             }
 
                             var wizardGenreTabState by remember { mutableIntStateOf(0) }
+                            // 18+ gate (2026-11-12 audit #4): same acknowledgment as the main path.
+                            val wizardAdultAck = remember { com.example.utils.PersonaResolver.adultAcknowledged(context) }
                             val eroticaCategories = remember {
                                 mapOf(
                                     "Core Romance" to listOf(
@@ -2722,17 +2739,19 @@ modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                                     onClick = { wizardGenreTabState = 0 },
                                     text = { Text("Standard Genres", style = MaterialTheme.typography.labelSmall) }
                                 )
-                                Tab(
-                                    selected = wizardGenreTabState == 1,
-                                    onClick = { wizardGenreTabState = 1 },
-                                    text = { 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text("🌶️", style = MaterialTheme.typography.labelSmall)
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Special Erotica", style = MaterialTheme.typography.labelSmall)
+                                if (wizardAdultAck) {
+                                    Tab(
+                                        selected = wizardGenreTabState == 1,
+                                        onClick = { wizardGenreTabState = 1 },
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text("🌶️", style = MaterialTheme.typography.labelSmall)
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Special Erotica", style = MaterialTheme.typography.labelSmall)
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -2762,8 +2781,8 @@ modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                                         )
                                     }
                                 }
-                            } else {
-                                // Erotica Section
+                            } else if (wizardAdultAck) {
+                                // Erotica Section (18+ acknowledged only)
                                 Column(modifier = Modifier.fillMaxWidth()) {
                                     // Category Selection
                                     Row(
@@ -2894,19 +2913,18 @@ modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                         // AUTHOR PERSONA
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("Author Persona & Style", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                            val personaOptions = listOf(
-                                "standard" to "Standard (Balanced, Plot-Driven)\nClear storytelling, logical plot progression, descriptive and engaging.",
-                                "weaver" to "The Weaver (High Sensory & Emotional Pacing)\nDopamine-driven tension, tactile details, deep character interiority.",
-                                "nightking" to "The Night King (Atmospheric, Slow-Burn Tension)\nMonsoon-light rain, moody environments, high psychological suspense.",
-                                "velvet" to "The Velvet (Intimate, Candlelit Companion)\nSeductive, unhurried, direct-address conversational prose.",
-                                "synapse" to "Synapse (Neuro-Narrative Architect)\n70% psychological buildup, hyper-specific sensory details, high intensity.",
-                                "mastram" to "Mastram (Pulp-Era Sensual Realism)\nDirect, passionate, nostalgic pulp, culturally grounded.",
-                                "hitchcock" to "Hitchcock (Locked-Room Thriller)\nReal-time escalation, ticking clock, claustrophobic suspense.",
-                                "poe" to "Poe (Noir Detective / True Crime)\nGritty, fast-paced investigation, hard-boiled street-smart monologues.",
-                                "blackmirror" to "BlackMirror (Speculative Sci-Fi)\nHigh-concept dystopian tech, mind-bending twists.",
-                                "lovecraft" to "Lovecraft (Cosmic Horror)\nSlow-burning dread, heavy atmosphere, primal supernatural encounters.",
-                                "meetcute" to "MeetCute (High-Concept Rom-Com)\nFast witty banter, forced proximity, opposites-attract charm."
-                            )
+                            // 2026-11-12 audit (#1/#2/#4): the picker renders the
+                            // persona registry (built-ins + the container's plugin
+                            // personas the plan §8 promised) instead of a hardcoded
+                            // list, and adult presets stay hidden until the 18+
+                            // acknowledgment in Settings.
+                            val pickerContext = LocalContext.current
+                            val personaOptions = remember(pickerContext) {
+                                com.example.utils.PersonaResolver.availableStoryPersonas(pickerContext)
+                                    .map { p ->
+                                        p.id to "${p.name} (${p.mode})\n${p.focus}"
+                                    }
+                            }
 
                             personaOptions.forEach { (id, desc) ->
                                 Row(
@@ -3912,7 +3930,7 @@ modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
                                         .horizontalScroll(rememberScrollState()),
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    listOf("Android", "Pocket TTS", "Cloud HuggingFace TTS", "Edge TTS").forEach { engine ->
+                                    listOf("Android", "Pocket TTS", "Cloud HuggingFace TTS").forEach { engine ->
                                         FilterChip(
                                             selected = ttsEngine == engine,
                                             onClick = { viewModel.setTtsEngine(engine) },
@@ -3939,7 +3957,6 @@ modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
                                         val (infoIcon, infoText) = when (ttsEngine) {
                                             "Android" -> Icons.Default.Android to "Uses your device's built-in Text-to-Speech system. Works completely offline, fast, and light on resources."
                                             "Pocket TTS" -> Icons.Default.PhonelinkRing to "Runs the local Pocket TTS engine: 100% offline synthesis in real time on CPU, private, with narrator voice cloning from a short WAV reference."
-                                            "Edge TTS" -> Icons.Default.CloudQueue to "Uses high-quality Microsoft Edge cloud voices. Completely free to use with no API key required (requires internet)."
                                             else -> Icons.Default.SettingsApplications to "Uses Hugging Face inference endpoints. Highly customizable with cutting-edge neural speech models (requires internet and API key)."
                                         }
                                         Icon(

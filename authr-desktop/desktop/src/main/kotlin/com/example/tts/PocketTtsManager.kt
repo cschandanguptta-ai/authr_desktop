@@ -19,10 +19,12 @@ import java.io.File
  *     safetensors voice pack, so narrator identity is identical across
  *     chapters by construction (plan §7.4).
  *
- * Degradation contract: when the Pocket TTS binary or the requested voice pack
- * is unavailable (first run, model pack not installed, constrained Android
- * device), synthesis falls back to Edge TTS so the audio pipeline stays
- * functional. The fallback is logged, never silent.
+ * Degradation contract (v3.0 audit: Edge TTS REMOVED, 2026-11-12): when the
+ * Pocket TTS binary or the requested voice pack is unavailable (first run,
+ * model pack not installed, constrained device), synthesis FAILS LOUD —
+ * logged here and reported to the caller — never a silent cloud fallback.
+ * The production renderer already enforces this (ADR-0017:
+ * PocketSynthesizer never routes through a fallback engine).
  */
 object PocketTtsManager {
 
@@ -53,8 +55,9 @@ object PocketTtsManager {
     }
 
     /**
-     * Synthesizes [text] to [outputFile]. Returns true when Pocket TTS (or the
-     * Edge fallback) produced a non-empty audio file.
+     * Synthesizes [text] to [outputFile]. Returns true only when Pocket TTS
+     * produced a non-empty audio file — a missing binary/pack fails LOUD
+     * (logged, engine marker "pocket-failed"), never a silent cloud fallback.
      */
     suspend fun synthesizeToFile(
         context: Context,
@@ -69,33 +72,25 @@ object PocketTtsManager {
         val packName = normalizePackName(voiceName)
         val packsDir = voicePacksDir(context)
         val packReady = PocketTtsBridge.resolveVoicePack(packName, packsDir) != null
-        if (packReady) {
-            val ok = PocketTtsBridge.synthesizeToFile(
-                text = text,
-                outputFile = outputFile,
-                packName = packName,
-                packsDir = packsDir,
-                temperature = synthesisTemperature
-            )
-            if (ok) {
-                _activeEngine.value = "pocket-tts"
-                return@withContext true
-            }
-            Log.w("PocketTtsManager", "Pocket TTS synthesis failed (${PocketTtsBridge.lastError.value}); falling back to Edge TTS.")
-        } else {
-            Log.w("PocketTtsManager", "Voice pack '$packName' not installed; falling back to Edge TTS. Install the Pocket TTS model pack for fully offline narration.")
+        if (!packReady) {
+            Log.w("PocketTtsManager", "Voice pack '$packName' not installed and no fallback engine exists — synthesis fails loud. Install the Pocket TTS model pack for offline narration.")
+            _activeEngine.value = "pocket-failed"
+            return@withContext false
         }
-        val edgeOk = runCatching {
-            EdgeTtsManager.synthesizeToFile(
-                text = text,
-                outputFile = outputFile,
-                voiceName = "en-US-AriaNeural",
-                pitch = 1.0f,
-                rate = speed
-            )
-        }.getOrElse { false }
-        if (edgeOk) _activeEngine.value = "edge-fallback"
-        edgeOk
+        val ok = PocketTtsBridge.synthesizeToFile(
+            text = text,
+            outputFile = outputFile,
+            packName = packName,
+            packsDir = packsDir,
+            temperature = synthesisTemperature
+        )
+        if (ok) {
+            _activeEngine.value = "pocket-tts"
+        } else {
+            Log.w("PocketTtsManager", "Pocket TTS synthesis failed (${PocketTtsBridge.lastError.value}); no fallback engine — failing loud.")
+            _activeEngine.value = "pocket-failed"
+        }
+        ok
     }
 
     suspend fun playAudioFile(file: File, volume: Float = 100f) {
@@ -105,7 +100,6 @@ object PocketTtsManager {
     }
 
     fun stopSpeaking() {
-        EdgeTtsManager.stopSpeaking()
         CloudTtsManager.stopSpeaking()
     }
 

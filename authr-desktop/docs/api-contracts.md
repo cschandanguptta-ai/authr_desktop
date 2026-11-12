@@ -63,8 +63,7 @@ FACT: `logit_bias` is included in the JSON **only when non-null** (`OpenAiChatRe
 | Engine | Contract |
 | --- | --- |
 | Pocket TTS (local) | Child-process invocation of the `pocket-tts` binary; resolution: bundled `<app>/pocket-tts/<os>/` → env `POCKET_TTS_BIN` → PATH → `~/.authr/pocket-tts/`; voice packs from a packs dir; `Status.MISSING` when absent (no crash). |
-| AndroidTtsManager | desktop shim of the Android TTS API (`android/speech/tts/TextToSpeech.kt` shim). |
-| EdgeTtsManager | network synthesis (Microsoft Edge voices). |
+| AndroidTtsManager | desktop shim of the Android TTS API (`android/speech/tts/TextToSpeech.kt` shim — routes synthesis through PocketTtsManager since the Edge removal, 2026-11-12). |
 | CloudTtsManager | ElevenLabs / Google TTS via `BuildConfig` keys (`ELEVENLABS_API_KEY`, `GOOGLE_TTS_API_KEY`). |
 | ffmpeg | `FfmpegLocator`: bundled → env `FFMPEG_HOME` → PATH; audio-only surface (video path removed in P0, SCR-2). |
 

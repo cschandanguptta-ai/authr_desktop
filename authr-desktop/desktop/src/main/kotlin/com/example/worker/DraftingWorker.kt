@@ -8,7 +8,6 @@ import com.example.data.api.LlmOrchestrator
 import com.example.data.local.BookDao
 import com.example.data.local.ChapterDao
 import com.example.data.local.LorebookDao
-import com.example.data.model.defaultPersonas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -160,15 +159,13 @@ class DraftingWorker(
                     }
                 }
 
-                val persona = defaultPersonas.find { it.id == book.personaId } ?: defaultPersonas.first()
-                val systemInstructionText = """
-                    You are ${persona.name}.
-                    Mode: ${persona.mode}
-                    Pacing: ${persona.pacing}
-                    Focus: ${persona.focus}
-                    Aesthetic: ${persona.aesthetic}
-                    Voice: ${persona.voice}
-                """.trimIndent()
+                // 2026-11-12 audit (#1/#6): the persona resolves through the
+                // registry (built-ins + container plugin personas) and rides
+                // the canonical card — no per-worker prompt block, no
+                // name-only reference, 18+ gate enforced on every generation path.
+                val persona = com.example.utils.PersonaResolver.resolve(applicationContext, book.personaId)
+                val systemInstructionText = com.example.engine.PersonaRegistry.authorFraming(persona) +
+                    "\n" + com.example.engine.PersonaRegistry.cardBody(persona)
 
                 val generatedContent = retryWithBackoff {
                     LlmOrchestrator.callAgent(applicationContext, LlmOrchestrator.Agent.SCENE, finalPrompt, systemInstructionText)
@@ -194,27 +191,20 @@ class DraftingWorker(
                     logAgentChat(bookDao, bookId, "🔎 [Continuity Manager]", "Chapter ${chapter.chapterNumber} is PROPOSED — continuity annotation is deferred until the writer confirms (L6 annotates confirmed text only).")
 
                     val completionPct = ((chapter.chapterNumber - 1) * 100) / chapters.size
-                    val score = "Flesch-Kincaid: Grade ${7 + (chapter.chapterNumber % 3)}"
-                    val emotional = when (chapter.chapterNumber % 3) {
-                        0 -> "High Suspense / Tension"
-                        1 -> "Optimistic / Reversal"
-                        else -> "Melancholic / Intimate dialogue"
-                    }
-                    val pacingVal = when (chapter.chapterNumber % 3) {
-                        0 -> "Fast Paced 🔥"
-                        1 -> "Accelerating ⚡"
-                        else -> "Sustained / Building Pacing ⚖️"
-                    }
-
+                    // 2026-11-12 audit (#8): the readability grade is computed from
+                    // the actual text (TextMetrics); the fabricated emotional and
+                    // pacing cards are gone — an unmeasured value reports
+                    // "Not analyzed", never an invented number.
+                    val score = com.example.utils.TextMetrics.readabilityLabel(generatedContent)
                     val currentB = bookDao.getBookById(bookId) ?: book
                     bookDao.updateBook(currentB.copy(
                         completionPercentage = completionPct,
                         readabilityScore = score,
-                        emotionalIntensity = emotional,
-                        pacingHeatmap = pacingVal
+                        emotionalIntensity = "Not analyzed",
+                        pacingHeatmap = "Not analyzed"
                     ))
 
-                    logAgentChat(bookDao, bookId, "📖 [Beta Reader]", "Completed reading Chapter ${chapter.chapterNumber}. Readability is calibrated to $score.")
+                    logAgentChat(bookDao, bookId, "📖 [Beta Reader]", "Chapter ${chapter.chapterNumber} — ${com.example.utils.TextMetrics.wordCount(generatedContent)} words. $score.")
                 } else {
                     Log.e("DraftingWorker", "Failed to generate content for chapter ${chapter.chapterNumber}")
                     chapterDao.updateChapter(chapter.copy(status = "Failed"))

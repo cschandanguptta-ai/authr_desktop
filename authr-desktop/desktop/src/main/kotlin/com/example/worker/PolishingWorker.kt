@@ -7,7 +7,6 @@ import androidx.work.WorkerParameters
 import com.example.data.api.LlmOrchestrator
 import com.example.data.local.BookDao
 import com.example.data.local.ChapterDao
-import com.example.data.model.defaultPersonas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -73,14 +72,15 @@ class PolishingWorker(
                     Respond with ONLY the polished chapter content. No extra notes or labels.
                 """.trimIndent()
 
-                val persona = defaultPersonas.find { it.id == book.personaId } ?: defaultPersonas.first()
+                // 2026-11-12 audit (#7): the editor REFERENCES the persona instead
+                // of BEING it — an editorial pass must preserve the author's
+                // persona voice, not restyle the text into the persona itself.
+                val persona = com.example.utils.PersonaResolver.resolve(applicationContext, book.personaId)
                 val systemInstructionText = """
-                    You are ${persona.name}, acting as a professional book editor.
-                    Mode: ${persona.mode}
-                    Pacing: ${persona.pacing}
-                    Focus: ${persona.focus}
-                    Aesthetic: ${persona.aesthetic}
-                    Voice: ${persona.voice}
+                    You are a professional book editor performing a style polish pass.
+                    The manuscript was written in the author persona described below — preserve its voice, pacing, aesthetic and intent; improve literary quality without restyling it into a different voice.
+                    Author persona card — ${persona.name} (${persona.mode}):
+                    ${com.example.engine.PersonaRegistry.cardBody(persona)}
                 """.trimIndent()
 
                 val polishedContent = retryWithBackoff {

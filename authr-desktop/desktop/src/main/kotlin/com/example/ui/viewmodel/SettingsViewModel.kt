@@ -194,6 +194,16 @@ class SettingsViewModel(
         }
 
         viewModelScope.launch {
+            // 2026-11-12 audit (#9): with no key configured, skip the live fetch —
+            // the old path sent the BuildConfig placeholder to the provider and
+            // surfaced its HTTP 400 as a mystery failure.
+            if (key.isBlank()) {
+                _fetchedModels.value = _fetchedModels.value.toMutableMap().apply {
+                    put(prov, com.example.data.api.ModelDiscoveryService.getFallbackModelsForProvider(prov))
+                }
+                _modelFetchStatus.value = "No API key configured for $prov — showing the built-in model list."
+                return@launch
+            }
             _isFetchingModels.value = true
             _modelFetchStatus.value = "Fetching live models for $prov..."
             val result = com.example.data.api.ModelDiscoveryService.fetchModelsForProvider(prov, key, baseUrl)

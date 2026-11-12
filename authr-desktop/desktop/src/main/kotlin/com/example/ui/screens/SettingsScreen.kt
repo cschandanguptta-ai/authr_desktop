@@ -642,6 +642,72 @@ fun SettingsScreen(
         }
         
         // Hugging Face Settings
+        // Mature Content Gate (2026-11-12 audit #4): adult personas and the
+        // erotica genre browser stay hidden everywhere until acknowledged here.
+        var showAdultGateDialog by remember { mutableStateOf(false) }
+        val context = LocalContext.current
+        var adultAcknowledged by remember {
+            mutableStateOf(com.example.utils.PersonaResolver.adultAcknowledged(context))
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column(modifier = Modifier.padding(6.dp)) {
+                Text("Mature Content (18+)", fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Unlocks the adult author personas (e.g. The Weaver, The NightKing) and the Special Erotica genre browser. Every generation path enforces this gate — not just the pickers.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(if (adultAcknowledged) "Enabled — adult presets visible" else "Disabled — adult presets hidden", style = MaterialTheme.typography.bodySmall)
+                    Switch(
+                        checked = adultAcknowledged,
+                        onCheckedChange = { wanted ->
+                            if (wanted) showAdultGateDialog = true
+                            else {
+                                com.example.utils.PersonaResolver.setAdultContentAcknowledged(context, false)
+                                adultAcknowledged = false
+                            }
+                        },
+                        modifier = Modifier.testTag("adult_content_gate_switch")
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (showAdultGateDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showAdultGateDialog = false },
+                title = { Text("Enable mature content?") },
+                text = {
+                    Text(
+                        "This unlocks personas and genres that generate explicit adult material (18+). " +
+                            "You confirm you are of legal age and want this content enabled on this device. " +
+                            "You can turn it off again at any time."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        com.example.utils.PersonaResolver.setAdultContentAcknowledged(context, true)
+                        adultAcknowledged = true
+                        showAdultGateDialog = false
+                    }) { Text("I am 18+, enable") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAdultGateDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+
         // TTS Engine Selection
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -655,7 +721,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf("Android", "Pocket TTS", "Cloud HuggingFace TTS", "Edge TTS").forEach { engine ->
+                    listOf("Android", "Pocket TTS", "Cloud HuggingFace TTS").forEach { engine ->
                         FilterChip(
                             selected = selectedTtsEngine == engine,
                             onClick = { 
@@ -720,7 +786,6 @@ fun SettingsScreen(
                     val (infoIcon, infoText) = when (selectedTtsEngine) {
                         "Android" -> Icons.Default.Android to "Uses your device's built-in Text-to-Speech system. Works completely offline, fast, and light on resources."
                         "Pocket TTS" -> Icons.Default.PhonelinkRing to "Runs the local Pocket TTS engine on this machine: 100% offline, private, real-time on CPU, with narrator voice cloning from a short WAV reference. Optional on Android as a downloadable model pack."
-                        "Edge TTS" -> Icons.Default.CloudQueue to "Uses high-quality Microsoft Edge cloud voices. Completely free to use with no API key required (requires internet)."
                         else -> Icons.Default.SettingsApplications to "Uses Hugging Face inference endpoints. Highly customizable with cutting-edge neural speech models (requires internet and API key)."
                     }
                     Icon(
@@ -851,9 +916,14 @@ fun SettingsScreen(
                             try {
                                 val result = when (selectedProv) {
                                     "Gemini" -> {
+                                        // 2026-11-12 audit (#9): an unset key is an unset key —
+                                        // the old BuildConfig placeholder fallback sent
+                                        // "MY_GEMINI_API_KEY" to the API as a real key.
+                                        val effectiveKey = tempGeminiKey.ifEmpty { BuildConfig.GEMINI_API_KEY }
+                                        if (effectiveKey.isBlank()) throw IllegalStateException("No Gemini API key configured — enter a key (or set GEMINI_API_KEY in .env) before testing.")
                                         com.example.data.api.ApiClient.geminiService.generateContent(
                                             "gemini-1.5-flash",
-                                            tempGeminiKey.ifEmpty { BuildConfig.GEMINI_API_KEY },
+                                            effectiveKey,
                                             com.example.data.api.GeminiRequest(
                                                 contents = listOf(com.example.data.api.GeminiContent(role = "user", parts = listOf(com.example.data.api.GeminiPart(text = prompt))))
                                             )

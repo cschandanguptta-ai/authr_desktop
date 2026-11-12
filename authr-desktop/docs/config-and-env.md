@@ -6,12 +6,13 @@ Every env var, API key, preference key, and per-book config field. **Never inclu
 
 | Name | Purpose | Where used | Required? | What breaks if missing/wrong |
 | --- | --- | --- | --- | --- |
-| `GEMINI_API_KEY` | Fallback Gemini key | `BuildConfig.resolveKey("GEMINI_API_KEY", placeholder)` → `LlmOrchestrator.getApiKeys` | No (secure-pref key wins) | Gemini route skipped / placeholder rejected with `Gemini API key is invalid or empty.` |
+| `GEMINI_API_KEY` | Fallback Gemini key | `BuildConfig.resolveKey` (env → .env; **empty when unset — the "MY_GEMINI_API_KEY" placeholder default was removed, 2026-11-12 audit #9**) → `LlmOrchestrator.getApiKeys` | No (secure-pref key wins) | Gemini route skipped loudly ("no API keys configured") |
 | `OLLAMA_API_KEY` | Fallback Ollama key (sent as `Bearer <key>` or `Bearer none`) | `BuildConfig` → Ollama block | No | Ollama still tried with `Bearer none` |
 | `HF_API_KEY` | HuggingFace inference (translation features) | `BuildConfig.HF_API_KEY` → translation screen | No | Translation provider unavailable |
 | `ELEVENLABS_API_KEY` | Cloud TTS | `BuildConfig` → `tts/CloudTtsManager` | No | That TTS engine unavailable |
 | `GOOGLE_TTS_API_KEY` | Cloud TTS | `BuildConfig` → `tts/CloudTtsManager` | No | That TTS engine unavailable |
-| `POCKET_TTS_BIN` | Explicit Pocket TTS binary override | `desktopbridge/PocketTtsBridge.locateBinary` | No | Bridge falls back to bundled/PATH/`~/.authr/pocket-tts`; `Status.MISSING` if none — the Audiobook workbench then offers espeak only, and `PocketSynthesizer` fails LOUD on the Pocket option (ADR-0017: never a silent Edge mix) |
+| `POCKET_TTS_BIN` | Explicit Pocket TTS binary override | `desktopbridge/PocketTtsBridge.locateBinary` | No | Bridge falls back to bundled/PATH/`~/.authr/pocket-tts`; `Status.MISSING` if none — the Audiobook workbench then offers espeak only, and BOTH the workbench Pocket option and the paragraph-playback shim fail LOUD (2026-11-12 audit: Edge removed — no fallback engine exists anywhere) |
+| `AUTHR_DEBUG` | Opt-in debug HTTP logging (`=1`); default OFF so shipped builds never log request bodies | `BuildConfig.DEBUG` → `ApiService` log level | No | HTTP traffic not logged (set `=1` to debug provider calls) |
 | `FFMPEG_HOME` | ffmpeg install root (`$FFMPEG_HOME/bin/ffmpeg`) | `desktopbridge/FfmpegLocator` | No | Falls back to bundled binary then PATH |
 | `ESPEAK_NG_BIN` | Explicit espeak-ng binary override (P4 phonemizer + local render engine) | `desktopbridge/EspeakLocator.espeakPath` | No | Falls back to bundled binary → PATH → `~/.authr/espeak-ng`; the IPA pass then finds no phonemizer (candidates drop out) and `EspeakSynthesizer` reports `espeak-ng not found` |
 | `EPUBCHECK_JAR` | Explicit path to epubcheck.jar (P5 external EPUB 3 gate; lib/ siblings must sit beside it — official dist layout). Distribution decision (ADR-0013, 2026-11-11; bundle shipped 2026-11-12 per ADR-0014): locator-first — the APP IMAGE now bundles `lib/app/epubcheck/` (5.2.1 dist), so writers need NO env vars and NO install; env vars remain for gate/CI machines, `~/.authr/epubcheck` remains the manual-install path; no runtime auto-download (a gate that needs the network to pass is not a local gate) | `desktopbridge/EpubCheckLocator.epubCheckJar` | No | Falls back to `EPUBCHECK_HOME` → `<app dir>/epubcheck/` → `~/.authr/epubcheck`; with no tool the retail package still builds but the epubcheck verdict is UNVERIFIED and the ship report is NOT clean (disclosed) |
@@ -50,7 +51,7 @@ Parity (OQ-5, verified 2026-11-12 against the original Android app in `source/`)
 
 | File | Keys | Purpose |
 | --- | --- | --- |
-| `studio_settings` | `agent_provider_<executive|plot|character|world|scene|continuity>` | per-agent provider selection (FACT: `LlmOrchestrator.getProviderForAgent`) |
+| `studio_settings` | `agent_provider_<executive|plot|character|world|scene|continuity>`, `adult_content_acknowledged_18plus` | per-agent provider selection; the 18+ acknowledgment flag (2026-11-12 audit #4 — plain prefs, non-secret; gates every picker AND every generation path via `PersonaResolver`) (FACT: `PersonaResolver`) |
 | `studio_settings` | `provider`, `tts_engine`, `humanize_audio`, `auto_optimize`, `app_theme`, `has_seen_onboarding`, `cleanup_enabled`, `cleanup_frequency`, `max_cache_size_mb`, `max_projects_count`, `queue_rpm`, `queue_concurrency`, `delete_unused_cache`, `delete_temp_cache`, `delete_failed_artifacts`, `delete_expired_api` | Settings/Studio app prefs (FACT: code-derived inventory, OQ-6, 2026-11-12 — `SettingsViewModel`/`StudioViewModel` string literals; the `custom_presets`/`pronunciation_rules`/`vocal_traits` literals are JSON payload field names inside single prefs values, not prefs keys) |
 | `studio_settings` | `author_name`, `author_pen_name`, `author_bio`, `author_website`, `author_social`, `author_publisher` | author profile card |
 

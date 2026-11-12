@@ -29,6 +29,12 @@ class OutlineWorker(
         val book = bookDao.getBookById(bookId) ?: return@withContext Result.failure()
         if (book.currentPhase == "Paused" || book.currentPhase == "Stopped") return@withContext Result.failure()
         val storyBible = book.storyBible
+        // 2026-11-12 audit (#5): the outline stage is no longer persona-blind —
+        // the Narrative Blueprint and the lorebook synthesis both receive the
+        // persona card, so the persona's pacing/mood shapes the structure the
+        // drafter then executes.
+        val persona = com.example.utils.PersonaResolver.resolve(applicationContext, book.personaId)
+        val personaBlock = com.example.engine.PersonaRegistry.cardBody(persona)
 
         try {
             try {
@@ -47,10 +53,13 @@ class OutlineWorker(
                     Title: ${book.title}
                     Genre: ${book.genre}
                     Synopsis: ${book.synopsis}
-                    
+
                     Use the Story Bible for guidance:
                     $storyBible
-                    
+
+                    Author persona (shape the blueprint's mood, pacing and subject matter to it):
+                    $personaBlock
+
                     Respond ONLY with a numbered list from 1 to ${book.targetChapters}. Keep summaries extremely concise (1 sentence max per chapter) to ensure the full list fits in your response. Format exactly like:
                     1. Episode 1 Title: Summary.
                     2. Episode 2 Title: Summary.
@@ -67,7 +76,10 @@ class OutlineWorker(
                     
                     Use the Story Bible for guidance:
                     $storyBible
-                    
+
+                    Author persona (shape the blueprint's mood, pacing and subject matter to it):
+                    $personaBlock
+
                     Respond ONLY with a numbered list of chapters, formatted exactly like:
                     1. Chapter 1 Title: Summary of what happens in this chapter.
                     2. Chapter 2 Title: Summary of what happens in this chapter.
@@ -135,7 +147,7 @@ class OutlineWorker(
             val existingLore = lorebookDao.getLorebookForBookSync(bookId)
             if (existingLore.isEmpty()) {
                 logAgentChat(bookDao, bookId, "🌍 [World Builder]", "Synthesizing custom Lorebook continuity rules from Story Bible...")
-                val lorePrompt = "Based on this book:\nTitle: ${book.title}\nGenre: ${book.genre}\nSynopsis: ${book.synopsis}\nStory Bible:\n$storyBible\n\nGenerate exactly 4 key world-building/character continuity rules.\nFormat them strictly as key-value lines, e.g.:\nProtagonist: [Details of protagonist, personality, goals]\nSetting: [Details of the location, rules of the world, atmosphere]\nCore Conflict: [Details of the central struggle and antagonist]\nKey Object: [Details of a central item/power]\n\nProvide ONLY the key-value lines, do not add introductory text."
+                val lorePrompt = "Based on this book:\nTitle: ${book.title}\nGenre: ${book.genre}\nSynopsis: ${book.synopsis}\nStory Bible:\n$storyBible\nAuthor persona to respect (tone and setting):\n$personaBlock\n\nGenerate exactly 4 key world-building/character continuity rules.\nFormat them strictly as key-value lines, e.g.:\nProtagonist: [Details of protagonist, personality, goals]\nSetting: [Details of the location, rules of the world, atmosphere]\nCore Conflict: [Details of the central struggle and antagonist]\nKey Object: [Details of a central item/power]\n\nProvide ONLY the key-value lines, do not add introductory text."
                 val loreText = retryWithBackoff {
                     LlmOrchestrator.callAgent(applicationContext, LlmOrchestrator.Agent.WORLD, lorePrompt)
                 }

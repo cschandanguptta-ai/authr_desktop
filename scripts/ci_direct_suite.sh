@@ -39,5 +39,7 @@ echo "=== D-13 workbench/wiring/policy route ==="
 bash "$BASE/scripts/d13_direct_test.sh" | tail -3
 echo "=== D-15 publishing workbench route ==="
 bash "$BASE/scripts/d15_direct_test.sh" | tail -3
+echo "=== 2026-11-12 audit-fix route (persona registry, honest telemetry) ==="
+bash "$BASE/scripts/audit_direct_test.sh" | tail -3
 
 echo "CI DIRECT SUITE GREEN"

@@ -215,6 +215,9 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
             runCatching {
                 val containerRoot = java.io.File(app.filesDir, "authr")
                 com.example.plugins.PluginRegistry.scaffoldDefaults(containerRoot)
+                // Pick up user-dropped/edited plugin persona files on this
+                // launch (plan §8: the user-extensible directory is authoritative).
+                com.example.utils.PersonaResolver.refreshPlugins(app)
             }.onFailure { android.util.Log.w("AuthrDesktopApp", "Plugin scaffold failed", it) }
         }
     }

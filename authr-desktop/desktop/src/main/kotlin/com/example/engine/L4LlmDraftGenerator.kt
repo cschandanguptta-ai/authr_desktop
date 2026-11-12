@@ -15,7 +15,10 @@ import com.example.ui.viewmodel.WriterStudioViewModel
  *  - the active character sheets (book.characterBible),
  *  - matching lorebook keys (keyword injection),
  *  - the continuity summaries of all CONFIRMED chapters,
- *  - the selected persona card,
+ *  - the selected persona card, resolved through the persona registry
+ *    (built-ins + container plugin personas; the 2026-11-12 audit fix made
+ *    this real — the generator used to send only the raw persona id string,
+ *    which the model could not interpret),
  *  - the format's word envelope (book.wordMin / book.wordMax).
  *
  * The produced text lands in the chapter workspace as PROPOSED via the
@@ -37,6 +40,12 @@ class L4LlmDraftGenerator(private val context: Context) : WriterStudioViewModel.
             canonContext.joinToString("\n") { "Chapter ${it.chapterNumber} (${it.title}): ${it.summary}" }
         }
         val wordEnvelope = "${book.wordMin}–${book.wordMax} words"
+
+        // 2026-11-12 audit (#6): the persona card rides the prompt in full —
+        // the name-only `Author persona: ${book.personaId}` line sent an
+        // opaque id ("nightking") the model could not interpret.
+        val persona = com.example.utils.PersonaResolver.resolve(context, book.personaId)
+        val personaBlock = PersonaRegistry.cardBody(persona)
 
         // P2 prose-quality bracket (plan §5.1): the forbidden-pattern block
         // rides the prompt on EVERY provider route; the decode-time bias
@@ -71,7 +80,8 @@ class L4LlmDraftGenerator(private val context: Context) : WriterStudioViewModel.
             Continuity summaries of all confirmed chapters:
             $continuitySummaries
 
-            Author persona: ${book.personaId}
+            Author persona — ${persona.name} (${persona.mode}):
+            $personaBlock
             Narrative structure: ${book.narrativeStructure}
             ${if (instruction.isNotBlank()) "Writer instruction for this draft:\n$instruction" else ""}
 

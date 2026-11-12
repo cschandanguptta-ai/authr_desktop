@@ -16,7 +16,7 @@ import javax.sound.sampled.SourceDataLine
  * Desktop replacement for android.media.MediaPlayer.
  *
  * - WAV files are played through javax.sound.sampled.
- * - MP3 files (Edge TTS / Pocket TTS / Cloud TTS output) are decoded with
+ * - MP3 files (Pocket TTS / Cloud TTS output) are decoded with
  *   JLayer and played through the same line.
  * - setVolume and playbackParams.speed are applied on the PCM stream
  *   (linear resampling). Pitch is folded into the resample ratio because

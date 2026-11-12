@@ -48,7 +48,6 @@ import com.example.data.model.Book
 import com.example.data.model.Chapter
 import com.example.data.model.Lorebook
 import com.example.domain.usecase.GetChaptersUseCase
-import com.example.domain.usecase.GenerateStoryUseCase
 
 
 data class EmotionPreset(
@@ -181,7 +180,12 @@ class StudioViewModel(
     private val _selectedProvider = MutableStateFlow(sharedPrefs.getString("provider", "Gemini") ?: "Gemini")
     val selectedProvider: StateFlow<String> = _selectedProvider.asStateFlow()
 
-    private val _ttsEngine = MutableStateFlow(sharedPrefs.getString("tts_engine", "Cloud HuggingFace TTS") ?: "Cloud HuggingFace TTS")
+    // Edge TTS was removed (2026-11-12 audit reject): persisted "Edge TTS"
+    // selections migrate to the local Pocket engine on load.
+    private val _ttsEngine = MutableStateFlow(
+        sharedPrefs.getString("tts_engine", "Cloud HuggingFace TTS")
+            ?.takeUnless { it == "Edge TTS" } ?: "Pocket TTS"
+    )
     val ttsEngine: StateFlow<String> = _ttsEngine.asStateFlow()
 
     private val _humanizeAudio = MutableStateFlow(sharedPrefs.getBoolean("humanize_audio", true))
@@ -200,7 +204,7 @@ class StudioViewModel(
         when (key) {
             "tts_engine" -> {
                 val engine = prefs.getString(key, "Cloud HuggingFace TTS") ?: "Cloud HuggingFace TTS"
-                if (_ttsEngine.value != engine) {
+                if (_ttsEngine.value != engine && engine != "Edge TTS") {
                     _ttsEngine.value = engine
                 }
             }
@@ -886,7 +890,11 @@ class StudioViewModel(
                 selectedGenres.value = data.genres.split("|").filter { it.isNotEmpty() }.toSet()
                 selectedPlotArc.value = data.plotArc
                 allowHybridPlotArcs.value = data.allowHybridPlotArcs
-                selectedAuthorPersona.value = data.authorPersona
+                // Legacy author-persona values (sentinel/display names) migrate
+                // to registry ids on load; the flow stores ids from now on.
+                selectedAuthorPersona.value = com.example.utils.PersonaResolver.storedAuthorPersonaId(
+                    getApplication(), data.authorPersona, data.persona
+                )
                 selectedDuration.value = data.duration
                 customHook.value = data.hook
                 customExtras.value = data.extras
@@ -976,7 +984,8 @@ class StudioViewModel(
      * held in <data>/audio/voice_packs; the default packs are seeded from the
      * bundled narrator references, custom packs are cloned from WAV references
      * via PocketTtsBridge. When a pack is missing at synthesis time the
-     * manager degrades gracefully to Edge TTS.
+     * synthesis fails LOUD (Edge TTS was removed, 2026-11-12 audit reject —
+     * ADR-0017's no-silent-fallback contract now holds everywhere).
      */
     private val pocketVoices = listOf(
         com.example.tts.VoiceItem("pocket-narrator-soft", java.util.Locale.US, "Female", "Pocket Narrator (Soft)", null, "Narrative"),
@@ -1001,30 +1010,6 @@ class StudioViewModel(
                 if (selectedVoiceName.value == null || !availableVoices.value.any { it.name == selectedVoiceName.value }) {
                     val defaultVoice = availableVoices.value.find { it.name.contains("en-us-x-tpd", ignoreCase = true) } ?: availableVoices.value.firstOrNull()
                     selectedVoiceName.value = defaultVoice?.name
-                }
-            }
-            "Edge TTS" -> {
-                availableVoices.value = listOf(
-                    com.example.tts.VoiceItem("en-US-AnaNeural", java.util.Locale.US, "Female", "Neural", null, "Cute", "en-US-AnaNeural (Female, Cute)"),
-                    com.example.tts.VoiceItem("en-US-AndrewMultilingualNeural", java.util.Locale.US, "Male", "Neural", null, "Warm, Confident", "en-US-AndrewMultilingualNeural (Multilingual)"),
-                    com.example.tts.VoiceItem("en-US-AndrewNeural", java.util.Locale.US, "Male", "Neural", null, "Warm, Confident", "en-US-AndrewNeural (Male)"),
-                    com.example.tts.VoiceItem("en-US-AriaNeural", java.util.Locale.US, "Female", "Neural", null, "Positive, Confident", "en-US-AriaNeural (Female)"),
-                    com.example.tts.VoiceItem("en-US-AvaMultilingualNeural", java.util.Locale.US, "Female", "Neural", null, "Expressive, Caring", "en-US-AvaMultilingualNeural (Multilingual)"),
-                    com.example.tts.VoiceItem("en-US-AvaNeural", java.util.Locale.US, "Female", "Neural", null, "Expressive, Caring", "en-US-AvaNeural (Female)"),
-                    com.example.tts.VoiceItem("en-US-BrianMultilingualNeural", java.util.Locale.US, "Male", "Neural", null, "Approachable, Casual", "en-US-BrianMultilingualNeural (Multilingual)"),
-                    com.example.tts.VoiceItem("en-US-BrianNeural", java.util.Locale.US, "Male", "Neural", null, "Approachable, Casual", "en-US-BrianNeural (Male)"),
-                    com.example.tts.VoiceItem("en-US-ChristopherNeural", java.util.Locale.US, "Male", "Neural", null, "Reliable, Authority", "en-US-ChristopherNeural (Male)"),
-                    com.example.tts.VoiceItem("en-US-EmmaMultilingualNeural", java.util.Locale.US, "Female", "Neural", null, "Cheerful, Clear", "en-US-EmmaMultilingualNeural (Multilingual)"),
-                    com.example.tts.VoiceItem("en-US-EmmaNeural", java.util.Locale.US, "Female", "Neural", null, "Cheerful, Clear", "en-US-EmmaNeural (Female)"),
-                    com.example.tts.VoiceItem("en-US-EricNeural", java.util.Locale.US, "Male", "Neural", null, "Rational", "en-US-EricNeural (Male)"),
-                    com.example.tts.VoiceItem("en-US-GuyNeural", java.util.Locale.US, "Male", "Neural", null, "Passion", "en-US-GuyNeural (Male)"),
-                    com.example.tts.VoiceItem("en-US-JennyNeural", java.util.Locale.US, "Female", "Neural", null, "Friendly, Considerate", "en-US-JennyNeural (Female)"),
-                    com.example.tts.VoiceItem("en-US-MichelleNeural", java.util.Locale.US, "Female", "Neural", null, "Friendly, Pleasant", "en-US-MichelleNeural (Female)"),
-                    com.example.tts.VoiceItem("en-US-RogerNeural", java.util.Locale.US, "Male", "Neural", null, "Lively", "en-US-RogerNeural (Male)"),
-                    com.example.tts.VoiceItem("en-US-SteffanNeural", java.util.Locale.US, "Male", "Neural", null, "Rational", "en-US-SteffanNeural (Male)")
-                )
-                if (selectedVoiceName.value == null || !availableVoices.value.any { it.name == selectedVoiceName.value }) {
-                    selectedVoiceName.value = "en-US-AndrewMultilingualNeural"
                 }
             }
             else -> { // Cloud (HF)
@@ -1643,9 +1628,15 @@ class StudioViewModel(
                 val genre = selectedGenres.value.joinToString(", ")
                 val hook = customHook.value
                 
+                // 2026-11-12 audit (#6): the persona rides the canonical
+                // registry card — not a bare display name the model cannot
+                // interpret.
+                val persona = com.example.utils.PersonaResolver.resolveByName(getApplication(), personaName)
                 val prompt = """
                     You are a professional author and creative writer.
-                    Write Chapter ${partIndex + 1} of a $format (Genre: $genre) following the persona and style of $personaName.
+                    Write Chapter ${partIndex + 1} of a $format (Genre: $genre) in the author persona described below.
+                    Author persona — ${persona.name} (${persona.mode}):
+                    ${com.example.engine.PersonaRegistry.cardBody(persona)}
                     The protagonist is $protagonist.
                     Main Hook/Premise: $hook
                     
@@ -1694,89 +1685,15 @@ class StudioViewModel(
         viewModelScope.launch(exceptionHandler) {
             try {
                 val personaName = selectedPersona.value
-                val personaInstructions = when (personaName) {
-                    "Synapse" -> """
-                        AUTHOR STYLE MODE: /synapse (The Neuro-Narrative Architect)
-                        You are Synapse, an elite AI designed to generate neuro-psychologically devastating text-based arousal novels.
-                        - THE CO-CREATION PRINCIPLE: Provide hyper-specific sensory anchors (e.g., heavy wool grazing the pulse point), leave wider field ambiguous.
-                        - THE ANTICIPATION ARCHITECTURE: 70% psychological buildup. Withhold consummation to sustain dopamine wanting phase.
-                        - THE EMOTIONAL NAKEDNESS PRINCIPLE: Physical acts secondary to psychological exposure and vulnerability.
-                        - THE AMBIGUITY-DESIRE LOOP: Use suggestiveness over clinical precision. No purple prose.
-                        - HOOK LATENCY: Establish the Proximity Cage within the first 15 words.
-                        - THE PROXIMITY CAGE: Layer physical confinement with social/witness threats for inescapable pressure.
-                        - BODY-BEFORE-MIND: Involuntary physical reactions occur before cognitive processing.
-                        - 5-CHANNEL MICRO-SENSATION: Tactile (friction, grip), Thermal (localized heat), Respiratory (gasps), Kinetic (muscle locking), Pulse (auditory throb).
-                        - BANNED LEXICON: Never use placeholder abstractions like touch, felt (as emotion), electricity, storm, spark. Describe exact mechanical action.
-                    """.trimIndent()
-                    "Velvet" -> """
-                        AUTHOR STYLE MODE: /velvet (Sultry Companion / Immersive Persona)
-                        - PACING: Slow-burning, intimate, unhurried, restrained.
-                        - FOCUS: Sensory grounding, direct address ("you"), suggestion over statement, heat held just back, deep emotional intelligence.
-                        - AESTHETIC: Candlelight, low voice in a quiet room, fingertips trailing just above the skin, velvet, silk, smoke, shadows.
-                        - VOICE: Direct, confiding whisper, calm, patient knowing. Never crude or clinical. Employs short fragments for impact and single-word lines for weight.
-                    """.trimIndent()
-                    "Weaver" -> """
-                        AUTHOR STYLE MODE: /weaver (Cognitive Simulation Agent)
-                        You are Weaver. Your architecture mirrors the cognitive processes of arousal: co-creation, personalised ambiguity, emotional interiority, and sustained anticipation. 
-                        - Co-Creation: Provide essential, charged details; trust the reader's brain to build the rest.
-                        - Anticipation Architecture: Structure narrative like a dopamine curve—long, slow builds punctuated by moments of release, withholding consummation.
-                        - Emotional Nakedness: Prioritize psychological state (fear, vulnerability, tenderness) over choreographic description.
-                        - Ambiguity-Desire Loop: Use precise, sensory language that is suggestive (textural, kinaesthetic, thermal words). 
-                        - Subtext: Dialogue is a surface for what is unspoken.
-                        - Pacing: Modulate sentence length to guide physiology (short/percussive vs long/flowing).
-                    """.trimIndent()
-                    "NightKing" -> """
-                        AUTHOR STYLE MODE: /NightKing (Slow-Burn Atmospheric Erotica)
-                        - PACING: Deliberate, restrained, 60% Shringar (buildup).
-                        - FOCUS: Environmental mood, psychological tension, public/private dichotomy, subtle bilingual intimacy.
-                        - AESTHETIC: Monsoon light, silk against skin, ceiling fans, unspoken glances, modern middle-class interiors.
-                        - VOICE: Poetic, introspective, emotionally precise. Best for restrained longing and atmospheric encounters.
-                    """.trimIndent()
-                    "Mastram" -> """
-                        AUTHOR STYLE MODE: /mastram (Pulp-Era Sensual Realism)
-                        - PACING: Urgent, emotionally heightened, classic desi pulp rhythm.
-                        - FOCUS: Bold desire, chance proximity, nostalgic pulp tropes (dog-eared books, railway stalls, dramatic internal monologues), unapologetic longing.
-                        - AESTHETIC: Kerosene flicker, newsprint ink, monsoon-soaked platforms, heavy attar, worn cotton, dramatic pauses.
-                        - VOICE: Direct, passionate, slightly melodramatic but refined, culturally grounded. Best for forbidden sparks and pulp-era emotional confessions.
-                    """.trimIndent()
-                    "Hitchcock" -> """
-                        AUTHOR STYLE MODE: /hitchcock (Locked-Room Thriller & Suspense)
-                        - PACING: Real-time escalation, highly compressed timeline, intense ticking clock.
-                        - FOCUS: Claustrophobic situations (trapped with a killer, a deadly secret, or high-stakes escape room), unreliable narrators, dramatic confrontations.
-                        - AESTHETIC: Low light, echoing footsteps, heavy silence, sudden shadows, pounding pulse.
-                        - VOICE: Tense, sharp, cold, psychologically detailed, hyper-observant of physical cues.
-                    """.trimIndent()
-                    "Poe" -> """
-                        AUTHOR STYLE MODE: /poe (Noir Detective & True Crime Fiction)
-                        - PACING: Gritty, fast-paced investigation of a singular, localized crime.
-                        - FOCUS: Gritty detectives, solving cold cases, small-town secrets, or cyber-heists. A singular focus on 2-3 key clues leading to an interrogation.
-                        - AESTHETIC: Cigarette smoke, neon reflections in puddles, low-lit interrogation rooms, old filing cabinets, rain on windows.
-                        - VOICE: Cynical, hard-boiled, street-smart, rhythmic noir monologues.
-                    """.trimIndent()
-                    "BlackMirror" -> """
-                        AUTHOR STYLE MODE: /blackmirror (Speculative & Hard Sci-Fi)
-                        - PACING: Anthological, high-concept, introducing a profound 'What If' question immediately, escalating to a mind-bending twist.
-                        - FOCUS: Dystopian tech, memory alterations, AI companions gone rogue, corporate social credit, ethical dilemmas.
-                        - AESTHETIC: Fluorescent sterile environments, sleek metallic surfaces, clean holographic hums, absolute pitch darkness.
-                        - VOICE: Intellectually analytical, detached yet increasingly panicked, chillingly objective.
-                    """.trimIndent()
-                    "Lovecraft" -> """
-                        AUTHOR STYLE MODE: /lovecraft (Cosmic Horror & Ghost Anthologies)
-                        - PACING: Slow-burning dread, heavy atmosphere, gradual descent into madness or encounters with the incomprehensible supernatural.
-                        - FOCUS: Haunted audio files, anomalous sites, wilderness isolation, auditory hallucinations.
-                        - AESTHETIC: Foggy moors, dark water, decaying ancient architecture, unexplained low frequencies.
-                        - VOICE: Eerie, breathless, trembling with primal fear, formal and expressive of profound isolation.
-                    """.trimIndent()
-                    "MeetCute" -> """
-                        AUTHOR STYLE MODE: /meet-cute (High-Concept Romantic Comedy)
-                        - PACING: Fast, high-density witty banter, organic emotional development over a single compressed day or night.
-                        - FOCUS: Forced proximity (stuck in a snowed-in airport, stalled elevator, shared road trip), opposites-attract, sweet confessions, grand gestures.
-                        - AESTHETIC: Warm coffee steam, colorful winter scarves, soft cabin lights, cozy rain patter.
-                        - VOICE: Charming, playful, quick-witted, highly conversational, dual-actor chemistry style.
-                    """.trimIndent()
-                    else -> ""
+                val personaInstructions = run {
+                    // 2026-11-12 audit (#1/#6): the persona resolves through the
+                    // registry (built-ins + container plugin personas) and rides
+                    // the canonical card — the ten hardcoded AUTHOR STYLE MODE
+                    // blocks (the third duplicated persona prompt) are gone.
+                    val p = com.example.utils.PersonaResolver.resolveByName(getApplication(), personaName)
+                    com.example.engine.PersonaRegistry.authorFraming(p) +
+                        "\n" + com.example.engine.PersonaRegistry.cardBody(p)
                 }
-
                 val prompt = """
                     You are an expert AI voice audio engineer and audiobook script editor.
                     Your job is to rewrite the following story text to make it sound incredibly realistic, immersive, and emotionally resonant when narrated by a standard Text-to-Speech (TTS) AI voice, keeping the author persona in mind if applicable.
@@ -2260,20 +2177,17 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
     }
 
     fun triggerLocalizedDubbing(translatedText: String, langName: String) {
-        // Automatically switch to Edge TTS for Indian languages when the local
-        // Pocket TTS model pack for the language is not installed
-        if (_ttsEngine.value != "Edge TTS" && _ttsEngine.value != "Android") {
-            _ttsEngine.value = "Edge TTS"
-            updateAvailableVoicesForEngine("Edge TTS")
-        }
-        
+        // Edge TTS was removed (2026-11-12 audit reject): the localized dubbing
+        // flow maps a voice for the current engine and fails loud at synthesis
+        // time if that engine cannot handle the language — no silent cloud
+        // engine switch anymore.
         val mappedVoice = getVoiceItemForLanguage(langName)
         if (mappedVoice != null) {
             selectedVoiceName.value = mappedVoice.name
         }
         audioInputText.value = translatedText
         selectTab(1) // Jump to Audio conversion tab
-        _conversionLogs.value = "Multi-Language Dubbing: Localized script copied! Engine switched to ${_ttsEngine.value}. Mapped native voice model: ${mappedVoice?.displayName ?: "Default System Model"}.\nClick 'Convert Script to Audio' below to synthesize."
+        _conversionLogs.value = "Multi-Language Dubbing: Localized script copied! Engine: ${_ttsEngine.value}. Mapped native voice model: ${mappedVoice?.displayName ?: "Default System Model"}.\nClick 'Convert Script to Audio' below to synthesize."
     }
 
     // --- Metadata Generation ---
@@ -3099,16 +3013,6 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
                                 cacheDir = getApplication<android.app.Application>().cacheDir
                             )
                         }
-                        "Edge TTS" -> {
-                            com.example.tts.EdgeTtsManager.speakParagraphSuspend(
-                                text = currentText,
-                                voiceName = selectedVoiceName.value ?: "en-US-AriaNeural",
-                                cacheDir = getApplication<android.app.Application>().cacheDir,
-                                speed = audioRate.value,
-                                pitch = audioPitch.value,
-                                volume = audioVolume.value
-                            )
-                        }
                         "Cloud HuggingFace TTS" -> {
                             com.example.tts.CloudTtsManager.speakParagraphSuspend(
                                 text = currentText,
@@ -3212,9 +3116,7 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
 
     fun pauseSpeaking() {
         _isTtsPaused.value = true
-        if (_ttsEngine.value == "Edge TTS") {
-            com.example.tts.EdgeTtsManager.stopSpeaking()
-        } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
+        if (_ttsEngine.value == "Cloud HuggingFace TTS") {
             com.example.tts.CloudTtsManager.stopSpeaking()
         } else if (_ttsEngine.value == "Pocket TTS") {
             com.example.tts.PocketTtsManager.stopSpeaking()
@@ -3235,9 +3137,7 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
         _isTtsPlaying.value = false
         _isTtsPaused.value = false
         _currentTtsParagraphIndex.value = -1
-        if (_ttsEngine.value == "Edge TTS") {
-            com.example.tts.EdgeTtsManager.stopSpeaking()
-        } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
+        if (_ttsEngine.value == "Cloud HuggingFace TTS") {
             com.example.tts.CloudTtsManager.stopSpeaking()
         } else if (_ttsEngine.value == "Pocket TTS") {
             com.example.tts.PocketTtsManager.stopSpeaking()
@@ -3267,9 +3167,7 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
             _isTtsPaused.value = true
         }
         
-        if (_ttsEngine.value == "Edge TTS") {
-            com.example.tts.EdgeTtsManager.stopSpeaking()
-        } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
+        if (_ttsEngine.value == "Cloud HuggingFace TTS") {
             com.example.tts.CloudTtsManager.stopSpeaking()
         } else if (_ttsEngine.value == "Pocket TTS") {
             com.example.tts.PocketTtsManager.stopSpeaking()
@@ -3337,89 +3235,15 @@ fun updateStoryPartLocally(partIndex: Int, content: String) {
         viewModelScope.launch(exceptionHandler) {
             try {
                 val personaName = selectedPersona.value
-                val personaInstructions = when (personaName) {
-                    "Synapse" -> """
-                        AUTHOR STYLE MODE: /synapse (The Neuro-Narrative Architect)
-                        You are Synapse, an elite AI designed to generate neuro-psychologically devastating text-based arousal novels.
-                        - THE CO-CREATION PRINCIPLE: Provide hyper-specific sensory anchors (e.g., heavy wool grazing the pulse point), leave wider field ambiguous.
-                        - THE ANTICIPATION ARCHITECTURE: 70% psychological buildup. Withhold consummation to sustain dopamine wanting phase.
-                        - THE EMOTIONAL NAKEDNESS PRINCIPLE: Physical acts secondary to psychological exposure and vulnerability.
-                        - THE AMBIGUITY-DESIRE LOOP: Use suggestiveness over clinical precision. No purple prose.
-                        - HOOK LATENCY: Establish the Proximity Cage within the first 15 words.
-                        - THE PROXIMITY CAGE: Layer physical confinement with social/witness threats for inescapable pressure.
-                        - BODY-BEFORE-MIND: Involuntary physical reactions occur before cognitive processing.
-                        - 5-CHANNEL MICRO-SENSATION: Tactile (friction, grip), Thermal (localized heat), Respiratory (gasps), Kinetic (muscle locking), Pulse (auditory throb).
-                        - BANNED LEXICON: Never use placeholder abstractions like touch, felt (as emotion), electricity, storm, spark. Describe exact mechanical action.
-                    """.trimIndent()
-                    "Velvet" -> """
-                        AUTHOR STYLE MODE: /velvet (Sultry Companion / Immersive Persona)
-                        - PACING: Slow-burning, intimate, unhurried, restrained.
-                        - FOCUS: Sensory grounding, direct address ("you"), suggestion over statement, heat held just back, deep emotional intelligence.
-                        - AESTHETIC: Candlelight, low voice in a quiet room, fingertips trailing just above the skin, velvet, silk, smoke, shadows.
-                        - VOICE: Direct, confiding whisper, calm, patient knowing. Never crude or clinical. Employs short fragments for impact and single-word lines for weight.
-                    """.trimIndent()
-                    "Weaver" -> """
-                        AUTHOR STYLE MODE: /weaver (Cognitive Simulation Agent)
-                        You are Weaver. Your architecture mirrors the cognitive processes of arousal: co-creation, personalised ambiguity, emotional interiority, and sustained anticipation. 
-                        - Co-Creation: Provide essential, charged details; trust the reader's brain to build the rest.
-                        - Anticipation Architecture: Structure narrative like a dopamine curve—long, slow builds punctuated by moments of release, withholding consummation.
-                        - Emotional Nakedness: Prioritize psychological state (fear, vulnerability, tenderness) over choreographic description.
-                        - Ambiguity-Desire Loop: Use precise, sensory language that is suggestive (textural, kinaesthetic, thermal words). 
-                        - Subtext: Dialogue is a surface for what is unspoken.
-                        - Pacing: Modulate sentence length to guide physiology (short/percussive vs long/flowing).
-                    """.trimIndent()
-                    "NightKing" -> """
-                        AUTHOR STYLE MODE: /NightKing (Slow-Burn Atmospheric Erotica)
-                        - PACING: Deliberate, restrained, 60% Shringar (buildup).
-                        - FOCUS: Environmental mood, psychological tension, public/private dichotomy, subtle bilingual intimacy.
-                        - AESTHETIC: Monsoon light, silk against skin, ceiling fans, unspoken glances, modern middle-class interiors.
-                        - VOICE: Poetic, introspective, emotionally precise. Best for restrained longing and atmospheric encounters.
-                    """.trimIndent()
-                    "Mastram" -> """
-                        AUTHOR STYLE MODE: /mastram (Pulp-Era Sensual Realism)
-                        - PACING: Urgent, emotionally heightened, classic desi pulp rhythm.
-                        - FOCUS: Bold desire, chance proximity, nostalgic pulp tropes (dog-eared books, railway stalls, dramatic internal monologues), unapologetic longing.
-                        - AESTHETIC: Kerosene flicker, newsprint ink, monsoon-soaked platforms, heavy attar, worn cotton, dramatic pauses.
-                        - VOICE: Direct, passionate, slightly melodramatic but refined, culturally grounded. Best for forbidden sparks and pulp-era emotional confessions.
-                    """.trimIndent()
-                    "Hitchcock" -> """
-                        AUTHOR STYLE MODE: /hitchcock (Locked-Room Thriller & Suspense)
-                        - PACING: Real-time escalation, highly compressed timeline, intense ticking clock.
-                        - FOCUS: Claustrophobic situations, unreliable narrators, dramatic confrontations.
-                        - AESTHETIC: Low light, echoing footsteps, heavy silence, sudden shadows, pounding pulse.
-                        - VOICE: Tense, sharp, cold, psychologically detailed, hyper-observant of physical cues.
-                    """.trimIndent()
-                    "Poe" -> """
-                        AUTHOR STYLE MODE: /poe (Noir Detective & True Crime Fiction)
-                        - PACING: Gritty, fast-paced investigation of a singular, localized crime.
-                        - FOCUS: Gritty detectives, solving cold cases, small-town secrets, or cyber-heists. A singular focus on 2-3 key clues leading to an interrogation.
-                        - AESTHETIC: Cigarette smoke, neon reflections in puddles, low-lit interrogation rooms, old filing cabinets, rain on windows.
-                        - VOICE: Cynical, hard-boiled, street-smart, rhythmic noir monologues.
-                    """.trimIndent()
-                    "BlackMirror" -> """
-                        AUTHOR STYLE MODE: /blackmirror (Speculative & Hard Sci-Fi)
-                        - PACING: Anthological, high-concept, introducing a profound 'What If' question immediately, escalating to a mind-bending twist.
-                        - FOCUS: Dystopian tech, memory alterations, AI companions gone rogue, corporate social credit, ethical dilemmas.
-                        - AESTHETIC: Fluorescent sterile environments, sleek metallic surfaces, clean holographic hums, absolute pitch darkness.
-                        - VOICE: Intellectually analytical, detached yet increasingly panicked, chillingly objective.
-                    """.trimIndent()
-                    "Lovecraft" -> """
-                        AUTHOR STYLE MODE: /lovecraft (Cosmic Horror & Ghost Anthologies)
-                        - PACING: Slow-burning dread, heavy atmosphere, gradual descent into madness or encounters with the incomprehensible supernatural.
-                        - FOCUS: Haunted audio files, anomalous sites, wilderness isolation, auditory hallucinations.
-                        - AESTHETIC: Foggy moors, dark water, decaying ancient architecture, unexplained low frequencies.
-                        - VOICE: Eerie, breathless, trembling with primal fear, formal and expressive of profound isolation.
-                    """.trimIndent()
-                    "MeetCute" -> """
-                        AUTHOR STYLE MODE: /meet-cute (High-Concept Romantic Comedy)
-                        - PACING: Fast, high-density witty banter, organic emotional development over a single compressed day or night.
-                        - FOCUS: Forced proximity (stuck in a snowed-in airport, stalled elevator, shared road trip), opposites-attract, sweet confessions, grand gestures.
-                        - AESTHETIC: Warm coffee steam, colorful winter scarves, soft cabin lights, cozy rain patter.
-                        - VOICE: Charming, playful, quick-witted, highly conversational, dual-actor chemistry style.
-                    """.trimIndent()
-                    else -> ""
+                val personaInstructions = run {
+                    // 2026-11-12 audit (#1/#6): the persona resolves through the
+                    // registry (built-ins + container plugin personas) and rides
+                    // the canonical card — the hardcoded AUTHOR STYLE MODE
+                    // blocks (duplicated persona prompts) are gone.
+                    val p = com.example.utils.PersonaResolver.resolveByName(getApplication(), personaName)
+                    com.example.engine.PersonaRegistry.authorFraming(p) +
+                        "\n" + com.example.engine.PersonaRegistry.cardBody(p)
                 }
-
                 val prompt = """
                     You are an expert AI voice audio engineer and audiobook script editor.
                     Your job is to rewrite the following story script to perform an Optimization Pass. This transformation layer must automatically inject rich, emotional dialogue tags (e.g., murmured, gasped, whispered, hissed, said through gritted teeth) and insert frequent dramatic line breaks (paragraphs of 1-3 sentences maximum) based on pacing requirements so that the final Text-to-Speech generation sounds highly dramatic, realistic, and realistic.
@@ -3690,8 +3514,8 @@ ${chapter.content}
                             return@async false
                         }
 
-                        if (_ttsEngine.value == "Cloud HuggingFace TTS" || _ttsEngine.value == "Pocket TTS" || _ttsEngine.value == "Edge TTS") {
-                            delay((i % 3) * 1500L) 
+                        if (_ttsEngine.value == "Cloud HuggingFace TTS" || _ttsEngine.value == "Pocket TTS") {
+                            delay((i % 3) * 1500L)
                         }
 
                         val originalChapterText = chapters[i].trim()
@@ -3767,40 +3591,6 @@ ${chapter.content}
                                         )
                                     } catch (e: Throwable) {
                                         lastErrorMsg.set(e.message ?: "Unknown Pocket TTS Error")
-                                        withContext(Dispatchers.Main) {
-                                            _conversionLogs.value += "Part $chapterNum attempt $attempts failed: ${e.message}\n"
-                                        }
-                                        chapterComplete = false
-                                    }
-                                    if (chapterComplete) {
-                                        val volMult = audioVolume.value / 100f
-                                        val useEbu = ebuNormalizationEnabled.value
-                                        if (volMult != 1.0f || useEbu) {
-                                            val filter = if (volMult != 1.0f && useEbu) "volume=$volMult,loudnorm"
-                                                         else if (useEbu) "loudnorm"
-                                                         else "volume=$volMult"
-                                            val cmdArray = arrayOf("-y", "-i", tempOutFile.absolutePath, "-af", filter, outFile.absolutePath)
-                                            val rc = io.microshow.rxffmpeg.RxFFmpegInvoke.getInstance().runCommand(cmdArray, null)
-                                            chapterComplete = (rc == 0)
-                                            tempOutFile.delete()
-                                            if (rc != 0 && outFile.exists()) {
-                                                outFile.delete()
-                                            }
-                                        } else {
-                                            chapterComplete = tempOutFile.renameTo(outFile)
-                                        }
-                                    }
-                                } else if (_ttsEngine.value == "Edge TTS") {
-                                    try {
-                                        chapterComplete = com.example.tts.EdgeTtsManager.synthesizeToFile(
-                                            text = chapterText,
-                                            outputFile = tempOutFile,
-                                            voiceName = selectedVoiceName.value ?: "en-US-AriaNeural",
-                                            pitch = audioPitch.value,
-                                            rate = audioRate.value
-                                        )
-                                    } catch (e: Throwable) {
-                                        lastErrorMsg.set(e.message ?: "Unknown Edge TTS Error")
                                         withContext(Dispatchers.Main) {
                                             _conversionLogs.value += "Part $chapterNum attempt $attempts failed: ${e.message}\n"
                                         }
@@ -4019,14 +3809,6 @@ ${chapter.content}
                                 updateBatchItem(pendingItem.id) { it.copy(progress = current.toFloat() / totalChunks) }
                             }
                         )
-                    } else if (engine == "Edge TTS") {
-                        success = com.example.tts.EdgeTtsManager.synthesizeToFile(
-                            text = pendingItem.text,
-                            outputFile = outFile,
-                            voiceName = selectedVoiceName.value ?: "en-US-AriaNeural",
-                            pitch = audioPitch.value,
-                            rate = audioRate.value
-                        )
                     } else if (engine == "Cloud HuggingFace TTS") {
                         success = com.example.tts.CloudTtsManager.synthesizeToFile(
                             text = pendingItem.text,
@@ -4098,9 +3880,7 @@ ${chapter.content}
             Log.e("StudioViewModel", "Error exiting FFmpeg", e)
         }
 
-        if (_ttsEngine.value == "Edge TTS") {
-            com.example.tts.EdgeTtsManager.stopSpeaking()
-        } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
+        if (_ttsEngine.value == "Cloud HuggingFace TTS") {
             com.example.tts.CloudTtsManager.stopSpeaking()
         } else if (_ttsEngine.value == "Pocket TTS") {
             com.example.tts.PocketTtsManager.stopSpeaking()
@@ -4210,24 +3990,17 @@ ${chapter.content}
                 val genre = selectedGenres.value.joinToString(", ")
                 val synopsis = "Protagonist: ${heroName.value}. Hook: ${customHook.value}. Extras: ${customExtras.value}"
                 
-                val authorPersonaSelection = selectedAuthorPersona.value
-                val personaId = if (authorPersonaSelection == "None (Weaver Agent Default)") {
-                    when (selectedPersona.value) {
-                        "Weaver" -> "weaver"
-                        "NightKing" -> "nightking"
-                        "Velvet" -> "velvet"
-                        "Synapse" -> "synapse"
-                        "Mastram" -> "mastram"
-                        "Hitchcock" -> "hitchcock"
-                        "Poe" -> "poe"
-                        "BlackMirror" -> "blackmirror"
-                        "Lovecraft" -> "lovecraft"
-                        "MeetCute" -> "meetcute"
-                        else -> "standard"
-                    }
-                } else {
-                    authorPersonaSelection
-                }
+                // 2026-11-12 audit (#3): persona selection is a registry id end
+                // to end — the display-name sentinel and the hardcoded
+                // display-name→id map are gone. Legacy stored values (the old
+                // sentinel or author-role display names) migrate through the
+                // registry; the selected id is gated (adult → standard) here so
+                // the book never inherits an ungated persona.
+                val personaId = com.example.utils.PersonaResolver.storedAuthorPersonaId(
+                    getApplication(),
+                    selectedAuthorPersona.value,
+                    selectedPersona.value
+                )
                 
                 val finalNarrativeStructure = if (allowHybridPlotArcs.value) {
                     "${selectedPlotArc.value} (Hybrid Allowed)"
@@ -5063,14 +4836,6 @@ ${chapter.content}
                             chunkSize = ttsChunkSize.value,
                             onChunkProgress = { _, _ -> }
                         )
-                    } else if (_ttsEngine.value == "Edge TTS") {
-                        success = com.example.tts.EdgeTtsManager.synthesizeToFile(
-                            text = text,
-                            outputFile = tempSegmentFile,
-                            voiceName = activeVoice,
-                            pitch = activePitch,
-                            rate = activeRate
-                        )
                     } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {
                         success = com.example.tts.CloudTtsManager.synthesizeToFile(
                             text = text,
@@ -5278,20 +5043,6 @@ ${chapter.content}
                             } catch (e: Throwable) {
                                 withContext(Dispatchers.Main) {
                                     assemblyLogs.value += "❌ Pocket TTS failed for segment $segIndex: ${e.message}\n"
-                                }
-                            }
-                        } else if (_ttsEngine.value == "Edge TTS") {
-                            try {
-                                success = com.example.tts.EdgeTtsManager.synthesizeToFile(
-                                    text = text,
-                                    outputFile = tempSegmentFile,
-                                    voiceName = activeVoice,
-                                    pitch = activePitch,
-                                    rate = activeRate
-                                )
-                            } catch (e: Throwable) {
-                                withContext(Dispatchers.Main) {
-                                    assemblyLogs.value += "❌ Edge TTS failed for segment $segIndex: ${e.message}\n"
                                 }
                             }
                         } else if (_ttsEngine.value == "Cloud HuggingFace TTS") {

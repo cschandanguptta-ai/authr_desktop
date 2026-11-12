@@ -25,9 +25,9 @@ import java.io.File
  * in <data>/audio/voice_packs and are referenced by name; a fixed voice state
  * reproduces the same narrator identity across chapters by construction.
  *
- * If no binary is present the bridge reports [Status.MISSING] and the manager
- * degrades gracefully to the Edge TTS route (plan: "cloud engines remain
- * configurable per agent for scale and quality, never as a hard dependency").
+ * If no binary is present the bridge reports [Status.MISSING] and synthesis
+ * FAILS LOUD — there is no fallback engine (Edge TTS was removed, 2026-11-12
+ * audit reject; ADR-0017: production never silently mixes engines).
  */
 object PocketTtsBridge {
 

@@ -44,7 +44,7 @@ flowchart LR
     end
 
     subgraph Media["tts/ + desktopbridge/"]
-        TTS["PocketTtsManager / AndroidTts /<br/>EdgeTts / CloudTts"]
+        TTS["PocketTtsManager / AndroidTts /<br/>CloudTts  (Edge removed 2026-11-12)"]
         PBridge["PocketTtsBridge (child process)"]
         FF["FfmpegLocator + Mp3ToWav +<br/>RxFFmpegInvoke (audio only)"]
     end
@@ -118,7 +118,7 @@ flowchart LR
 | `plugins/PluginRegistry.kt` | Structure/persona JSON plugins under `<authr>/plugins/{structures,personas}`, scaffold of shipped defaults | ShippedPlugins, PluginSchema | `Main.kt`, drafting prompts |
 | `worker/*.kt` | CoroutineWorkers: WorldBuilding, Outline (serial outline gate), Drafting (Blueprint 2.0 block), Polishing, Compilation (canon + recovery + serial gates), EpubExport, StorageCleanup, WorkerUtils (`logAgentChat`, `retryWithBackoff`) | DAOs, engine, orchestrator | WorkManager shim chains |
 | `androidx/work/WorkManager.kt` | Ported WorkManager shim: chains, periodic jobs, `runSingle` via registered factories; **no factories registered anywhere → chains no-op (see tech-debt)** | — | ViewModels/workers |
-| `tts/*.kt` | PocketTtsManager (local), AndroidTtsManager, EdgeTtsManager, CloudTtsManager | desktopbridge, BuildConfig | AudioScreen/VMs |
+| `tts/*.kt` | PocketTtsManager (local — the shim's synthesis backend since the 2026-11-12 Edge removal), AndroidTtsManager, CloudTtsManager | desktopbridge, BuildConfig | AudioScreen/VMs |
 | `desktopbridge/PocketTtsBridge.kt` | Pocket TTS child-process bridge; binary resolution: bundled → `POCKET_TTS_BIN` → PATH → `~/.authr/pocket-tts` | ProcessBuilder | PocketTtsManager |
 | `desktopbridge/FfmpegLocator.kt` | ffmpeg resolution: bundled → `FFMPEG_HOME` → PATH | — | audio workers |
 | `desktopbridge/EspeakLocator.kt` | espeak-ng resolution (P4, plan §7.3 phonemizer): bundled → `ESPEAK_NG_BIN` → PATH → `~/.authr/espeak-ng`; accepts legacy `espeak` name | — | PronunciationPass, EspeakSynthesizer |
@@ -145,4 +145,4 @@ FACT (`data/api/ApiService.kt` base URLs + `LlmOrchestrator.kt`):
 - HuggingFace inference `https://api-inference.huggingface.co/` (translation features)
 - OpenRouter `https://openrouter.ai/`
 - OpenAI-compatible (Groq `https://api.groq.com/openai/v1/…`, NVIDIA `https://integrate.api.nvidia.com/v1/…`, Custom base URL)
-- Pocket TTS local binary (no network), Edge TTS (network, `tts/EdgeTtsManager.kt`), ElevenLabs/Google TTS keys via BuildConfig (FACT: `BuildConfig.kt`).
+- Pocket TTS local binary (no network — the ONLY bundled synthesis engine since the 2026-11-12 Edge removal), ElevenLabs/Google TTS keys via BuildConfig (FACT: `BuildConfig.kt`).
