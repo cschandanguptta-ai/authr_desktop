@@ -3,7 +3,7 @@
 # Compiles engine/audio + EspeakLocator + the 5 P4 test classes against the
 # surviving app-image classpath + Nov 9 desktop.jar, then runs them via JUnitCore.
 set -u
-BASE=/home/z/my-project
+BASE="${AUTHR_BASE:-/home/z/my-project}"
 AD=$BASE/authr-desktop/desktop
 IMG=$AD/build/compose/binaries/main/app/AuthrOS/lib/app
 EXTRAS=$BASE/.build-extras
@@ -22,7 +22,7 @@ CP+="$EXTRAS/kotlin-test-2.2.10.jar:$EXTRAS/kotlin-test-junit-2.2.10.jar"
 # put junit 4 FIRST so it shadows junit 3.8.2.
 CP="$EXTRAS/junit-4.13.2.jar:$EXTRAS/hamcrest-core-1.3.jar:$EXTRAS/kotlin-test-2.2.10.jar:$EXTRAS/kotlin-test-junit-2.2.10.jar:$CP"
 
-JAVA=/tmp/my-project/tools/jdk/bin/java
+JAVA="${AUTHR_JAVA:-/tmp/my-project/tools/jdk/bin/java}"
 COMPILER_CP="$EXTRAS/kotlin-compiler-embeddable-2.2.10.jar:$EXTRAS/trove4j-1.0.20200330.jar:$IMG/kotlin-stdlib-2.2.10-ab998b5a8873e5635565578249af83.jar:$IMG/kotlin-reflect-1.8.21-6c7edbaeeb3b6b1b678269e482fa1c.jar:$IMG/kotlinx-coroutines-core-jvm-1.10.2-16bb58d0777fca3b2efde66862478c.jar:$IMG/annotations-23.0.0-8484cd17d040d837983323f760b2c660.jar"
 
 MAIN_SRCS="$SRC/com/example/engine/audio/PronunciationPass.kt $SRC/com/example/engine/audio/MasteringChain.kt $SRC/com/example/engine/audio/AcxAudit.kt $SRC/com/example/engine/audio/SmilExporter.kt $SRC/com/example/engine/audio/AudiobookRenderer.kt $SRC/com/example/desktopbridge/EspeakLocator.kt"
@@ -59,7 +59,7 @@ public class RunP4Tests {
     }
 }
 EOF
-JAVAC=/tmp/my-project/tools/jdk/bin/javac
+JAVAC="$(dirname "$JAVA")/javac"
 "$JAVAC" -cp "$OUT:$CP" -d "$OUT" /tmp/RunP4Tests.java || { echo "launcher compile failed"; exit 1; }
 RUN_CP="$OUT:$CP"
 "$JAVA" -cp "$RUN_CP" RunP4Tests \

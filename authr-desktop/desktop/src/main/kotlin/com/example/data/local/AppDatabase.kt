@@ -170,11 +170,21 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
+                // v3.0 D-02 RESOLVED (OQ-3 decided, 2026-11-12): NO
+                // destructive fallback. `fallbackToDestructiveMigration(true)`
+                // silently WIPED user manuscripts on any schema drift — the
+                // exact data loss the plan's writer-sovereignty pillar forbids.
+                // Fail LOUD instead: opening a database whose schema version
+                // has no contiguous migration path throws
+                // IllegalStateException ("A migration from X to Y was
+                // required but not found"), and a fresh install creates the
+                // current schema unchanged. MigrationFailFastTest guards the
+                // loud-failure half. Desktop edition pre-release note: only
+                // developer databases predate this; the beta ships schema 15.
                 val instance = Room.databaseBuilder<AppDatabase>(
                     context.getDatabasePath("audio_novel_studio_db").absolutePath
                 )
                 .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
-                .fallbackToDestructiveMigration(true)
                 .setDriver(BundledSQLiteDriver())
                 .build()
                 INSTANCE = instance

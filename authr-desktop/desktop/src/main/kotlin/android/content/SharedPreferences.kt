@@ -55,6 +55,14 @@ interface SharedPreferences {
             encode: ((String) -> String)? = null,
             decode: ((String) -> String)? = null
         ): SharedPreferences = FileBackedSharedPreferences(file, encode, decode)
+
+        /**
+         * A purely in-memory [SharedPreferences] — nothing ever touches disk.
+         * The D-03 secure-storage fallback: when the encrypted store cannot
+         * be opened, secrets ride in memory for the session instead of
+         * persisting unencrypted.
+         */
+        fun inMemory(): SharedPreferences = MemorySharedPreferences()
     }
 }
 
@@ -220,5 +228,60 @@ internal class FileBackedSharedPreferences(
 
     companion object {
         private object REMOVE
+    }
+}
+
+/**
+ * A purely in-memory [SharedPreferences] (v3.0 D-03): a session-scoped map
+ * with NO disk backing. The secure-storage fallback — secrets stay volatile
+ * when the encrypted store cannot be opened, instead of persisting
+ * unencrypted. Listeners are accepted and invoked in-process.
+ */
+internal class MemorySharedPreferences : SharedPreferences {
+
+    private val values = java.util.concurrent.ConcurrentHashMap<String, Any>()
+    private val listeners =
+        java.util.concurrent.CopyOnWriteArrayList<SharedPreferences.OnSharedPreferenceChangeListener>()
+
+    private inner class EditorImpl : SharedPreferences.Editor {
+        private val pending = java.util.concurrent.ConcurrentLinkedQueue<() -> Unit>()
+        override fun putString(key: String, value: String?) = apply { pending += { put(key, value) } }
+        override fun putStringSet(key: String, values: Set<String>?) = apply { pending += { put(key, values?.toSet()) } }
+        override fun putInt(key: String, value: Int) = apply { pending += { put(key, value) } }
+        override fun putLong(key: String, value: Long) = apply { pending += { put(key, value) } }
+        override fun putFloat(key: String, value: Float) = apply { pending += { put(key, value) } }
+        override fun putBoolean(key: String, value: Boolean) = apply { pending += { put(key, value) } }
+        override fun remove(key: String) = apply { pending += { values.remove(key); changed(key) } }
+        override fun clear() = apply { pending += { val keys = values.keys.toList(); values.clear(); keys.forEach(::changed) } }
+        override fun apply() { pending.forEach { it() } }
+        override fun commit(): Boolean { apply(); return true }
+        private fun put(key: String, value: Any?) {
+            if (value == null) values.remove(key) else values[key] = value
+            changed(key)
+        }
+        private fun changed(key: String) = listeners.forEach { it.onSharedPreferenceChanged(this@MemorySharedPreferences, key) }
+    }
+
+    private fun <T : Any> read(key: String, def: T?): T? {
+        @Suppress("UNCHECKED_CAST")
+        return values[key] as? T ?: def
+    }
+
+    override fun getAll(): Map<String, *> = values.toMap()
+    override fun getString(key: String, defValue: String?) = read(key, defValue)
+    override fun getStringSet(key: String, defValue: Set<String>?) = read(key, defValue)
+    override fun getInt(key: String, defValue: Int) = read(key, defValue) ?: defValue
+    override fun getLong(key: String, defValue: Long) = read(key, defValue) ?: defValue
+    override fun getFloat(key: String, defValue: Float) = read(key, defValue) ?: defValue
+    override fun getBoolean(key: String, defValue: Boolean) = read(key, defValue) ?: defValue
+    override fun contains(key: String) = values.containsKey(key)
+    override fun edit(): SharedPreferences.Editor = EditorImpl()
+
+    override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        listeners += listener
+    }
+
+    override fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        listeners -= listener
     }
 }

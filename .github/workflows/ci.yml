@@ -1,0 +1,68 @@
+# Authr OS desktop edition — CI (v3.0 D-07).
+#
+# The suite runs through the NO-GRADLE direct routes (kotlinc + JUnitCore,
+# the same scripts the sandbox used for every phase gate): the tracked
+# desktop/build tree is the load-bearing classpath, the toolchain jars are
+# fetched reproducibly from Maven Central, and every route is green or the
+# job fails. A Gradle `:desktop:test` job runs alongside as the formal
+# dependency-set proof (D-15's outstanding item) but is advisory — the repo
+# ships no wrapper, so the pinned Gradle version can legitimately drift.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  direct-suite:
+    name: Direct test suite (no Gradle)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Optional external tools: with them the P4 real-binary integration
+      # tests RUN; without them they skip via Assume (the suite still
+      # gates everything that needs no binaries).
+      - name: Install espeak-ng + ffmpeg (best effort)
+        run: sudo apt-get update && sudo apt-get install -y espeak-ng ffmpeg || true
+
+      - name: Cache direct-route toolchain
+        uses: actions/cache@v4
+        with:
+          path: .build-extras
+          key: build-extras-${{ hashFiles('scripts/p5_fetch_toolchain.sh') }}
+
+      - name: Run the direct test suite
+        env:
+          AUTHR_BASE: ${{ github.workspace }}
+          AUTHR_JAVA: ${{ env.JAVA_HOME }}/bin/java
+        run: bash scripts/ci_direct_suite.sh
+
+  gradle-test:
+    name: Gradle :desktop:test (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true # no wrapper in-repo; the pinned Gradle can drift (D-15)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle (pinned; repo has no wrapper)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14'
+
+      - name: Run :desktop:test
+        run: gradle :desktop:test --no-daemon

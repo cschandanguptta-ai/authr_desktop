@@ -342,6 +342,24 @@ class WorkManager private constructor() {
         @JvmStatic
         fun getInstance(context: Context): WorkManager =
             instance ?: synchronized(this) { instance ?: WorkManager().also { instance = it } }
+
+        /**
+         * Public registration surface (v3.0 D-01): the desktop replacement
+         * for the Android app's Koin `worker { … }` module. Production code
+         * registers through [com.example.worker.WorkerRegistry] (the
+         * app's whole worker graph in one call); tests register their own
+         * workers through this same public API.
+         */
+        @JvmStatic
+        fun <T : ListenableWorker> registerWorker(
+            clazz: KClass<T>,
+            factory: (WorkerParameters) -> T
+        ): Unit = DesktopWorkManager.registerWorker(clazz, factory)
+
+        /** Diagnostic probe: the worker classes with a registered factory. */
+        @JvmStatic
+        fun registeredWorkerClasses(): Set<KClass<out ListenableWorker>> =
+            DesktopWorkManager.factories.keys.toSet()
     }
 
     private val impl = DesktopWorkManager

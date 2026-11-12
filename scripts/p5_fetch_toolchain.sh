@@ -6,7 +6,7 @@
 #   - epubcheck 5.2.1 standalone dist (the external EPUB 3 conformance gate)
 # Jars land in /home/z/my-project/.build-extras/ (survives recycles).
 
-DEST=/home/z/my-project/.build-extras
+DEST="${AUTHR_EXTRAS:-${AUTHR_BASE:-/home/z/my-project}/.build-extras}"
 mkdir -p "$DEST"
 CENTRAL="https://repo.maven.apache.org/maven2"
 

@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 
+import com.example.data.api.LlmOrchestrator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,24 +15,13 @@ class SettingsViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val sharedPrefs = try {
-        val masterKey = androidx.security.crypto.MasterKey.Builder(application)
-            .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
-            .build()
-
-        androidx.security.crypto.EncryptedSharedPreferences.create(
-            application,
-            "secure_studio_settings",
-            masterKey,
-            androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    } catch (e: Throwable) {
-        try {
-            application.deleteSharedPreferences("secure_studio_settings")
-        } catch (_: Throwable) {}
-        application.getSharedPreferences("secure_studio_settings_fallback", Context.MODE_PRIVATE)
-    }
+    // v3.0 D-03: the single secure-prefs construction site is
+    // LlmOrchestrator.openSecurePrefs — on keystore failure the fallback is
+    // IN-MEMORY ONLY (never the old plain `secure_studio_settings_fallback`
+    // file), the corrupt-store delete is gone (a transient failure must not
+    // nuke the store; a broken store stays for the fixed keystore to reopen)
+    // and the Settings screen surfaces the degraded state.
+    private val sharedPrefs = LlmOrchestrator.openSecurePrefs(application)
 
     private val _geminiApiKey = MutableStateFlow(sharedPrefs.getString("gemini_key", "") ?: "")
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()

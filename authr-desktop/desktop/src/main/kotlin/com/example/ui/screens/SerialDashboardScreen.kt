@@ -223,13 +223,31 @@ fun SerialDashboardScreen(
                         HorizontalDivider()
                         // Export profile picker + paste-ready package (§6.13)
                         Text("Platform export (§6.13 — paste-ready)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            SerialExportProfiles.PROFILES.take(4).forEach { p ->
-                                FilterChip(
-                                    selected = p.id == exportProfileId,
-                                    onClick = { viewModel.setExportProfile(p.id) },
-                                    label = { Text(p.platform.split(" ").first(), fontSize = 11.sp) }
+                        // v3.0 D-09 fixed: a dropdown exposes ALL six profiles —
+                        // the old take(4) chip row hid Dreame/Webnovel/Tapas
+                        // behind a truncation the writer could not get past.
+                        var profileMenuOpen by remember(selectedChapter.id) { mutableStateOf(false) }
+                        val selectedProfile = SerialExportProfiles.PROFILES.firstOrNull { it.id == exportProfileId }
+                        Box {
+                            OutlinedButton(onClick = { profileMenuOpen = true }) {
+                                Text(
+                                    "Platform: " + (selectedProfile?.platform ?: "select…"),
+                                    fontSize = 12.sp
                                 )
+                            }
+                            DropdownMenu(
+                                expanded = profileMenuOpen,
+                                onDismissRequest = { profileMenuOpen = false }
+                            ) {
+                                SerialExportProfiles.PROFILES.forEach { p ->
+                                    DropdownMenuItem(
+                                        text = { Text("${p.platform} — ${p.model}", fontSize = 12.sp) },
+                                        onClick = {
+                                            viewModel.setExportProfile(p.id)
+                                            profileMenuOpen = false
+                                        }
+                                    )
+                                }
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

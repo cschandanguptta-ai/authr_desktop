@@ -3,12 +3,12 @@
 # then renders the ten-chapter gate audiobook end to end through the real
 # espeak-ng + ffmpeg toolchain. Evidence tree lands in download/.
 set -eu
-BASE=/home/z/my-project
+BASE="${AUTHR_BASE:-/home/z/my-project}"
 AD=$BASE/authr-desktop/desktop
 EXTRAS=$BASE/.build-extras
 OUT=$EXTRAS/p4-classes
 IMG=$AD/build/compose/binaries/main/app/AuthrOS/lib/app
-JAVA=/tmp/my-project/tools/jdk/bin/java
+JAVA="${AUTHR_JAVA:-/tmp/my-project/tools/jdk/bin/java}"
 
 GATE_DIR="$BASE/download/Authr-OS-3.0-P4-Audiobook-Gate"
 WORK_DIR="$EXTRAS/p4-gate-work"

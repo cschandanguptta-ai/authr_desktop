@@ -4,7 +4,7 @@
 export JAVA_HOME=/tmp/my-project/tools/jdk
 export LD_LIBRARY_PATH=/tmp/my-project/tools/xlibs/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 
-DIST=/tmp/my-project/authr-desktop/desktop/build/compose/binaries/main/app/AuthrOS
+DIST="${AUTHR_BASE:-/home/z/my-project}/authr-desktop/desktop/build/compose/binaries/main/app/AuthrOS"
 CP=$(ls "$DIST"/lib/app/*.jar | tr '\n' ':')
 
 rm -rf /tmp/render-p3 && mkdir -p /tmp/render-p3

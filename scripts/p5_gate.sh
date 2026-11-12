@@ -12,7 +12,7 @@
 # 3. evidence tree → download/Authr-OS-3.0-P5-Retail-Package/
 #    gate log        → download/Authr-OS-3.0-P5-Retail-Package.gate-run.log
 set -u
-BASE=/home/z/my-project
+BASE="${AUTHR_BASE:-/home/z/my-project}"
 EVIDENCE="$BASE/download/Authr-OS-3.0-P5-Retail-Package"
 LOG="$BASE/download/Authr-OS-3.0-P5-Retail-Package.gate-run.log"
 

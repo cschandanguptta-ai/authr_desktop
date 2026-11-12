@@ -9,7 +9,7 @@ How tests are organized, what is and isn't covered, which tests guard which area
 - **ViewModels are testable** because they take injected scope + generators (`WriterStudioViewModel` takes `CoroutineScope`, `L4DraftGenerator`, optional `authrRoot`; `SerialDashboardViewModel` takes `CoroutineScope`, optional `exportDir`).
 - **Engine code is pure**: `engine/` and `engine/serialization/` have no Context dependencies by design.
 
-## Suite inventory (226 tests, all green as of the D-15 publishing-screen slice, 2026-11-12)
+## Suite inventory (238 tests, all green as of the D-13/D-01/D-02/D-03/D-09 slice, 2026-11-12)
 
 | Test class | Tests | Guards (exit gates in bold) |
 | --- | --- | --- |
@@ -44,6 +44,11 @@ How tests are organized, what is and isn't covered, which tests guard which area
 | `ShipReportTest` | 7 | **P5 primitives**: clean = every verdict passed (UNVERIFIED ≠ clean), artifact/verdict tables, waiver disclosure with mandatory notes |
 | `RetailPackagerTest` | 9 | **P5 gate: one-action retail package (novel + serial volumes), canon exclusions disclosed, workbench authority, pricing record; real epubcheck 5.2.1 integration — zero errors verified, failures block the clean verdict (skipped when the tool is absent)** |
 | `PublishingWorkbenchTest` | 4 | **D-15 guards (ADR-0014)**: workbench seeds from the project record (OQ-9), edited workbench stages to `authr/<bookId>/metadata/kdp_workbench.json` and survives reselection, the ONE ACTION (container export → import audit → packageRetail) produces a clean package end to end from fakes (epubcheck present) or an honestly-UNVERIFIED one (absent), serial packages ride the arc volumes + cadence disclosure |
+| `WorkerWiringTest` | 2 | **D-01 guards (ADR-0015)**: the registry covers every enqueued worker class (proxy DAOs); a registered chain runs in order and a failed step halts it through the real `beginUniqueWork(...).then(...).enqueue()` path |
+| `MigrationFailFastTest` | 2 | **D-02 guards (ADR-0016)** against the real Room 2.8.5 KMP runtime: a v3 schema-gap file throws "A migration from 3 to 15 was required" and KEEPS ITS ROWS (no destructive recreation); a registered 3→15 path runs to the current version |
+| `SecurePrefsFallbackTest` | 2 | **D-03 guards (ADR-0016)**: the keystore-failure fallback is in-memory only (a second open never sees the first session's key; zero secure-settings files hit disk — data-root walk asserted); `MemorySharedPreferences` behaves like preferences |
+| `AudiobookWorkbenchTest` | 4 | **D-13 guards (ADR-0017)**: lorebook coinage scan → approval staging to `authr/<bookId>/audio/pronunciation_rules.json` → reload-on-reselect; one-action render ALL GREEN from fake synth/mastering/audit (canon chapters, master, speed factor); unavailable engine refused with its reason; render without a data root stays honest |
+| `PocketSynthesizerTest` | 2 | **D-13 guards (ADR-0017)**: missing engine piece fails LOUD with a note naming it, no partial output, never an Edge round trip (by construction); POCKET_STRUCTURAL + temperature pinned |
 
 ## What is NOT covered (be honest before shipping a change)
 
@@ -65,6 +70,7 @@ How tests are organized, what is and isn't covered, which tests guard which area
 | entities/migrations/container | AuthrContainerRoundTripTest | full suite |
 | ViewModels | SerialDashboardTest (pattern) | full suite |
 | `ui/screens/PublishingScreen.kt` / `ui/viewmodel/PublishingViewModel.kt` / `Main.kt` | PublishingWorkbenchTest | full suite, then `scripts/d15_build_ui.sh` (refresh the jar + image) and an Xvfb smoke |
+| `ui/screens/AudiobookWorkbenchScreen.kt` / `ui/viewmodel/AudiobookViewModel.kt` / `engine/audio/PocketSynthesizer.kt` / `Main.kt` / `worker/WorkerRegistry.kt` / `AppDatabase.kt` (migrations) / `LlmOrchestrator.kt` (secure prefs) | AudiobookWorkbenchTest + PocketSynthesizerTest + WorkerWiringTest + MigrationFailFastTest + SecurePrefsFallbackTest (the `scripts/d13_direct_test.sh` route, 68 tests incl. the audio + serial + publishing regression sets) | full suite, then `scripts/d15_build_ui.sh` (refresh the jar + image) and an Xvfb smoke |
 | `engine/publishing/RetailPackager.kt` (gate steps) | RetailPackagerTest + PublishingWorkbenchTest | full suite + `scripts/p5_gate.sh`; if you touched the CONCURRENT steps, re-run `scripts/D15LatencyProbe.kt` (ADR-0010: record the wall clock, don't guess it) |
 | workers | engine classes behind them + compile | full suite + manual chain review |
 | `engine/audio/*` | the 5 P4 classes + `AudiobookRendererTest` (integration auto-skips without espeak/ffmpeg) | full suite, then `scripts/p4_gate.sh` (10-chapter gate render) |
@@ -73,15 +79,16 @@ How tests are organized, what is and isn't covered, which tests guard which area
 ## How to verify a change safely
 
 1. `./gradlew :desktop:compileKotlin :desktop:compileTestKotlin` — fast signal.
-2. `./gradlew :desktop:test` — 226/226 required. A red exit-gate test means the CODE moved; re-read `docs/change-impact.md` before touching either side of a cue-locked corpus.
+2. `./gradlew :desktop:test` — 238/238 required. A red exit-gate test means the CODE moved; re-read `docs/change-impact.md` before touching either side of a cue-locked corpus.
 3. In CI-less sandboxes where Gradle dependency resolution is blocked, the P4+P5 suites run without Gradle: `scripts/p4_direct_test.sh` and `scripts/p5_direct_test.sh` (direct kotlinc + JUnitCore; jars via `scripts/p4_fetch_toolchain.sh` / `scripts/p5_fetch_toolchain.sh` into `.build-extras/`; P5 adds the kotlinx-serialization compiler plugin jar for the container/workbench code).
 4. The D-15 slice has its own routes (ADR-0014): `scripts/d15_build_ui.sh` compiles the FULL main tree (main sources + KSP Room impls, compose + serialization plugins) against the app image jars, refreshes `desktop/build/classes/kotlin/main`, and swaps the app jar in place + bundles epubcheck/fonts/pdfbox into the image (~84 s full rebuild; measured); `scripts/d15_direct_test.sh` compiles and runs the publishing regression set + the D-15 guards (49 tests, ~12 s compile). The app jar is the cfg's FIRST `app.classpath` entry — never glob `desktop-*` (the compose desktop-jvm library jar lives beside it).
 5. The annotator/print latency slice (D-08/D-16) has its own route: `scripts/p6_direct_test.sh` compiles the modified engine files + `AnnotatorPerfTest`, the annotator/cliché/token-bias tests and `PrintInteriorTest`; `scripts/p6_probe.sh` re-runs the D-08 latency probe (`scripts/latency_probe.kt`) — pass `EXTRA_CP=$HOME/../my-project/.build-extras/p6-classes` to measure the fixed classes against the stock build. The toolchain in `.build-extras/` is NOT in git (restorable via the fetch scripts — P6 workspace hygiene; the fetch scripts now carry EVERY jar the routes need, including the serialization plugin and coroutines-test).
 6. For serialization changes, re-run the corpus probe (`scripts/CorpusProbe.java` via jshell) and eyeball the suite verdict line (`passed=true exitGateGreen=true warnings=0`).
-7. For UI-affecting changes, run the Xvfb smoke (`scripts/p3_smoke.sh`) on a workstation and look at the screenshots in `/tmp/render-p3/`.
-8. For audiobook changes, re-run the ten-chapter gate (`scripts/p4_gate.sh`) and check the five gate lines plus the per-chapter ACX tables in the output (evidence tree lands in `download/Authr-OS-3.0-P4-Audiobook-Gate/`).
-9. For publishing changes, re-run the retail gate (`scripts/p5_gate.sh`) and check the four gate lines plus the band-probe lines (evidence tree lands in `download/Authr-OS-3.0-P5-Retail-Package/`). epubcheck must be present (the fetch script puts the dist under `.build-extras/epubcheck-dist/`; the app image bundles its own copy).
-10. If you added a planted corpus sentence, add or update the matching planted-cue assertion in the same commit (ADR-0004/0007).
+7. The D-13 slice route (ADR-0015/0016/0017): `scripts/d13_direct_test.sh` compiles the P4 audio engine mains WITH the tests in one kotlinc invocation (same-module smart casts on `ChapterRender.audit`/`masterAudit`) plus the new guard tests, and runs them with the audio + serial + publishing regression sets (68 tests, ~21 s compile + ~100 s run — RetailPackagerTest's real epubcheck runs dominate, per D-17). **CI runs every route** via `scripts/ci_direct_suite.sh` (D-07): JDK 21 + the fetch + p4/p5/p6/d13/d15, on any machine — the scripts honor `AUTHR_BASE`/`AUTHR_JAVA`/`AUTHR_EXTRAS` env overrides.
+8. For UI-affecting changes, run the Xvfb smoke (`scripts/p3_smoke.sh`) on a workstation and look at the screenshots in `/tmp/render-p3/`.
+9. For audiobook changes, re-run the ten-chapter gate (`scripts/p4_gate.sh`) and check the five gate lines plus the per-chapter ACX tables in the output (evidence tree lands in `download/Authr-OS-3.0-P4-Audiobook-Gate/`).
+10. For publishing changes, re-run the retail gate (`scripts/p5_gate.sh`) and check the four gate lines plus the band-probe lines (evidence tree lands in `download/Authr-OS-3.0-P5-Retail-Package/`). epubcheck must be present (the fetch script puts the dist under `.build-extras/epubcheck-dist/`; the app image bundles its own copy).
+11. If you added a planted corpus sentence, add or update the matching planted-cue assertion in the same commit (ADR-0004/0007).
 
 ## Adding tests (house rules)
 

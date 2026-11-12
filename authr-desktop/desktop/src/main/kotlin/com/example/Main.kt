@@ -28,7 +28,10 @@ import com.example.data.local.AppDatabase
 import com.example.data.repository.AppRepository
 import com.example.domain.usecase.GetChaptersUseCase
 import com.example.engine.L4LlmDraftGenerator
+import com.example.engine.audio.AudiobookRenderer
+import com.example.engine.audio.PronunciationPass
 import com.example.ui.screens.AudioScreen
+import com.example.ui.screens.AudiobookWorkbenchScreen
 import com.example.ui.screens.MetadataScreen
 import com.example.ui.screens.PublishingScreen
 import com.example.ui.screens.SerialDashboardScreen
@@ -37,11 +40,13 @@ import com.example.ui.screens.StoryScreen
 import com.example.ui.screens.TranslateScreen
 import com.example.ui.screens.WriterStudioScreen
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.viewmodel.AudiobookViewModel
 import com.example.ui.viewmodel.PublishingViewModel
 import com.example.ui.viewmodel.SerialDashboardViewModel
 import com.example.ui.viewmodel.SettingsViewModel
 import com.example.ui.viewmodel.StudioViewModel
 import com.example.ui.viewmodel.WriterStudioViewModel
+import com.example.worker.WorkerRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -55,6 +60,30 @@ import kotlinx.coroutines.launch
 fun main() {
     val app = DesktopApplication.instance
     app.onCreate()
+
+    // v3.0 D-01 (OQ-1 RESOLVED): the desktop edition ships the autonomous
+    // pipeline as a RUNNING feature. Register the worker factories before
+    // the UI exists, so the first enqueue (Autonomous drafting, storage
+    // cleanup, EPUB export) finds its factory instead of logging
+    // "No factory for …" and stopping. The database is the shared singleton
+    // (AppDatabase.getDatabase); the repository built here feeds the
+    // EpubExportWorker only — AuthrDesktopApp builds its own instance over
+    // the same DAOs (the repository is a stateless facade).
+    val wiringDatabase = AppDatabase.getDatabase(app)
+    WorkerRegistry.register(
+        appContext = app,
+        database = wiringDatabase,
+        repository = AppRepository(
+            storyDao = wiringDatabase.storyDao(),
+            audioTrackDao = wiringDatabase.audioTrackDao(),
+            bookDao = wiringDatabase.bookDao(),
+            chapterDao = wiringDatabase.chapterDao(),
+            lorebookDao = wiringDatabase.lorebookDao(),
+            chekhovGunDao = wiringDatabase.chekhovGunDao(),
+            questionDao = wiringDatabase.questionDao(),
+            serialArcDao = wiringDatabase.serialArcDao()
+        )
+    )
 
     application {
         val windowState = rememberWindowState(width = 1440.dp, height = 940.dp)
@@ -128,6 +157,49 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
         repository = repository,
         exportDir = app.filesDir
     )
+    // Audiobook workbench (v3.0 D-13, the P4 report handoff): engine
+    // picker → pronunciation review → one-action render → ACX report.
+    // The engine catalog is probed HERE (Context territory) — Pocket TTS
+    // needs the binary + voice pack, espeak-ng the bundled binary, the
+    // phonemizer the espeak voice; the VM stays Context-free.
+    val ffmpeg = com.example.desktopbridge.FfmpegLocator.ffmpegPath()
+    val ffprobe = com.example.desktopbridge.FfmpegLocator.ffprobePath()
+    val espeak = com.example.desktopbridge.EspeakLocator.espeakPath()
+    val pocketReady = com.example.engine.audio.PocketSynthesizer.isReady(app)
+    val audiobookViewModel = AudiobookViewModel(
+        repository = repository,
+        authrRoot = app.filesDir,
+        engineCatalog = listOf(
+            AudiobookViewModel.EngineOption(
+                id = "pocket",
+                label = "Pocket TTS",
+                continuity = "POCKET_STRUCTURAL — fixed voice pack, identity identical across chapters",
+                available = pocketReady,
+                unavailableNote = if (pocketReady) null else "install the pocket-tts binary + a .safetensors voice pack (see config-and-env)"
+            ),
+            AudiobookViewModel.EngineOption(
+                id = "espeak",
+                label = "espeak-ng",
+                continuity = "ESPEAK_LOCAL — bundled offline engine, deterministic fixed voice",
+                available = espeak != null,
+                unavailableNote = if (espeak != null) null else "espeak-ng not found"
+            )
+        ),
+        synthesizerFor = { engineId ->
+            if (engineId == "pocket") com.example.engine.audio.PocketSynthesizer(
+                packsDir = com.example.tts.PocketTtsManager.voicePacksDir(app)
+            ) else com.example.engine.audio.EspeakSynthesizer(espeak)
+        },
+        phonemizer = espeak?.let { PronunciationPass.EspeakPhonemizer(it) },
+        rendererFor = { synth ->
+            AudiobookRenderer(
+                synthesizer = synth,
+                mastering = com.example.engine.audio.MasteringChain(ffmpegPath = ffmpeg),
+                audit = com.example.engine.audio.AcxAudit(ffmpegPath = ffmpeg, ffprobePath = ffprobe)
+            )
+        }
+    )
+
     // Publishing workbench (v3.0 D-15, the P5 report handoff): metadata
     // workbench editor + one-action retail packaging + ship-report viewer.
     val publishingViewModel = PublishingViewModel(
@@ -178,6 +250,10 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
                                 viewModel = publishingViewModel,
                                 onBack = { viewModel.selectTab(0) }
                             )
+                            9 -> AudiobookWorkbenchScreen(
+                                viewModel = audiobookViewModel,
+                                onBack = { viewModel.selectTab(0) }
+                            )
                             else -> StoryScreen(viewModel = viewModel) // 0: Story, 4: recommendations live in the Story workspace
                         }
                     }
@@ -201,6 +277,7 @@ private fun GlobalWorkspaceBar(currentTab: Int, onSelect: (Int) -> Unit) {
         6 to "Writer Studio",
         7 to "Serial",
         8 to "Publishing",
+        9 to "Audiobook",
         5 to "Settings"
     )
     Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {

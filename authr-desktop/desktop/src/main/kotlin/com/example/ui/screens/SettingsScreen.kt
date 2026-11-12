@@ -165,6 +165,17 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.primary
         )
 
+        // v3.0 D-03: a broken keystore degrades to MEMORY-ONLY key storage —
+        // say so where the keys are entered, instead of silently persisting
+        // them unencrypted (the old plain-file fallback).
+        if (com.example.data.api.LlmOrchestrator.secureStorageDegraded) {
+            Text(
+                text = "Secure storage unavailable — API keys are held in memory only for this session and will NOT be saved. Re-enter them after restarting with a working keystore.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),

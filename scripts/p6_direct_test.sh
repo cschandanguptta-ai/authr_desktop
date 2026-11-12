@@ -7,7 +7,7 @@
 # classes, then runs the annotator test files + the new perf guards via
 # JUnitCore. Jars: scripts/p5_fetch_toolchain.sh into ../.build-extras/.
 set -u
-BASE=/home/z/my-project
+BASE="${AUTHR_BASE:-/home/z/my-project}"
 AD=$BASE/authr-desktop/desktop
 IMG=$AD/build/compose/binaries/main/app/AuthrOS/lib/app
 EXTRAS=$BASE/.build-extras
@@ -25,7 +25,7 @@ CP+="$AD/build/classes/kotlin/main"
 # print interior (D-16 resolver tests need pdfbox)
 CP+=":$EXTRAS/pdfbox-2.0.33.jar:$EXTRAS/fontbox-2.0.33.jar:$EXTRAS/commons-logging-1.2.jar"
 
-JAVA=/tmp/my-project/tools/jdk/bin/java
+JAVA="${AUTHR_JAVA:-/tmp/my-project/tools/jdk/bin/java}"
 COMPILER_CP="$EXTRAS/kotlin-compiler-embeddable-2.2.10.jar:$EXTRAS/trove4j-1.0.20200330.jar:$IMG/kotlin-stdlib-2.2.10-ab998b5a8873e5635565578249af83.jar:$IMG/kotlin-reflect-1.8.21-6c7edbaeeb3b6b1b678269e482fa1c.jar:$IMG/kotlinx-coroutines-core-jvm-1.10.2-16bb58d0777fca3b2efde66862478c.jar:$IMG/annotations-23.0.0-8484cd17d040d837983323f760b2c660.jar"
 
 MAIN_SRCS="$SRC/com/example/engine/LiveAstAnnotator.kt \
@@ -68,7 +68,7 @@ public class RunP6Tests {
     }
 }
 EOF
-JAVAC=/tmp/my-project/tools/jdk/bin/javac
+JAVAC="$(dirname "$JAVA")/javac"
 "$JAVAC" -cp "$RUN_CP" -d "$OUT" /tmp/RunP6Tests.java || { echo "launcher compile failed"; exit 1; }
 
 "$JAVA" -Xmx3g -cp "$RUN_CP" RunP6Tests \

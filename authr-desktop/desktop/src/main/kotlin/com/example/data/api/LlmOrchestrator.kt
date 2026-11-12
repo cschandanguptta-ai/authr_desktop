@@ -7,6 +7,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object LlmOrchestrator {
+
+    /**
+     * True when the encrypted store could not be opened and API keys are
+     * held in MEMORY ONLY for this session (v3.0 D-03, OQ-4 decided
+     * 2026-11-12): a broken keystore never silently downgrades to PLAIN
+     * persistent storage — secrets stay volatile, the status line in the
+     * Settings screen says so, and a restart needs the keys re-entered.
+     */
+    @Volatile
+    var secureStorageDegraded: Boolean = false
+        private set
+
     
     enum class Agent(val key: String, val displayName: String) {
         EXECUTIVE("executive", "Executive Orchestrator"),
@@ -27,8 +39,20 @@ object LlmOrchestrator {
         sharedPrefs.edit().putString("agent_provider_${agent.key}", provider).apply()
     }
 
-    private fun getSecurePrefs(context: Context): android.content.SharedPreferences {
+    /**
+     * Opens the encrypted preferences store (the single construction site
+     * for both LlmOrchestrator and SettingsViewModel). On any keystore
+     * failure the fallback is IN-MEMORY ONLY — never the old plain
+     * `secure_studio_settings_fallback` file (D-03: keys must not persist
+     * unencrypted, with no user signal). [forceFallback] is the test hook
+     * that proves the fallback is volatile.
+     */
+    fun openSecurePrefs(
+        context: Context,
+        forceFallback: Boolean = false
+    ): android.content.SharedPreferences {
         return try {
+            if (forceFallback) throw IllegalStateException("forced fallback (D-03 test hook)")
             val masterKey = androidx.security.crypto.MasterKey.Builder(context)
                 .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
                 .build()
@@ -41,9 +65,18 @@ object LlmOrchestrator {
                 androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (e: Exception) {
-            context.getSharedPreferences("secure_studio_settings_fallback", Context.MODE_PRIVATE)
+            secureStorageDegraded = true
+            Log.e(
+                "LlmOrchestrator",
+                "Encrypted preferences unavailable (${e.message}); API keys stay in MEMORY ONLY " +
+                    "for this session — nothing is written to disk unencrypted (D-03)."
+            )
+            android.content.SharedPreferences.Companion.inMemory()
         }
     }
+
+    private fun getSecurePrefs(context: Context): android.content.SharedPreferences =
+        openSecurePrefs(context)
 
     private fun getApiKeys(context: Context, provider: String): List<String> {
         val sharedPrefs = getSecurePrefs(context)
