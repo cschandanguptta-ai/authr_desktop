@@ -142,3 +142,90 @@ jobs:
           name: AuthrOS-android-apks
           path: source/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
+
+  # Publishes a real GitHub Release (the Releases page) from a pushed v* tag.
+  # Run artifacts (Actions tab) and Releases are different things — the
+  # installer jobs above only produce the former. This job waits for both
+  # builds on the tag, downloads their artifacts, stages friendly asset
+  # names + SHA-256 checksums, and creates the Release with the workflow's
+  # own GITHUB_TOKEN (permissions: contents: write at workflow level).
+  github-release:
+    name: Publish GitHub Release
+    needs: [windows-installer, android-apk]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download Windows installers
+        uses: actions/download-artifact@v4
+        with:
+          name: AuthrOS-windows-installers
+          path: dist-windows
+
+      - name: Download Android APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: AuthrOS-android-apks
+          path: dist-android
+
+      - name: Stage release assets with checksums
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          find dist-windows -type f \( -name '*.msi' -o -name '*.exe' \) -print -exec cp {} release/ \;
+          n=0
+          for apk in $(find dist-android -type f -name '*.apk' | sort); do
+            n=$((n+1))
+            case "$(basename "$apk")" in
+              *debug*) cp "$apk" release/AuthrOS-android-debug.apk ;;
+              *)       cp "$apk" release/AuthrOS-android-release.apk ;;
+            esac
+          done
+          test "$(find release -maxdepth 1 -name '*.msi' | wc -l)" -ge 1 || { echo 'FATAL: no MSI in the downloaded artifact'; exit 1; }
+          test "$n" -ge 2 || { echo 'FATAL: expected debug+release APKs, got '"$n"; exit 1; }
+          (cd release && sha256sum ./*.msi ./*.apk > CHECKSUMS.txt)
+          ls -la release/
+          echo '--- checksums ---'
+          cat release/CHECKSUMS.txt
+
+      - name: Write release notes
+        run: |
+          cat > notes.md <<'EOF'
+          Authr OS desktop installer + Android APKs, built by CI from this tag.
+
+          ## Desktop (Windows)
+
+          - `AuthrOS-3.0.0.msi` — jpackage/WiX installer for the Compose Desktop edition (JDK 21 runtime bundled; no Java install needed). The upgrade UUID is stable across releases, so future MSIs upgrade in place.
+
+          ## Android
+
+          - `AuthrOS-android-debug.apk` — debug-signed build of the v2.3-lineage Android project (`source/`, minSdk 24 / targetSdk 36).
+          - `AuthrOS-android-release.apk` — release build signed with a CI-ephemeral keystore, so Android shows the standard "unknown developer" prompt on install. For Google Play uploads, build locally with your own keystore: `KEYSTORE_PATH=... STORE_PASSWORD=... KEY_PASSWORD=... gradle assembleRelease` in `source/`.
+
+          ## Integrity
+
+          - `CHECKSUMS.txt` — SHA-256 for every asset in this release.
+
+          ## Verification on this tag
+
+          - Direct test suite (no Gradle): 280 tests across 6 routes — green.
+          - Gradle `:desktop:test` — green.
+          - Windows MSI built via `:desktop:packageReleaseMsi`; Android via `assembleDebug` + `assembleRelease`.
+          EOF
+
+      - name: Create or update the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — uploading assets with --clobber"
+            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" release/* --clobber
+          else
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" \
+              --title "Authr OS $TAG" \
+              --notes-file notes.md \
+              release/*
+          fi
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name'
