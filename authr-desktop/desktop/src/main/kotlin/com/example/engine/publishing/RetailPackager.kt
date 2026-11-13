@@ -160,19 +160,21 @@ object RetailPackager {
         //     overlaps the gate too. Verdict ORDER is preserved (epub results
         //     in volume order, then the print verdict) — only the wall clock
         //     shrinks; the 2-volume serial measured 14.2 s → 7.4 s.
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(minOf(4, epubResults.size + 1))
-        val epubFutures = epubResults.map { er ->
-            pool.submit(java.util.concurrent.Callable { runEpubCheck(er) })
-        }
-        val printFuture = pool.submit(java.util.concurrent.Callable { renderPrintStage(wb, input, canon, outDir) })
-        val epubVerdicts = epubFutures.map { it.get() }
-        val printStage = printFuture.get()
-        pool.shutdown()
-        val verdicts = mutableListOf<ShipReport.GateVerdict>()
-        verdicts += epubVerdicts
-        verdicts += printStage.verdict
-        val printResult = printStage.result
-        val printQuote = printStage.quote
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(
+            minOf(4, epubResults.size + 1)
+        ) { r -> Thread(r, "authr-retail-packager") }
+        try {
+            val epubFutures = epubResults.map { er ->
+                pool.submit(java.util.concurrent.Callable { runEpubCheck(er) })
+            }
+            val printFuture = pool.submit(java.util.concurrent.Callable { renderPrintStage(wb, input, canon, outDir) })
+            val epubVerdicts = epubFutures.map { it.get() }
+            val printStage = printFuture.get()
+            val verdicts = mutableListOf<ShipReport.GateVerdict>()
+            verdicts += epubVerdicts
+            verdicts += printStage.verdict
+            val printResult = printStage.result
+            val printQuote = printStage.quote
 
         // 6. pricing record
         val ebookQuote = epubResults.maxByOrNull { it.sizeBytes }?.let {
@@ -236,6 +238,20 @@ object RetailPackager {
             clean = ShipReport.isClean(verdicts),
             disclosures = disclosures
         )
+        } finally {
+            // 2026-11-13 (test-isolation fix): shutdown() alone lets the pool's
+            // idle threads park for their full 60 s keepalive AFTER this call
+            // returns — a leaked "authr-retail-packager" thread then observes
+            // JVM-global state (user.home, user.dir) that a LATER test in the
+            // same JVM has flipped (the direct routes run whole slices in one
+            // JVM). Futures are already .get()'d above, so termination is
+            // immediate in the normal path; awaitTermination only guards the
+            // pathological case.
+            pool.shutdown()
+            if (!pool.awaitTermination(60, java.util.concurrent.TimeUnit.SECONDS)) {
+                pool.shutdownNow()
+            }
+        }
     }
 
     /** The print-interior stage (render + verdict + quote), runnable off-thread. */

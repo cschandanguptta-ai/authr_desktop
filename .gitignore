@@ -26,3 +26,4 @@ node_modules/
 # kotlinc test route (scripts/p5_direct_test.sh, p6_direct_test.sh) compiles
 # against the app image jars and compiled main classes inside it, and Gradle
 # cannot run in the gate sandbox. Do not gitignore it.
+.env

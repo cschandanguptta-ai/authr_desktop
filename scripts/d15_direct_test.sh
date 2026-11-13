@@ -27,7 +27,8 @@ $TSRC/com/example/PublishingWorkbenchTest.kt \
 $TSRC/com/example/RetailPackagerTest.kt \
 $TSRC/com/example/PublishingMetadataTest.kt \
 $TSRC/com/example/VolumeBundlerTest.kt \
-$TSRC/com/example/ShipReportTest.kt"
+$TSRC/com/example/ShipReportTest.kt \
+$TSRC/com/example/RetailPackagerIsolationTest.kt"
 if ! "$JAVA" -Xmx2g -cp "$COMPILER_CP" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler \
   -classpath "$CP" -jvm-target 21 -no-stdlib -nowarn \
   -d "$OUT" $TEST_SRCS >"$EXTRAS/d15-test-compile.log" 2>&1; then
@@ -63,6 +64,7 @@ cd "$BASE"  # user.dir = repo root so EpubCheckLocator finds .build-extras dist
   com.example.PrintInteriorTest \
   com.example.PublishingWorkbenchTest \
   com.example.RetailPackagerTest \
+  com.example.RetailPackagerIsolationTest \
   com.example.PublishingMetadataTest \
   com.example.VolumeBundlerTest \
   com.example.ShipReportTest

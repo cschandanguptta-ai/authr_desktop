@@ -116,30 +116,37 @@ class PrintInteriorTest {
 
     @Test
     fun `bundled app-dir fonts are found — the packaged image layout`() {
-        // Stage a face into <code-source parent>/fonts/ exactly where the
-        // packaged image ships it, and make ~/.authr miss, so the app-dir
-        // candidate (the D-16 bundle, the EpubCheckLocator pattern) is the
-        // one that satisfies the search — before the system dirs.
-        val parent = PrintInterior::class.java.protectionDomain.codeSource?.location
-            ?.toURI()?.let { java.io.File(it).parentFile }
-        org.junit.Assume.assumeTrue("code source has no parent dir (jar-in-jar layout)", parent != null)
+        // Stage a face into a TEMP "app dir" exactly where the packaged image
+        // ships it, and make ~/.authr miss, so the app-dir candidate (the
+        // D-16 bundle, the EpubCheckLocator pattern) is the one that satisfies
+        // the search — before the system dirs.
+        // 2026-11-13 (test-isolation fix): the search order is
+        // <resources-dir>/fonts, then <code-source parent>/fonts. The old
+        // version staged into the REAL code-source parent — the shared
+        // tracked build/classes tree every other test in this JVM reads —
+        // restoring a deleted file was best-effort and a crash mid-test left
+        // the poisoned file behind for every later test (observed as a
+        // cross-test font-resolution flake). Staging through the
+        // compose.application.resources.dir property points the search at a
+        // private temp dir: nothing shared is touched.
+        val resourcesDir = createTempDir("authr-fonts-appdir")
+        val staged = java.io.File(java.io.File(resourcesDir, "fonts"), "DejaVuSerif.ttf")
+        staged.parentFile.mkdirs()
         val src = java.io.File("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf")
         org.junit.Assume.assumeTrue("dejavu serif not present on this machine", src.isFile)
-        val staged = java.io.File(java.io.File(parent!!, "fonts"), "DejaVuSerif.ttf")
-        staged.parentFile.mkdirs()
-        // The app-dir candidate is the BUNDLED image's fonts/ dir — the file
-        // may already exist there (D-16 bundle). Back it up and restore it:
-        // a test must never consume the shipped bundle.
-        val backup = staged.takeIf { it.isFile }?.readBytes()
         staged.writeBytes(src.readBytes())
         val origHome = System.getProperty("user.home")
+        val origRes = System.getProperty("compose.application.resources.dir")
         System.setProperty("user.home", "/nonexistent-authr-home")
+        System.setProperty("compose.application.resources.dir", resourcesDir.absolutePath)
         try {
             val resolved = PrintInterior.resolveFontPath(explicitPath = "", bold = false)
             assertEquals(staged.absolutePath, resolved, "the bundled app-dir face wins before the system dirs")
         } finally {
             System.setProperty("user.home", origHome)
-            if (backup != null) staged.writeBytes(backup) else staged.delete()
+            if (origRes == null) System.clearProperty("compose.application.resources.dir")
+            else System.setProperty("compose.application.resources.dir", origRes)
+            resourcesDir.deleteRecursively()
         }
     }
 

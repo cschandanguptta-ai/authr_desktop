@@ -90,7 +90,14 @@ compose.desktop {
             windows {
                 menu = true
                 dirChooser = true
-                upgradeUuid = "6ac9d1e0-1f9a-4b8f-9f8f-authros20desk"
+                // 2026-11-13 (push-preflight bug #4): the old value
+                // "6ac9d1e0-1f9a-4b8f-9f8f-authros20desk" is NOT parseable by
+                // UUID.fromString ("authros20desk" is not hex) — the Compose
+                // plugin validates upgradeUuid when generating the Windows
+                // upgrade identity, so the MSI/EXE packaging task dies at
+                // configuration time on the Windows runner. Deterministic v5
+                // (URL namespace) so rebuilds keep the same upgrade identity.
+                upgradeUuid = "f5d50191-48ab-5410-b4d0-042ebed917cb"
             }
             macOS {
                 bundleID = "com.aistudio.audionovelstudio.nxkpt"
