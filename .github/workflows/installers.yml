@@ -195,7 +195,7 @@ jobs:
 
           ## Desktop (Windows)
 
-          - `AuthrOS-3.0.0.msi` — jpackage/WiX installer for the Compose Desktop edition (JDK 21 runtime bundled; no Java install needed). The upgrade UUID is stable across releases, so future MSIs upgrade in place.
+          - `AuthrOS-3.1.0.msi` — jpackage/WiX installer for the Compose Desktop edition (JDK 21 runtime bundled; no Java install needed). The upgrade UUID is stable across releases, so future MSIs upgrade in place.
 
           ## Android
 

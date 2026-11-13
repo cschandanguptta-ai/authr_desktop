@@ -19,7 +19,7 @@ The `installers` workflow builds the installers on every push (run artifacts
 under the Actions tab). Pushing a `v*` tag additionally **publishes a GitHub
 Release** — Releases page, repo right sidebar — with:
 
-- `AuthrOS-3.0.0.msi` — jpackage/WiX installer (upgrade UUID
+- `AuthrOS-3.1.0.msi` — jpackage/WiX installer (upgrade UUID
   `f5d50191-48ab-5410-b4d0-042ebed917cb`, stable across releases).
 - `AuthrOS-android-debug.apk` + `AuthrOS-android-release.apk` — the Android
   project (minSdk 24 / targetSdk 36); the release APK is signed with a

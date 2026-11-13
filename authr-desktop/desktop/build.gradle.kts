@@ -80,7 +80,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Msi, TargetFormat.Dmg, TargetFormat.AppImage, TargetFormat.Exe)
             packageName = "AuthrOS"
-            packageVersion = "3.0.0"
+            packageVersion = "3.1.0"
             description = "Authr: The Autonomous Author Operating System - Desktop Edition"
             vendor = "Authr OS"
             copyright = "© 2026 Authr OS. All rights reserved."
