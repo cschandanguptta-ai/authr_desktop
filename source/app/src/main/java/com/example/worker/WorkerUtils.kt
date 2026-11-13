@@ -56,10 +56,17 @@ fun createForegroundInfo(context: android.content.Context, notificationTitle: St
         .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
         .build()
 
+    // 2026-11-13 (CI fix): FOREGROUND_SERVICE_TYPE_DATA_SYNC on API 29-33 made
+    // lintVitalRelease fatal ("Missing dataSync foregroundServiceType in the
+    // AndroidManifest.xml") — the manifest declares specialUse for
+    // SystemForegroundService, so the code now matches it on every API level.
+    // (specialUse exists from API 34; on 29-33 the manifest override of the
+    // WorkManager service entry is what the platform consults, and the
+    // FOREGROUND_SERVICE_SPECIAL_USE permission gates 34+.)
     return if (android.os.Build.VERSION.SDK_INT >= 34) {
         androidx.work.ForegroundInfo(1001, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
     } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-        androidx.work.ForegroundInfo(1001, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        androidx.work.ForegroundInfo(1001, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
     } else {
         androidx.work.ForegroundInfo(1001, notification)
     }
