@@ -30,7 +30,7 @@ Authr OS is a multi-agent AI authoring workstation ported from Android to deskto
 
 ## Commands
 
-Run from `authr-desktop/` (Gradle 8.13, JDK 21; sandbox note: `org.gradle.java.home` in `gradle.properties` points to `/tmp/my-project/tools/jdk`):
+Run from `authr-desktop/` (Gradle 8.14, JDK 21; sandbox note: pass the sandbox JDK via the CLI, `-Dorg.gradle.java.home=/tmp/my-project/tools/jdk` — `gradle.properties` no longer pins machine-local paths):
 
 ```bash
 ./gradlew :desktop:test                 # full test suite (253 tests as of the 2026-11-12 audit slice; the no-Gradle direct routes run 278 including cross-route regression repeats)
