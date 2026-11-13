@@ -65,4 +65,5 @@ jobs:
           gradle-version: '8.14'
 
       - name: Run :desktop:test
+        working-directory: authr-desktop
         run: gradle :desktop:test --no-daemon

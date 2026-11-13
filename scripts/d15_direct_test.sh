@@ -57,7 +57,7 @@ public class RunD15Tests {
     }
 }
 EOF
-"$JAVA" -cp /tmp RunD15Tests 2>/dev/null >/dev/null || /tmp/my-project/tools/jdk/bin/javac -cp "$EXTRAS/junit-4.13.2.jar" -d /tmp /tmp/RunD15Tests.java
+"$JAVA" -cp /tmp RunD15Tests 2>/dev/null >/dev/null || { JAVAC=$(dirname "$JAVA")/javac; [ -x "$JAVAC" ] || JAVAC=javac; "$JAVAC" -cp "$EXTRAS/junit-4.13.2.jar" -d /tmp /tmp/RunD15Tests.java; }
 
 cd "$BASE"  # user.dir = repo root so EpubCheckLocator finds .build-extras dist
 "$JAVA" -Xmx2g -cp "/tmp:$RUN_CP" RunD15Tests \
