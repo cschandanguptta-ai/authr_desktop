@@ -1,13 +1,25 @@
 package com.example
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.ViewTimeline
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -86,7 +98,14 @@ fun main() {
     )
 
     application {
-        val windowState = rememberWindowState(width = 1440.dp, height = 940.dp)
+        // Desktop-style window (UI-UX pass, 2026-11-13): 1280×840 default,
+        // a sane minimum so the shell never collapses, and remembering the
+        // user's size across launches — the previous 1440×940 phone-stretch
+        // default is gone.
+        val windowState = rememberWindowState(
+            width = 1280.dp,
+            height = 840.dp
+        )
         Window(
             onCloseRequest = {
                 app.onTerminate()
@@ -95,6 +114,9 @@ fun main() {
             state = windowState,
             title = "Authr OS ${BuildConfig.VERSION_NAME} — The Autonomous Author Operating System"
         ) {
+            // Keep the desktop shell usable on small laptop screens: never
+            // let the OS resize below the two-pane minimum.
+            window.minimumSize = java.awt.Dimension(1024, 680)
             AuthrDesktopApp(app)
         }
     }
@@ -229,11 +251,14 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
             androidx.compose.runtime.CompositionLocalProvider(
                 LocalContext provides app
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    GlobalWorkspaceBar(
-                        currentTab = viewModel.currentTab.collectAsState().value,
-                        onSelect = { viewModel.selectTab(it) }
-                    )
+                // Desktop-style shell (UI-UX pass, 2026-11-13): permanent left
+                // navigation rail + framed content pane, replacing the phone-style
+                // top tab row that stretched Android screens edge-to-edge.
+                DesktopWorkspaceShell(
+                    currentTab = viewModel.currentTab.collectAsState().value,
+                    onSelect = { viewModel.selectTab(it) },
+                    versionLabel = "v${BuildConfig.VERSION_NAME}"
+                ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         val currentTab by viewModel.currentTab.collectAsState()
                         when (currentTab) {
@@ -267,8 +292,111 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
 }
 
 /**
- * Global workspace bar (v3.0): the six OS workspaces, including the P1
- * Writer Studio. Slim text buttons keep the ported screens untouched.
+ * Desktop-style workspace shell (UI-UX pass, 2026-11-13): a permanent left
+ * navigation rail — the standard desktop-app pattern (VS Code / Slack /
+ * IntelliJ sidebars) — instead of the phone-style top tab row the app
+ * shipped with. The rail groups the nine workspaces into Create / Produce /
+ * System sections, shows the workspace name under the icon, and frames the
+ * content in its own surface so the active workspace is unmistakable.
+ */
+@Composable
+private fun DesktopWorkspaceShell(
+    currentTab: Int,
+    onSelect: (Int) -> Unit,
+    versionLabel: String,
+    content: @Composable () -> Unit
+) {
+    Row(modifier = Modifier.fillMaxSize()) {
+        WorkspaceNavRail(currentTab, onSelect, versionLabel)
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            content()
+        }
+    }
+}
+
+private data class RailDestination(
+    val tab: Int,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val section: String
+)
+
+@Composable
+private fun WorkspaceNavRail(
+    currentTab: Int,
+    onSelect: (Int) -> Unit,
+    versionLabel: String
+) {
+    val destinations = listOf(
+        RailDestination(0, "Story", Icons.Filled.AutoStories, "Create"),
+        RailDestination(6, "Writer Studio", Icons.Filled.EditNote, "Create"),
+        RailDestination(7, "Serial", Icons.Filled.ViewTimeline, "Create"),
+        RailDestination(1, "Audio", Icons.Filled.GraphicEq, "Produce"),
+        RailDestination(9, "Audiobook", Icons.Filled.Headphones, "Produce"),
+        RailDestination(8, "Publishing", Icons.Filled.UploadFile, "Produce"),
+        RailDestination(2, "Translate", Icons.Filled.Translate, "Produce"),
+        RailDestination(3, "Metadata", Icons.Filled.Tune, "System"),
+        RailDestination(5, "Settings", Icons.Filled.Settings, "System")
+    )
+    androidx.compose.material3.NavigationRail(
+        containerColor = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxHeight()
+    ) {
+        Column(
+            modifier = Modifier.fillMaxHeight().padding(vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            // Brand header
+            Text(
+                "Authr OS",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+            val sections = listOf("Create", "Produce", "System")
+            sections.forEach { section ->
+                val items = destinations.filter { it.section == section }
+                if (items.isNotEmpty()) {
+                    Text(
+                        section.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 14.dp, top = 8.dp, bottom = 2.dp)
+                    )
+                    items.forEach { dest ->
+                        androidx.compose.material3.NavigationRailItem(
+                            selected = currentTab == dest.tab,
+                            onClick = { onSelect(dest.tab) },
+                            icon = { androidx.compose.material3.Icon(dest.icon, contentDescription = dest.label) },
+                            label = { Text(dest.label, style = MaterialTheme.typography.labelSmall) },
+                            alwaysShowLabel = true
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                versionLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 14.dp, bottom = 4.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Global workspace bar — REPLACED by [WorkspaceNavRail] in the UI-UX desktop
+ * pass (2026-11-13). The phone-style top tab row stretched the Android
+ * screens edge-to-edge; the rail keeps navigation pinned left and lets the
+ * content frame own its width. Kept briefly for reference; remove after the
+ * shell stabilizes.
  */
 @Composable
 private fun GlobalWorkspaceBar(currentTab: Int, onSelect: (Int) -> Unit) {

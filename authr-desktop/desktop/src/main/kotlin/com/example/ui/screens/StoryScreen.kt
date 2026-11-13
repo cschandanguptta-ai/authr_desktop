@@ -92,10 +92,13 @@ fun StoryScreen(
         modifier = modifier.fillMaxSize()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+            // UI-UX desktop pass (2026-11-13): the phone-style TabRow split
+            // the header in two half-window tabs; desktop apps use compact
+            // leading tabs. The row is no longer fillMaxWidth.
             TabRow(
                 selectedTabIndex = activeWorkspaceTab,
                 containerColor = MaterialTheme.colorScheme.surface,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.widthIn(max = 560.dp)
             ) {
                 Tab(
                     selected = activeWorkspaceTab == 0,
@@ -115,6 +118,9 @@ fun StoryScreen(
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (activeWorkspaceTab == 0) {
+                    // UI-UX desktop pass (2026-11-13): centered readable
+                    // column for the wizard form.
+                    com.example.ui.components.DesktopContentPane {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -2099,6 +2105,7 @@ fun StoryScreen(
             }
         }
     }
+    } // end DesktopContentPane (wizard)
 
 
                 } else {

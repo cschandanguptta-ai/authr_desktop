@@ -64,8 +64,11 @@ fun TranslateScreen(
         Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
     }
 
+    // UI-UX desktop pass (2026-11-13): readable centered column instead of
+    // the stretched phone-form.
+    com.example.ui.components.DesktopContentPane(modifier = modifier) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(6.dp),
@@ -656,6 +659,7 @@ fun TranslateScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
     }
+    } // end DesktopContentPane — the editors below are window overlays.
 
     if (showInputDistractionFreeEditor) {
         DistractionFreeManuscriptEditor(

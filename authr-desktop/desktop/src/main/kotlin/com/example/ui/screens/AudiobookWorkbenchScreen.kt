@@ -60,6 +60,8 @@ fun AudiobookWorkbenchScreen(
     val book = books.firstOrNull { it.id == selectedBookId }
     val canonCount = remember(chapters) { WriterGate.canonChapters(chapters).size }
 
+    // UI-UX desktop pass (2026-11-13): readable centered column.
+    com.example.ui.components.DesktopContentPane {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -178,6 +180,7 @@ fun AudiobookWorkbenchScreen(
             )
         }
     }
+    } // end DesktopContentPane
 }
 
 @Composable

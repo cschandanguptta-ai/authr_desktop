@@ -61,6 +61,8 @@ fun PublishingScreen(
 
     var showShipReport by remember { mutableStateOf(false) }
 
+    // UI-UX desktop pass (2026-11-13): readable centered column.
+    com.example.ui.components.DesktopContentPane {
     Column(Modifier.fillMaxSize()) {
         // ── Header ──────────────────────────────────────────────────────
         Surface(tonalElevation = 3.dp) {
@@ -95,7 +97,7 @@ fun PublishingScreen(
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            return
+            return@DesktopContentPane
         }
 
         // ── Body ────────────────────────────────────────────────────────
@@ -142,6 +144,7 @@ fun PublishingScreen(
             }
         }
     }
+    } // end DesktopContentPane
 }
 
 // ----------------------------------------------------------------------

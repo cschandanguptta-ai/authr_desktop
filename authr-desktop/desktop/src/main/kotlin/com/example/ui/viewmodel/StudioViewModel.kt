@@ -102,7 +102,11 @@ class StudioViewModel(
     }
 
     // --- State variables ---
-    private val _currentTab = MutableStateFlow(0) // 0: Story, 1: Audio, 2: Translate, 3: Metadata, 4: Recs, 5: Settings
+    // UI smoke hook (2026-11-13): -Dauthr.ui.startTab=N boots a specific
+    // workspace (screenshots / launcher smoke); unset → Story, as shipped.
+    private val _currentTab = MutableStateFlow(
+        runCatching { System.getProperty("authr.ui.startTab")?.toInt() ?: 0 }.getOrDefault(0)
+    ) // 0: Story, 1: Audio, 2: Translate, 3: Metadata, 4: Recs, 5: Settings
     val currentTab: StateFlow<Int> = _currentTab.asStateFlow()
 
     // Database Flows

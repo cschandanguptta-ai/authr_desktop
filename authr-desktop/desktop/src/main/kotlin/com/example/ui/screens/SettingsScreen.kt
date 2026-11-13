@@ -151,8 +151,11 @@ fun SettingsScreen(
         selectedProv = provider
     }
 
+    // UI-UX desktop pass (2026-11-13): bound the form to a readable centered
+    // column instead of stretching it edge-to-edge across the window.
+    com.example.ui.components.DesktopContentPane(modifier = modifier) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(6.dp),
@@ -1782,6 +1785,7 @@ fun SettingsScreen(
         }
         Spacer(modifier = Modifier.height(16.dp))
     }
+    } // end DesktopContentPane
 }
 
 private fun formatBytes(bytes: Long): String {

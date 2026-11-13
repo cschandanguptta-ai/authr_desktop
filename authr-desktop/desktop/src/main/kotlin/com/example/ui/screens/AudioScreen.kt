@@ -167,8 +167,11 @@ fun AudioScreen(
         }
     }
 
+    // UI-UX desktop pass (2026-11-13): readable centered column instead of
+    // the stretched phone-form.
+    com.example.ui.components.DesktopContentPane(modifier = modifier) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(6.dp),
@@ -1739,6 +1742,8 @@ fun AudioScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
     }
+    } // end DesktopContentPane — dialogs below are window-level overlays,
+      // intentionally OUTSIDE the centered column.
 
     // Save synthesis project name dialog
     if (showSynthesisTitleDialog) {
