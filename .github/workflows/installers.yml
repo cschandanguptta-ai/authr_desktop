@@ -99,7 +99,9 @@ jobs:
       - name: Set up Gradle (pinned)
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.1.0'
+          # AGP 9.1.1's version-check plugin enforces Gradle >= 9.3.1
+          # (first CI round failed at 9.1.0 with exactly that message).
+          gradle-version: '9.3.1'
 
       - name: Generate ephemeral keystores
         working-directory: source
