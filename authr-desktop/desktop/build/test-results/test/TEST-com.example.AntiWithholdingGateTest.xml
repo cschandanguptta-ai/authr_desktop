@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.AntiWithholdingGateTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:06.587Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="3.211">
+<testsuite name="com.example.AntiWithholdingGateTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:17.622Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.183">
   <properties/>
   <testcase name="the golden serial passes the gate" classname="com.example.AntiWithholdingGateTest" time="0.025"/>
-  <testcase name="the seeded withheld variant differs from the golden serial only in chapter 5" classname="com.example.AntiWithholdingGateTest" time="3.161"/>
+  <testcase name="the seeded withheld variant differs from the golden serial only in chapter 5" classname="com.example.AntiWithholdingGateTest" time="0.105"/>
   <testcase name="a payoff without a consequential seed still fails — both halves are required" classname="com.example.AntiWithholdingGateTest" time="0.005"/>
   <testcase name="non-serialized projects are never gated" classname="com.example.AntiWithholdingGateTest" time="0.001"/>
   <testcase name="retail-only books without a free tier are not gated" classname="com.example.AntiWithholdingGateTest" time="0.004"/>
-  <testcase name="the gate fires exactly on the seeded withheld-payoff project" classname="com.example.AntiWithholdingGateTest" time="0.01"/>
+  <testcase name="the gate fires exactly on the seeded withheld-payoff project" classname="com.example.AntiWithholdingGateTest" time="0.012"/>
   <testcase name="the gate binds to the free tier size, not chapter 5" classname="com.example.AntiWithholdingGateTest" time="0.005"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>

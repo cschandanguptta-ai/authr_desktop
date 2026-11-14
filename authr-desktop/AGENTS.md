@@ -1,4 +1,4 @@
-# AGENTS.md — Authr OS Desktop (v3.0, P5 complete + post-P5 maintenance slice: D-08 latency, D-15/D-16 steps, OQ-16 resolution, workspace hygiene)
+# AGENTS.md — Authr OS Desktop (v3.1 + ADR-0018: the commercial authoring pipeline — nine gated stages, editorial intelligence layer, schema v16)
 
 Authr OS is a multi-agent AI authoring workstation ported from Android to desktop (Kotlin JVM + Compose Multiplatform). Six Weaver sub-agents (Executive, Plot Architect, Character Psychologist, World Builder, Scene Composer, Continuity Manager) run over a multi-provider LLM orchestrator (Gemini, Mistral, OpenRouter, Groq, NVIDIA, Custom OpenAI, Ollama) to plan, draft, quality-gate, serialize, narrate, and export books and web-novel serials. Every generated artifact is a PROPOSED proposal that becomes canon only when the writer confirms it (writer-sovereignty, `WriterGate`). Projects live in a Room SQLite database and travel as `.authr` container zip files.
 

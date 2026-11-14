@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.ShipReportTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:26.483Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.001">
+  <properties/>
+  <testcase name="empty waiver list says none" classname="com.example.ShipReportTest" time="0.001"/>
+  <testcase name="serial disclosures sections render" classname="com.example.ShipReportTest" time="0.0"/>
+  <testcase name="chekov waivers are disclosed with their notes never silent" classname="com.example.ShipReportTest" time="0.0"/>
+  <testcase name="report renders verdicts artifacts and package verdict" classname="com.example.ShipReportTest" time="0.0"/>
+  <testcase name="waiver lines derive from waived guns with mandatory notes" classname="com.example.ShipReportTest" time="0.0"/>
+  <testcase name="clean only when every verdict passed" classname="com.example.ShipReportTest" time="0.0"/>
+  <testcase name="red verdicts make the package not clean and say so" classname="com.example.ShipReportTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.SmilExporterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:26.489Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.013">
+  <properties/>
+  <testcase name="timing sanity accepts contiguous full coverage" classname="com.example.SmilExporterTest" time="0.0"/>
+  <testcase name="xhtml document carries the matching fragment ids" classname="com.example.SmilExporterTest" time="0.0"/>
+  <testcase name="timing sanity rejects gaps, overlaps and a mismatched final clip" classname="com.example.SmilExporterTest" time="0.003"/>
+  <testcase name="smil document pairs every text fragment with its audio segment" classname="com.example.SmilExporterTest" time="0.008"/>
+  <testcase name="fragmentText splits paragraphs and long paragraphs by sentence" classname="com.example.SmilExporterTest" time="0.001"/>
+  <testcase name="fragmentsWithTimings lays fragments end to end weighted by words" classname="com.example.SmilExporterTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

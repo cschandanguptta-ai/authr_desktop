@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.PersonaRegistryTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:22.239Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.007">
+  <properties/>
+  <testcase name="an invalid plugin persona file is never loaded" classname="com.example.PersonaRegistryTest" time="0.003"/>
+  <testcase name="legacy story-studio display names map to registry ids" classname="com.example.PersonaRegistryTest" time="0.0"/>
+  <testcase name="adult genres are classified for the picker gate" classname="com.example.PersonaRegistryTest" time="0.0"/>
+  <testcase name="stored author-persona values migrate to ids without losing the old semantics" classname="com.example.PersonaRegistryTest" time="0.001"/>
+  <testcase name="resolve falls back to standard for an unknown id and never throws" classname="com.example.PersonaRegistryTest" time="0.0"/>
+  <testcase name="shipped plugin personas parse into registry personas and built-ins win collisions" classname="com.example.PersonaRegistryTest" time="0.001"/>
+  <testcase name="the ten author roles are real registry personas" classname="com.example.PersonaRegistryTest" time="0.0"/>
+  <testcase name="the canonical card carries every persona trait plus banned patterns" classname="com.example.PersonaRegistryTest" time="0.001"/>
+  <testcase name="exactly the five v2-3 erotica personas are flagged adult" classname="com.example.PersonaRegistryTest" time="0.0"/>
+  <testcase name="an adult persona resolves to standard while the 18+ gate is closed" classname="com.example.PersonaRegistryTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

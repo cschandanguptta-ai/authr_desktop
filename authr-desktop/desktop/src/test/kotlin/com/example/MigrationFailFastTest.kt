@@ -70,7 +70,7 @@ class MigrationFailFastTest {
     fun `a schema gap throws instead of wiping the database`() {
         val dbFile = oldVersionFile(version = 3)
         try {
-            // No migrations registered: 3 -> 15 has no path. With the old
+            // No migrations registered: 3 -> 16 has no path. With the old
             // fallbackToDestructiveMigration(true) this SILENTLY RECREATED
             // the file (the manuscript died); now it must throw.
             val db = Room.databaseBuilder<AppDatabase>(dbFile.absolutePath)
@@ -97,7 +97,7 @@ class MigrationFailFastTest {
 
     @Test
     fun `a migration path runs instead of throwing`() {
-        // The contiguous-path half of the policy: with an explicit 3 -> 15
+        // The contiguous-path half of the policy: with an explicit 3 -> 16
         // migration registered, the same old file opens and migrates. The
         // file starts as a Room-created CURRENT-schema database rolled back
         // to user_version 3 (schema validation then passes once the
@@ -110,13 +110,15 @@ class MigrationFailFastTest {
                 .setDriver(BundledSQLiteDriver())
                 .build()
             try {
-                runBlocking { pristine.useConnection(false) {} } // creates the current schema at version 15
+                runBlocking { pristine.useConnection(false) {} } // creates the current schema at version 16
             } finally {
                 pristine.close()
             }
             exec(dbFile, "PRAGMA user_version = 3") // roll the stamp back
 
-            val migration = object : Migration(3, 15) {
+            // ADR-0018: the current schema is v16 (editorial_memory); the
+            // pristine build above stamps 16, so the explicit path targets 16.
+            val migration = object : Migration(3, 16) {
                 override fun migrate(db: SQLiteConnection) {
                     // no-op: the schema is already current (see above)
                 }
@@ -127,7 +129,7 @@ class MigrationFailFastTest {
                 .build()
             try {
                 runBlocking { db.useConnection(false) {} }
-                assertEquals(15L, userVersion(dbFile), "the explicit path ran to the current schema")
+                assertEquals(16L, userVersion(dbFile), "the explicit path ran to the current schema")
             } finally {
                 db.close()
             }

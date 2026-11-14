@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.PublishingMetadataTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:23.479Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.019">
+  <properties/>
+  <testcase name="missing workbench reads as null" classname="com.example.PublishingMetadataTest" time="0.001"/>
+  <testcase name="structured workbench round-trips through the container entry" classname="com.example.PublishingMetadataTest" time="0.002"/>
+  <testcase name="print cost is fixed plus per page and royalty sixty percent" classname="com.example.PublishingMetadataTest" time="0.002"/>
+  <testcase name="untouched workbench is not edited" classname="com.example.PublishingMetadataTest" time="0.001"/>
+  <testcase name="categories capped at three" classname="com.example.PublishingMetadataTest" time="0.0"/>
+  <testcase name="seventy bracket inside the band on amazon com" classname="com.example.PublishingMetadataTest" time="0.001"/>
+  <testcase name="delivery rounds up per megabyte with a one cent minimum" classname="com.example.PublishingMetadataTest" time="0.0"/>
+  <testcase name="keywords capped at the KDP seven with blanks dropped" classname="com.example.PublishingMetadataTest" time="0.001"/>
+  <testcase name="legacy string-envelope stub reads as a workbench with the legacy text" classname="com.example.PublishingMetadataTest" time="0.006"/>
+  <testcase name="print breakeven list is cost over rate" classname="com.example.PublishingMetadataTest" time="0.004"/>
+  <testcase name="band boundaries two ninety-nine and twelve ninety-nine" classname="com.example.PublishingMetadataTest" time="0.0"/>
+  <testcase name="thirty-five bracket never subtracts delivery" classname="com.example.PublishingMetadataTest" time="0.001"/>
+  <testcase name="fromBook seeds blurb from synopsis and keeps legacy marketing as a variant" classname="com.example.PublishingMetadataTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

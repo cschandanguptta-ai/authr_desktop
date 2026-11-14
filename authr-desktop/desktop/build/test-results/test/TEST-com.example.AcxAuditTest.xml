@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.AcxAuditTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:16.110Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.877">
+  <properties/>
+  <testcase name="probe parses ffprobe key=value stream metadata" classname="com.example.AcxAuditTest" time="0.004"/>
+  <testcase name="real ffmpeg audit - mastered speech passes all green by construction" classname="com.example.AcxAuditTest" time="0.862"/>
+  <testcase name="measurement failure is red, never a crash" classname="com.example.AcxAuditTest" time="0.005"/>
+  <testcase name="parsers read astats, ebur128 and per-window noise floor" classname="com.example.AcxAuditTest" time="0.002"/>
+  <testcase name="audit is green only when every criterion is met" classname="com.example.AcxAuditTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

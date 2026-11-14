@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.PipelineEngineTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:15.678Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.427">
+  <properties/>
+  <testcase name="decisions append in order and issues resolve" classname="com.example.PipelineEngineTest" time="0.083"/>
+  <testcase name="a red gate records failure and blocks advancement" classname="com.example.PipelineEngineTest" time="0.016"/>
+  <testcase name="corrupt payload fails loud instead of silently degrading" classname="com.example.PipelineEngineTest" time="0.01"/>
+  <testcase name="engagement snapshot round-trips with per-chapter detail" classname="com.example.PipelineEngineTest" time="0.004"/>
+  <testcase name="editorial gate blocks unresolved MAJOR findings and zero passes" classname="com.example.PipelineEngineTest" time="0.002"/>
+  <testcase name="publication prep gate enforces the KDP package shape" classname="com.example.PipelineEngineTest" time="0.0"/>
+  <testcase name="a green gate plus approval completes the stage" classname="com.example.PipelineEngineTest" time="0.004"/>
+  <testcase name="worldbuilding gate blocks empty bibles" classname="com.example.PipelineEngineTest" time="0.001"/>
+  <testcase name="stage states default to NOT_STARTED and fill gaps" classname="com.example.PipelineEngineTest" time="0.001"/>
+  <testcase name="qa suite passes healthy canon" classname="com.example.PipelineEngineTest" time="0.078"/>
+  <testcase name="retention analyzer rewards a strong chapter over a weak one" classname="com.example.PipelineEngineTest" time="0.03"/>
+  <testcase name="engagement gate blocks a manuscript below the retention floor" classname="com.example.PipelineEngineTest" time="0.086"/>
+  <testcase name="memory slots round-trip losslessly" classname="com.example.PipelineEngineTest" time="0.002"/>
+  <testcase name="concept gate blocks empty differentiator" classname="com.example.PipelineEngineTest" time="0.002"/>
+  <testcase name="qa suite flags cross-chapter repetition" classname="com.example.PipelineEngineTest" time="0.088"/>
+  <testcase name="qa suite flags unresolved chekhov guns as HARD" classname="com.example.PipelineEngineTest" time="0.008"/>
+  <testcase name="versions append and the latest is last" classname="com.example.PipelineEngineTest" time="0.003"/>
+  <testcase name="manuscript gate blocks empty canon and empty chapters" classname="com.example.PipelineEngineTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

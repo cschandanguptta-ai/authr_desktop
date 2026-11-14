@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.TextMetricsTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:26.505Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.013">
+  <properties/>
+  <testcase name="counts words and sentences from the real text" classname="com.example.TextMetricsTest" time="0.003"/>
+  <testcase name="the dashboard label reports honesty instead of fabrication" classname="com.example.TextMetricsTest" time="0.002"/>
+  <testcase name="a sample too small to mean anything returns null - never an invented number" classname="com.example.TextMetricsTest" time="0.0"/>
+  <testcase name="syllable estimation handles silent e and vowel groups" classname="com.example.TextMetricsTest" time="0.0"/>
+  <testcase name="a simple passage grades low and a complex one grades higher" classname="com.example.TextMetricsTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

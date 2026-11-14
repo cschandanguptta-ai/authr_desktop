@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.TokenBiasPolicyTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:16.303Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.05">
+<testsuite name="com.example.TokenBiasPolicyTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:26.521Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.015">
   <properties/>
-  <testcase name="bias payload maps offender tokens to minus five" classname="com.example.TokenBiasPolicyTest" time="0.036"/>
-  <testcase name="clean text emits an empty payload even on bias routes" classname="com.example.TokenBiasPolicyTest" time="0.001"/>
-  <testcase name="enforcement plan carries constraints bias and the linter gate" classname="com.example.TokenBiasPolicyTest" time="0.009"/>
-  <testcase name="ollama biases via its openai-compatible surface" classname="com.example.TokenBiasPolicyTest" time="0.003"/>
-  <testcase name="mistral and gemini run on prompt constraints plus the linter" classname="com.example.TokenBiasPolicyTest" time="0.0"/>
-  <testcase name="non-bias routes never emit a payload" classname="com.example.TokenBiasPolicyTest" time="0.0"/>
-  <testcase name="offender tokens are deterministic and ranked" classname="com.example.TokenBiasPolicyTest" time="0.0"/>
-  <testcase name="openai-compatible routes support decode-time bias" classname="com.example.TokenBiasPolicyTest" time="0.0"/>
+  <testcase name="bias payload maps offender tokens to minus five" classname="com.example.TokenBiasPolicyTest" time="0.002"/>
+  <testcase name="clean text emits an empty payload even on bias routes" classname="com.example.TokenBiasPolicyTest" time="0.002"/>
+  <testcase name="enforcement plan carries constraints bias and the linter gate" classname="com.example.TokenBiasPolicyTest" time="0.002"/>
+  <testcase name="ollama biases via its openai-compatible surface" classname="com.example.TokenBiasPolicyTest" time="0.002"/>
+  <testcase name="mistral and gemini run on prompt constraints plus the linter" classname="com.example.TokenBiasPolicyTest" time="0.001"/>
+  <testcase name="non-bias routes never emit a payload" classname="com.example.TokenBiasPolicyTest" time="0.001"/>
+  <testcase name="offender tokens are deterministic and ranked" classname="com.example.TokenBiasPolicyTest" time="0.001"/>
+  <testcase name="openai-compatible routes support decode-time bias" classname="com.example.TokenBiasPolicyTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

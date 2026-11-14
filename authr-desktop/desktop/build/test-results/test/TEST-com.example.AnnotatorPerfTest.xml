@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.AnnotatorPerfTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:16.991Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.628">
+  <properties/>
+  <testcase name="20k-word cold annotate stays inside the documented ceiling and warm repeat is near-instant" classname="com.example.AnnotatorPerfTest" time="0.497"/>
+  <testcase name="echo detection ignores punctuation-only window members as before" classname="com.example.AnnotatorPerfTest" time="0.002"/>
+  <testcase name="cache is bounded and evicted entries recompute" classname="com.example.AnnotatorPerfTest" time="0.098"/>
+  <testcase name="unchanged text hits the cache and returns the same annotation list instance" classname="com.example.AnnotatorPerfTest" time="0.003"/>
+  <testcase name="editing the text misses the cache and recomputes" classname="com.example.AnnotatorPerfTest" time="0.004"/>
+  <testcase name="changing the lorebook misses the cache and recomputes" classname="com.example.AnnotatorPerfTest" time="0.012"/>
+  <testcase name="overlapping cliche spans still dedupe to the winning severity" classname="com.example.AnnotatorPerfTest" time="0.002"/>
+  <testcase name="refusals are never cached as annotations" classname="com.example.AnnotatorPerfTest" time="0.005"/>
+  <testcase name="echo detection still fires across punctuation-adjacent windows" classname="com.example.AnnotatorPerfTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <jpackage-state version="21.0.13" platform="linux">
-  <app-version>3.0.0</app-version>
+  <app-version>3.1.0</app-version>
   <main-launcher>AuthrOS</main-launcher>
   <main-class>com.example.MainKt</main-class>
   <signed>false</signed>

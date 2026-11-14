@@ -18,6 +18,7 @@ import com.example.data.model.SerialArc
 import com.example.data.model.ChekhovGun
 import com.example.data.model.QuestionEntry
 import com.example.data.model.PluginRecord
+import com.example.data.model.EditorialMemory
 
 /**
  * DESKTOP PORT NOTE (AppDatabase):
@@ -35,14 +36,17 @@ import com.example.data.model.PluginRecord
  *  - v15: v3.0 schema v2 (plan Table 32, Appendix A) — additive only:
  *    serialization profile columns on books/chapters, writer-confirmed engine
  *    state, and the serial_arcs / chekhov_guns / questions / plugins tables.
+ *  - v16: ADR-0018 editorial intelligence layer — additive only: the
+ *    editorial_memory table (per-book pipeline memory slots).
  */
 @Database(
     entities = [
         Story::class, StoryFts::class, AudioTrack::class, Book::class,
         Chapter::class, ChapterFts::class, Lorebook::class,
-        SerialArc::class, ChekhovGun::class, QuestionEntry::class, PluginRecord::class
+        SerialArc::class, ChekhovGun::class, QuestionEntry::class, PluginRecord::class,
+        EditorialMemory::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -55,6 +59,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chekhovGunDao(): ChekhovGunDao
     abstract fun questionDao(): QuestionDao
     abstract fun pluginDao(): PluginDao
+    abstract fun editorialMemoryDao(): EditorialMemoryDao
 
     companion object {
         @Volatile
@@ -168,6 +173,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v16 (ADR-0018): the editorial intelligence layer — per-book
+         * pipeline memory. Additive only: one new table, no column changes
+         * to existing tables. v15 rows are untouched.
+         */
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SQLiteConnection) {
+                db.exec(
+                    "CREATE TABLE IF NOT EXISTS editorial_memory (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "bookId INTEGER NOT NULL, " +
+                        "slot TEXT NOT NULL, " +
+                        "payload TEXT NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "lastModifiedAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(bookId) REFERENCES books(id) ON DELETE CASCADE)"
+                )
+                db.exec("CREATE INDEX IF NOT EXISTS index_editorial_memory_bookId ON editorial_memory(bookId)")
+                db.exec("CREATE UNIQUE INDEX IF NOT EXISTS index_editorial_memory_bookId_slot ON editorial_memory(bookId, slot)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 // v3.0 D-02 RESOLVED (OQ-3 decided, 2026-11-12): NO
@@ -184,7 +211,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder<AppDatabase>(
                     context.getDatabasePath("audio_novel_studio_db").absolutePath
                 )
-                .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                 .setDriver(BundledSQLiteDriver())
                 .build()
                 INSTANCE = instance

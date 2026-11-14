@@ -1,17 +1,17 @@
 --input
-"/tmp/my-project/authr-desktop/desktop/build/compose/tmp/createDistributable/libs"
+"/home/z/my-project/authr-desktop/desktop/build/compose/tmp/createDistributable/libs"
 --runtime-image
-"/tmp/my-project/authr-desktop/desktop/build/compose/tmp/main/runtime"
+"/home/z/my-project/authr-desktop/desktop/build/compose/tmp/main/runtime"
 --resource-dir
-"/tmp/my-project/authr-desktop/desktop/build/compose/tmp/resources"
+"/home/z/my-project/authr-desktop/desktop/build/compose/tmp/resources"
 --java-options
 "'-Dcompose.application.resources.dir=$APPDIR/resources'"
 --main-jar
-"desktop-d3edee42ede991f5da48ff2a3c0fb1.jar"
+"desktop-965106e3ffb8575f0e0cdaaa556163.jar"
 --main-class
 "com.example.MainKt"
 --icon
-"/tmp/my-project/authr-desktop/desktop/build/compose/default-resources/1.9.3/default-icon-linux.png"
+"/home/z/my-project/authr-desktop/desktop/build/compose/default-resources/1.9.3/default-icon-linux.png"
 --java-options
 "'-Dcompose.application.configure.swing.globals=true'"
 --java-options
@@ -19,7 +19,7 @@
 --type
 "app-image"
 --dest
-"/tmp/my-project/authr-desktop/desktop/build/compose/binaries/main/app"
+"/home/z/my-project/authr-desktop/desktop/build/compose/binaries/main/app"
 --name
 "AuthrOS"
 --description
@@ -27,6 +27,6 @@
 --copyright
 "© 2026 Authr OS. All rights reserved."
 --app-version
-"3.0.0"
+"3.1.0"
 --vendor
 "Authr OS"

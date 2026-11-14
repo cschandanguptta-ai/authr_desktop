@@ -8,6 +8,7 @@ import com.example.data.local.ChekhovGunDao
 import com.example.data.local.LorebookDao
 import com.example.data.local.QuestionDao
 import com.example.data.local.SerialArcDao
+import com.example.data.local.EditorialMemoryDao
 import com.example.data.model.AudioTrack
 import com.example.data.model.Story
 import com.example.data.model.Book
@@ -26,7 +27,9 @@ class AppRepository(
     private val lorebookDao: LorebookDao,
     private val chekhovGunDao: ChekhovGunDao? = null,
     private val questionDao: QuestionDao? = null,
-    private val serialArcDao: SerialArcDao? = null
+    private val serialArcDao: SerialArcDao? = null,
+    /** ADR-0018 editorial intelligence layer; nullable keeps JVM tests Room-free. */
+    val editorialMemoryDao: EditorialMemoryDao? = null
 ) {
     val allStories: Flow<List<Story>> = storyDao.getAllStories()
     val allAudioTracks: Flow<List<AudioTrack>> = audioTrackDao.getAllAudioTracks()

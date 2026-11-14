@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.WorkerWiringTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:26.586Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.526">
+  <properties/>
+  <testcase name="the shim executes a registered chain in order and halts on failure" classname="com.example.WorkerWiringTest" time="0.511"/>
+  <testcase name="register covers every worker class the app enqueues" classname="com.example.WorkerWiringTest" time="0.015"/>
+  <system-out><![CDATA[11-14 07:44:26.593 W/DesktopWorkManager: Chain wiring-test-fail halted after StepWorker failure
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

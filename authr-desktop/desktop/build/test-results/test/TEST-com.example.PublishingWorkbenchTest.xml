@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.PublishingWorkbenchTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:23.501Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.688">
+  <properties/>
+  <testcase name="edited workbench stages into the container layout and survives reselection" classname="com.example.PublishingWorkbenchTest" time="0.021"/>
+  <testcase name="one action packages the novel end to end with the container audit" classname="com.example.PublishingWorkbenchTest" time="0.098"/>
+  <testcase name="serial package rides the arc volumes and cadence disclosure" classname="com.example.PublishingWorkbenchTest" time="0.564"/>
+  <testcase name="workbench seeds from the project record when never staged" classname="com.example.PublishingWorkbenchTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.AudiobookWorkbenchTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:20.337Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.11">
+  <properties/>
+  <testcase name="scan proposes lorebook terms and approval stages the container entry" classname="com.example.AudiobookWorkbenchTest" time="0.058"/>
+  <testcase name="one-action render runs the P4 pipeline green with approved rules" classname="com.example.AudiobookWorkbenchTest" time="0.047"/>
+  <testcase name="render without a data root stays honest instead of writing" classname="com.example.AudiobookWorkbenchTest" time="0.003"/>
+  <testcase name="engine picker never selects an unavailable engine" classname="com.example.AudiobookWorkbenchTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

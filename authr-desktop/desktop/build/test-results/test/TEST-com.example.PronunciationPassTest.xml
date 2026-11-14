@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.PronunciationPassTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:23.439Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.037">
+  <properties/>
+  <testcase name="normalize applies approved rules verbatim, punctuation preserved" classname="com.example.PronunciationPassTest" time="0.002"/>
+  <testcase name="coined hyphenated and apostrophe terms are candidates" classname="com.example.PronunciationPassTest" time="0.001"/>
+  <testcase name="normalize does not replace inside longer words but crosses hyphens" classname="com.example.PronunciationPassTest" time="0.0"/>
+  <testcase name="respell maps IPA to readable stress-marked respellings" classname="com.example.PronunciationPassTest" time="0.026"/>
+  <testcase name="scan finds lorebook entries and proper nouns, skips common words" classname="com.example.PronunciationPassTest" time="0.001"/>
+  <testcase name="container rules conversion round-trips approved entries" classname="com.example.PronunciationPassTest" time="0.0"/>
+  <testcase name="sentence-initial-only capitals are ordinary words, not candidates" classname="com.example.PronunciationPassTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

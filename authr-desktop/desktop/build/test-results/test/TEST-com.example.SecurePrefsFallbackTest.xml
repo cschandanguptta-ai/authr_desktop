@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.SecurePrefsFallbackTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:25.392Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.032">
+  <properties/>
+  <testcase name="memory preferences behave like preferences" classname="com.example.SecurePrefsFallbackTest" time="0.005"/>
+  <testcase name="the degraded fallback is in-memory only and never persists" classname="com.example.SecurePrefsFallbackTest" time="0.027"/>
+  <system-out><![CDATA[11-14 07:44:25.417 E/LlmOrchestrator: Encrypted preferences unavailable (forced fallback (D-03 test hook)); API keys stay in MEMORY ONLY for this session — nothing is written to disk unencrypted (D-03).
+11-14 07:44:25.418 E/LlmOrchestrator: Encrypted preferences unavailable (forced fallback (D-03 test hook)); API keys stay in MEMORY ONLY for this session — nothing is written to disk unencrypted (D-03).
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

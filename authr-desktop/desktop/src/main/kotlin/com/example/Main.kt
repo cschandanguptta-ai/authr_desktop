@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.GraphicEq
@@ -28,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,11 +47,13 @@ import com.example.engine.audio.PronunciationPass
 import com.example.ui.screens.AudioScreen
 import com.example.ui.screens.AudiobookWorkbenchScreen
 import com.example.ui.screens.MetadataScreen
+import com.example.ui.screens.PipelineWorkbenchScreen
 import com.example.ui.screens.PublishingScreen
 import com.example.ui.screens.SerialDashboardScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.StoryScreen
 import com.example.ui.screens.TranslateScreen
+import com.example.ui.viewmodel.PipelineViewModel
 import com.example.ui.screens.WriterStudioScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.AudiobookViewModel
@@ -157,7 +161,8 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
         lorebookDao = database.lorebookDao(),
         chekhovGunDao = database.chekhovGunDao(),
         questionDao = database.questionDao(),
-        serialArcDao = database.serialArcDao()
+        serialArcDao = database.serialArcDao(),
+        editorialMemoryDao = database.editorialMemoryDao()
     )
     val viewModel = StudioViewModel(
         application = app,
@@ -178,6 +183,19 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
     val serialDashboardViewModel = SerialDashboardViewModel(
         repository = repository,
         exportDir = app.filesDir
+    )
+    // Pipeline Workbench (ADR-0018): the nine-stage commercial authoring
+    // pipeline — market research → concept → architecture → worldbuilding
+    // → manuscript → editorial → engagement → QA → publication prep, with
+    // deterministic gates, writer approval checkpoints, and the persistent
+    // editorial memory (decisions, issues, versions, engagement analytics).
+    val pipelineMemory = com.example.engine.pipeline.EditorialMemoryStore(
+        requireNotNull(database.editorialMemoryDao()) { "editorial_memory DAO missing (schema v16)" }
+    )
+    val pipelineViewModel = PipelineViewModel(
+        context = app,
+        repository = repository,
+        memory = pipelineMemory
     )
     // Audiobook workbench (v3.0 D-13, the P4 report handoff): engine
     // picker → pronunciation review → one-action render → ACX report.
@@ -282,6 +300,10 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
                                 viewModel = audiobookViewModel,
                                 onBack = { viewModel.selectTab(0) }
                             )
+                            10 -> PipelineWorkbenchScreen(
+                                viewModel = pipelineViewModel,
+                                scope = rememberCoroutineScope()
+                            )
                             else -> StoryScreen(viewModel = viewModel) // 0: Story, 4: recommendations live in the Story workspace
                         }
                     }
@@ -334,6 +356,7 @@ private fun WorkspaceNavRail(
 ) {
     val destinations = listOf(
         RailDestination(0, "Story", Icons.Filled.AutoStories, "Create"),
+        RailDestination(10, "Pipeline", Icons.Filled.AccountTree, "Create"),
         RailDestination(6, "Writer Studio", Icons.Filled.EditNote, "Create"),
         RailDestination(7, "Serial", Icons.Filled.ViewTimeline, "Create"),
         RailDestination(1, "Audio", Icons.Filled.GraphicEq, "Produce"),

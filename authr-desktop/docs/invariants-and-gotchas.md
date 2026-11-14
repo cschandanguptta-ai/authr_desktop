@@ -55,7 +55,10 @@ Things that must ALWAYS stay true, non-obvious behavior, and desktop-port traps.
 - `engine/serialization/GoldenSerial.kt` ↔ every validator regex: the corpus is the tests' fixture AND the exit-gate gatekeeper. Change one side only and the suite tells you which side moved.
 - `LiveAstAnnotator.beatCueList` / `classifyEnding` were made public in P3 precisely so BalanceMeter/EndingAdvisor share the annotator's cue lists — do NOT fork new cue sets in the serialization package (FACT: P3 decision).
 - `CompilationWorker` gate ORDER: canon exclusion → Chekhov recovery gate → serial suite (FACT: `worker/CompilationWorker.kt`). Reordering changes which gate a blocked writer sees first.
-- Tab indices are load-bearing across `Main.kt` (bar + `when`) and the smoke harness — adding a tab means touching both (FACT).
+- Tab indices are load-bearing across `Main.kt` (bar + `when`) and the smoke harness — adding a tab means touching both (FACT). Tab 10 is the Pipeline workbench (ADR-0018).
+- ADR-0018 pipeline: stage advancement requires gate green AND writer approval — `PipelineOrchestrator.approveStage` refuses red gates, and no code path may set a stage APPROVED except that method (FACT: `engine/pipeline/PipelineOrchestrator.kt`).
+- ADR-0018: the editorial memory store and the two analyzers (RetentionAnalyzer, ManuscriptQaSuite) NEVER call an LLM — stages 7 and 8 are deterministic local code by design (FACT: ADR-0004 alignment).
+- ADR-0018: `editorial_memory` payload drift fails loud (`IllegalStateException`) — the store must never silently swallow a malformed payload (FACT: `PipelineEngineTest` "corrupt payload fails loud").
 
 ## Fragile areas — do not touch without reading first
 

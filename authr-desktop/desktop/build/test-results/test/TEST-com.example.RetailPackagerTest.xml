@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.RetailPackagerTest" tests="9" skipped="3" failures="0" errors="0" timestamp="2026-11-14T07:44:24.447Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.396">
+  <properties/>
+  <testcase name="epubcheck verdict is verified when the tool runs - zero errors" classname="com.example.RetailPackagerTest" time="0.002">
+    <skipped/>
+  </testcase>
+  <testcase name="workbench authoritative - unedited workbench discloses derivation" classname="com.example.RetailPackagerTest" time="0.061"/>
+  <testcase name="unconfirmed chapters are excluded from every artifact and disclosed" classname="com.example.RetailPackagerTest" time="0.033"/>
+  <testcase name="serial project bundles volume epubs per arc" classname="com.example.RetailPackagerTest" time="0.089"/>
+  <testcase name="one action produces epub print metadata and ship report for a novel" classname="com.example.RetailPackagerTest" time="0.09"/>
+  <testcase name="chekov waivers land in the ship report" classname="com.example.RetailPackagerTest" time="0.059"/>
+  <testcase name="epubcheck failures block the clean verdict" classname="com.example.RetailPackagerTest" time="0.001">
+    <skipped/>
+  </testcase>
+  <testcase name="serial volume epubs also pass the external gate" classname="com.example.RetailPackagerTest" time="0.0">
+    <skipped/>
+  </testcase>
+  <testcase name="pricing record quotes both brackets" classname="com.example.RetailPackagerTest" time="0.06"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

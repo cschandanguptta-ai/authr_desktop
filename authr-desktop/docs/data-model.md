@@ -104,12 +104,13 @@ erDiagram
     }
 ```
 
-Full column lists: `data/model/Book.kt`, `Chapter.kt`, `SerialArc.kt`, `ChekhovGun.kt`, `QuestionEntry.kt`, `Lorebook.kt`, `Story.kt`, `AudioTrack.kt`, `PluginRecord.kt` (plugins: `id, kind, name, path, version, enabled`, unique `(kind, name)`).
+Full column lists: `data/model/Book.kt`, `Chapter.kt`, `SerialArc.kt`, `ChekhovGun.kt`, `QuestionEntry.kt`, `Lorebook.kt`, `Story.kt`, `AudioTrack.kt`, `PluginRecord.kt` (plugins: `id, kind, name, path, version, enabled`, unique `(kind, name)`), `EditorialMemory.kt` (ADR-0018: `id, bookId, slot, payload, createdAt, lastModifiedAt`, unique `(bookId, slot)` — per-book pipeline memory: market_findings, positioning, reader_personas, decisions, issues, versions, stage_state, engagement, publication_package).
 
 ## Relationships & constraints
 
-- FKs with `ON DELETE CASCADE`: chapters / serial_arcs / chekhov_guns / questions → books (FACT: `@ForeignKey` in each entity).
+- FKs with `ON DELETE CASCADE`: chapters / serial_arcs / chekhov_guns / questions / editorial_memory → books (FACT: `@ForeignKey` in each entity).
 - `serial_arcs` unique index `(bookId, arcIndex)` (FACT: `SerialArc.kt`).
+- `editorial_memory` unique index `(bookId, slot)` — one row per payload slot per book; upserts are slot-scoped REPLACE (FACT: `EditorialMemoryDao`, ADR-0018).
 - **No DB-level FK** for `chapters.arcId`, `serial_arcs.questionRef`, `serial_arcs.answeredQuestionRef` — logical links only (FACT: entity definitions; the completion requirement checks them in code, `MicroArcPlanner.checkArcs`).
 - Legacy tables: `stories` + `stories_fts`, `chapters_fts`, `audio_tracks`, `lorebook` (v2.3 baseline; FACT: `AppDatabase` entity list).
 
@@ -120,6 +121,7 @@ Full column lists: `data/model/Book.kt`, `Chapter.kt`, `SerialArc.kt`, `ChekhovG
 | 12→13 | `books.lastModifiedAt` (DB-side default 0; entity declares none — Room tolerates DB-side defaults) |
 | 13→14 | v2.3 serial seeds: `isSerialized`, `targetChapters`, `releaseSchedule` |
 | 14→15 | v3.0 schema v2 (plan Table 32 + Appendix A): serial profile columns on books; writer-confirmed engine state + serialization columns on chapters; new tables `serial_arcs`, `chekhov_guns`, `questions`, `plugins` |
+| 15→16 | ADR-0018: new table `editorial_memory` (per-book pipeline memory slots) + `index_editorial_memory_bookId`, unique `(bookId, slot)`; no changes to existing tables |
 
 ## Migration rules (how to safely change schema)
 

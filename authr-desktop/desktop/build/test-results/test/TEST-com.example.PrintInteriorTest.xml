@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.PrintInteriorTest" tests="11" skipped="1" failures="0" errors="0" timestamp="2026-11-14T07:44:22.289Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="1.145">
+  <properties/>
+  <testcase name="ladder rows render the plan bands" classname="com.example.PrintInteriorTest" time="0.002"/>
+  <testcase name="pagination converges — recomputed gutter stays stable" classname="com.example.PrintInteriorTest" time="0.407"/>
+  <testcase name="empty font path auto-resolves to an existing serif on this machine" classname="com.example.PrintInteriorTest" time="0.001"/>
+  <testcase name="empty book rejected" classname="com.example.PrintInteriorTest" time="0.002"/>
+  <testcase name="text round-trips through the embedded font" classname="com.example.PrintInteriorTest" time="0.475"/>
+  <testcase name="auto-resolve total miss fails loudly with the search list" classname="com.example.PrintInteriorTest" time="0.002">
+    <skipped/>
+  </testcase>
+  <testcase name="gutter ladder matches the plan table exactly" classname="com.example.PrintInteriorTest" time="0.0"/>
+  <testcase name="interior is six by nine trim with a compliant gutter" classname="com.example.PrintInteriorTest" time="0.136"/>
+  <testcase name="every page carries mirrored margins" classname="com.example.PrintInteriorTest" time="0.112"/>
+  <testcase name="bundled app-dir fonts are found — the packaged image layout" classname="com.example.PrintInteriorTest" time="0.005"/>
+  <testcase name="explicit font path is strict — missing file fails loudly with the path" classname="com.example.PrintInteriorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

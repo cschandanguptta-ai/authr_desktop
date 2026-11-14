@@ -1,1 +1,4 @@
-+2DGolden corpus precision: 1.0000 (TP=154 FP=0 hits=154, 23210 words)
+OVDGolden corpus precision: 1.0000 (TP=154 FP=0 hits=154, 23210 words)
+äåÍ11-14 07:44:25.417 E/LlmOrchestrator: Encrypted preferences unavailable (forced fallback (D-03 test hook)); API keys stay in MEMORY ONLY for this session â€” nothing is written to disk unencrypted (D-03).
+äåÍ11-14 07:44:25.418 E/LlmOrchestrator: Encrypted preferences unavailable (forced fallback (D-03 test hook)); API keys stay in MEMORY ONLY for this session â€” nothing is written to disk unencrypted (D-03).
+°¯`11-14 07:44:26.593 W/DesktopWorkManager: Chain wiring-test-fail halted after StepWorker failure

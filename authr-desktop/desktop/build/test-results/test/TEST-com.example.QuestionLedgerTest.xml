@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.QuestionLedgerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:14.438Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.014">
+<testsuite name="com.example.QuestionLedgerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:24.193Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.007">
   <properties/>
   <testcase name="long-horizon phrasing opens long-term questions without a window" classname="com.example.QuestionLedgerTest" time="0.001"/>
-  <testcase name="duplicate cues within one chapter collapse to one entry" classname="com.example.QuestionLedgerTest" time="0.0"/>
+  <testcase name="duplicate cues within one chapter collapse to one entry" classname="com.example.QuestionLedgerTest" time="0.001"/>
   <testcase name="revelation outcomes cover the six checks" classname="com.example.QuestionLedgerTest" time="0.001"/>
-  <testcase name="detection opens progressive questions with answer windows" classname="com.example.QuestionLedgerTest" time="0.0"/>
+  <testcase name="detection opens progressive questions with answer windows" classname="com.example.QuestionLedgerTest" time="0.001"/>
   <testcase name="answering records the chapter and links the revelation" classname="com.example.QuestionLedgerTest" time="0.0"/>
-  <testcase name="only overdue progressive questions surface" classname="com.example.QuestionLedgerTest" time="0.012"/>
+  <testcase name="only overdue progressive questions surface" classname="com.example.QuestionLedgerTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

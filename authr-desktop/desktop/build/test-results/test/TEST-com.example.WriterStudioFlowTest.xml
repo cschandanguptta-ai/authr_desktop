@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.WriterStudioFlowTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:16.378Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.132">
+<testsuite name="com.example.WriterStudioFlowTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:27.119Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.03">
   <properties/>
-  <testcase name="regenerate archives the previous draft and lands a new proposal" classname="com.example.WriterStudioFlowTest" time="0.061"/>
-  <testcase name="five-chapter novella runs end to end with the confirm flow" classname="com.example.WriterStudioFlowTest" time="0.036"/>
-  <testcase name="queue keyboard flow confirms remaining proposals in order" classname="com.example.WriterStudioFlowTest" time="0.034"/>
+  <testcase name="regenerate archives the previous draft and lands a new proposal" classname="com.example.WriterStudioFlowTest" time="0.008"/>
+  <testcase name="five-chapter novella runs end to end with the confirm flow" classname="com.example.WriterStudioFlowTest" time="0.018"/>
+  <testcase name="queue keyboard flow confirms remaining proposals in order" classname="com.example.WriterStudioFlowTest" time="0.004"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.ChekhovLedgerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:12.049Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.905">
+<testsuite name="com.example.ChekhovLedgerTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:20.735Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.15">
   <properties/>
-  <testcase name="end to end - blocked serial recovers through resolve and waive" classname="com.example.ChekhovLedgerTest" time="0.826"/>
-  <testcase name="re-emphasis escalates the existing gun instead of duplicating it" classname="com.example.ChekhovLedgerTest" time="0.024"/>
-  <testcase name="the recovery gate blocks only unresolved guns" classname="com.example.ChekhovLedgerTest" time="0.0"/>
+  <testcase name="end to end - blocked serial recovers through resolve and waive" classname="com.example.ChekhovLedgerTest" time="0.075"/>
+  <testcase name="re-emphasis escalates the existing gun instead of duplicating it" classname="com.example.ChekhovLedgerTest" time="0.016"/>
+  <testcase name="the recovery gate blocks only unresolved guns" classname="com.example.ChekhovLedgerTest" time="0.001"/>
   <testcase name="the orphan sweep fires at the final-act boundary" classname="com.example.ChekhovLedgerTest" time="0.0"/>
-  <testcase name="escalate and resolve guards hold" classname="com.example.ChekhovLedgerTest" time="0.017"/>
-  <testcase name="waivers require a mandatory note and are never silent" classname="com.example.ChekhovLedgerTest" time="0.006"/>
-  <testcase name="every planted gun in the regression corpus is detected" classname="com.example.ChekhovLedgerTest" time="0.026"/>
+  <testcase name="escalate and resolve guards hold" classname="com.example.ChekhovLedgerTest" time="0.001"/>
+  <testcase name="waivers require a mandatory note and are never silent" classname="com.example.ChekhovLedgerTest" time="0.001"/>
+  <testcase name="every planted gun in the regression corpus is detected" classname="com.example.ChekhovLedgerTest" time="0.048"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

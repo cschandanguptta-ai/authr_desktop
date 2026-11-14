@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.MasteringChainTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:21.877Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.185">
+  <properties/>
+  <testcase name="real ffmpeg smoke - mastering a clean tone passes" classname="com.example.MasteringChainTest" time="0.181"/>
+  <testcase name="layer parameters match the Table 25 specification" classname="com.example.MasteringChainTest" time="0.001"/>
+  <testcase name="mastering runs the layers in fixed order and skips ducking without a bed" classname="com.example.MasteringChainTest" time="0.001"/>
+  <testcase name="missing ffmpeg is reported, never thrown" classname="com.example.MasteringChainTest" time="0.0"/>
+  <testcase name="ambient bed activates the ducking layer as stage one" classname="com.example.MasteringChainTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.MicroArcPlannerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:13.958Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.089">
+<testsuite name="com.example.MicroArcPlannerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:22.064Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.06">
   <properties/>
-  <testcase name="default phase bounds cover 15 chapters in four phases" classname="com.example.MicroArcPlannerTest" time="0.036"/>
-  <testcase name="in-flight arcs report progress without failing" classname="com.example.MicroArcPlannerTest" time="0.018"/>
-  <testcase name="planArcs lays 15-chapter arcs across the target" classname="com.example.MicroArcPlannerTest" time="0.006"/>
-  <testcase name="an arc whose question stays open fails the completion check" classname="com.example.MicroArcPlannerTest" time="0.005"/>
-  <testcase name="escalation needs at least two beats across the phase" classname="com.example.MicroArcPlannerTest" time="0.004"/>
-  <testcase name="a complete arc passes every planner check on the golden serial" classname="com.example.MicroArcPlannerTest" time="0.014"/>
+  <testcase name="default phase bounds cover 15 chapters in four phases" classname="com.example.MicroArcPlannerTest" time="0.001"/>
+  <testcase name="in-flight arcs report progress without failing" classname="com.example.MicroArcPlannerTest" time="0.006"/>
+  <testcase name="planArcs lays 15-chapter arcs across the target" classname="com.example.MicroArcPlannerTest" time="0.001"/>
+  <testcase name="an arc whose question stays open fails the completion check" classname="com.example.MicroArcPlannerTest" time="0.022"/>
+  <testcase name="escalation needs at least two beats across the phase" classname="com.example.MicroArcPlannerTest" time="0.011"/>
+  <testcase name="a complete arc passes every planner check on the golden serial" classname="com.example.MicroArcPlannerTest" time="0.01"/>
   <testcase name="seeds JSON parses into next-arc entries" classname="com.example.MicroArcPlannerTest" time="0.001"/>
-  <testcase name="the completion requirement is checked against the question ledger and the contribution" classname="com.example.MicroArcPlannerTest" time="0.005"/>
+  <testcase name="the completion requirement is checked against the question ledger and the contribution" classname="com.example.MicroArcPlannerTest" time="0.006"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

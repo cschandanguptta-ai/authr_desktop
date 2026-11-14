@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.AudiobookRendererTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:17.807Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="2.526">
+  <properties/>
+  <testcase name="synthesis failure fails the report, never crashes" classname="com.example.AudiobookRendererTest" time="0.009"/>
+  <testcase name="synthesis speed factor divides audio seconds by wall seconds" classname="com.example.AudiobookRendererTest" time="0.11"/>
+  <testcase name="render gates canon, normalizes and records continuity" classname="com.example.AudiobookRendererTest" time="0.023"/>
+  <testcase name="real espeak-ng and ffmpeg render two chapters end to end" classname="com.example.AudiobookRendererTest" time="2.368"/>
+  <testcase name="wav duration parser reads the canonical header" classname="com.example.AudiobookRendererTest" time="0.002"/>
+  <testcase name="measured fragment durations give contiguous SMIL timings" classname="com.example.AudiobookRendererTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

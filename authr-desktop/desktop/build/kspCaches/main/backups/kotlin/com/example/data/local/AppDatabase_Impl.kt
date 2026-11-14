@@ -65,8 +65,12 @@ public class AppDatabase_Impl : AppDatabase() {
     PluginDao_Impl(this)
   }
 
+  private val _editorialMemoryDao: Lazy<EditorialMemoryDao> = lazy {
+    EditorialMemoryDao_Impl(this)
+  }
+
   protected override fun createOpenDelegate(): RoomOpenDelegate {
-    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(15, "04537b8e28052a9bc9ea4e89aa379146", "889a558ee46526a9e04d67bc5e91f39f") {
+    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(16, "d73604bca82cd31b709ce722b465a7a6", "6a73a874b01d51705116ac751f6439ed") {
       public override fun createAllTables(connection: SQLiteConnection) {
         connection.execSQL("CREATE TABLE IF NOT EXISTS `stories` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `heroName` TEXT NOT NULL, `genres` TEXT NOT NULL, `format` TEXT NOT NULL, `duration` TEXT NOT NULL, `hook` TEXT NOT NULL, `extras` TEXT NOT NULL, `part1` TEXT NOT NULL, `part2` TEXT NOT NULL, `part3` TEXT NOT NULL, `part4` TEXT NOT NULL, `part5` TEXT NOT NULL, `wordCount` INTEGER NOT NULL, `persona` TEXT NOT NULL, `ambientTheme` TEXT NOT NULL, `ambientVolume` REAL NOT NULL, `metaTitle` TEXT NOT NULL, `metaDesc` TEXT NOT NULL, `metaTags` TEXT NOT NULL, `metaThumbPrompt` TEXT NOT NULL, `timestamp` INTEGER NOT NULL)")
         connection.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `stories_fts` USING FTS4(`title` TEXT NOT NULL, `hook` TEXT NOT NULL, `part1` TEXT NOT NULL, `part2` TEXT NOT NULL, `part3` TEXT NOT NULL, `part4` TEXT NOT NULL, `part5` TEXT NOT NULL, content=`stories`)")
@@ -96,8 +100,9 @@ public class AppDatabase_Impl : AppDatabase() {
         connection.execSQL("CREATE INDEX IF NOT EXISTS `index_questions_bookId_level` ON `questions` (`bookId`, `level`)")
         connection.execSQL("CREATE TABLE IF NOT EXISTS `plugins` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `kind` TEXT NOT NULL, `name` TEXT NOT NULL, `path` TEXT NOT NULL, `version` TEXT NOT NULL, `enabled` INTEGER NOT NULL)")
         connection.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_plugins_kind_name` ON `plugins` (`kind`, `name`)")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `editorial_memory` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bookId` INTEGER NOT NULL, `slot` TEXT NOT NULL, `payload` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `lastModifiedAt` INTEGER NOT NULL)")
         connection.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
-        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '04537b8e28052a9bc9ea4e89aa379146')")
+        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd73604bca82cd31b709ce722b465a7a6')")
       }
 
       public override fun dropAllTables(connection: SQLiteConnection) {
@@ -112,6 +117,7 @@ public class AppDatabase_Impl : AppDatabase() {
         connection.execSQL("DROP TABLE IF EXISTS `chekhov_guns`")
         connection.execSQL("DROP TABLE IF EXISTS `questions`")
         connection.execSQL("DROP TABLE IF EXISTS `plugins`")
+        connection.execSQL("DROP TABLE IF EXISTS `editorial_memory`")
       }
 
       public override fun onCreate(connection: SQLiteConnection) {
@@ -438,6 +444,26 @@ public class AppDatabase_Impl : AppDatabase() {
               | Found:
               |""".trimMargin() + _existingPlugins)
         }
+        val _columnsEditorialMemory: MutableMap<String, TableInfo.Column> = mutableMapOf()
+        _columnsEditorialMemory.put("id", TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsEditorialMemory.put("bookId", TableInfo.Column("bookId", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsEditorialMemory.put("slot", TableInfo.Column("slot", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsEditorialMemory.put("payload", TableInfo.Column("payload", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsEditorialMemory.put("createdAt", TableInfo.Column("createdAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsEditorialMemory.put("lastModifiedAt", TableInfo.Column("lastModifiedAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        val _foreignKeysEditorialMemory: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
+        val _indicesEditorialMemory: MutableSet<TableInfo.Index> = mutableSetOf()
+        val _infoEditorialMemory: TableInfo = TableInfo("editorial_memory", _columnsEditorialMemory, _foreignKeysEditorialMemory, _indicesEditorialMemory)
+        val _existingEditorialMemory: TableInfo = tableInfoRead(connection, "editorial_memory")
+        if (!_infoEditorialMemory.equals(_existingEditorialMemory)) {
+          return RoomOpenDelegate.ValidationResult(false, """
+              |editorial_memory(com.example.data.model.EditorialMemory).
+              | Expected:
+              |""".trimMargin() + _infoEditorialMemory + """
+              |
+              | Found:
+              |""".trimMargin() + _existingEditorialMemory)
+        }
         return RoomOpenDelegate.ValidationResult(true, null)
       }
     }
@@ -449,7 +475,7 @@ public class AppDatabase_Impl : AppDatabase() {
     _shadowTablesMap.put("stories_fts", "stories")
     _shadowTablesMap.put("chapters_fts", "chapters")
     val _viewTables: MutableMap<String, Set<String>> = mutableMapOf()
-    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "stories", "stories_fts", "audio_tracks", "books", "chapters", "chapters_fts", "lorebook", "serial_arcs", "chekhov_guns", "questions", "plugins")
+    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "stories", "stories_fts", "audio_tracks", "books", "chapters", "chapters_fts", "lorebook", "serial_arcs", "chekhov_guns", "questions", "plugins", "editorial_memory")
   }
 
   protected override fun getRequiredTypeConverterClasses(): Map<KClass<*>, List<KClass<*>>> {
@@ -463,6 +489,7 @@ public class AppDatabase_Impl : AppDatabase() {
     _typeConvertersMap.put(ChekhovGunDao::class, ChekhovGunDao_Impl.getRequiredConverters())
     _typeConvertersMap.put(QuestionDao::class, QuestionDao_Impl.getRequiredConverters())
     _typeConvertersMap.put(PluginDao::class, PluginDao_Impl.getRequiredConverters())
+    _typeConvertersMap.put(EditorialMemoryDao::class, EditorialMemoryDao_Impl.getRequiredConverters())
     return _typeConvertersMap
   }
 
@@ -493,4 +520,6 @@ public class AppDatabase_Impl : AppDatabase() {
   public override fun questionDao(): QuestionDao = _questionDao.value
 
   public override fun pluginDao(): PluginDao = _pluginDao.value
+
+  public override fun editorialMemoryDao(): EditorialMemoryDao = _editorialMemoryDao.value
 }

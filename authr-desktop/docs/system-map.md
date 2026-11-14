@@ -32,7 +32,7 @@ flowchart LR
 
     subgraph Data["data/"]
         Repo["AppRepository"]
-        DB[("AppDatabase (Room KMP)<br/>v15, 11 entities")]
+        DB[("AppDatabase (Room KMP)<br/>v16, 12 entities")] 
         Orch["LlmOrchestrator<br/>+ RequestQueueManager + ApiClient"]
         Container["AuthrContainer (.authr zip)<br/>schema v2"]
         Plugins["PluginRegistry<br/>structures + personas"]
@@ -77,6 +77,7 @@ flowchart LR
 | `ui/viewmodel/StudioViewModel.kt` | Master VM: books/stories CRUD, wizard LLM calls, autonomous pipeline enqueue, TTS settings, logs (5,496 lines) | AppRepository, LlmOrchestrator, WorkManager shim | `Main.kt`, screens |
 | `ui/viewmodel/WriterStudioViewModel.kt` | Confirm flow: freeze text → persist serialization artifacts → L6 annotate → ledger upserts → orphan sweep; queue actions; archive | AppRepository, engine/* | `WriterStudioScreen` |
 | `ui/viewmodel/SerialDashboardViewModel.kt` | Publication dashboard state: recompute suite/buffer/cadence, arcs, worksheet/scorecard saves, release actions, exports | AppRepository, engine/serialization/* | `SerialDashboardScreen` |
+| `ui/viewmodel/PipelineViewModel.kt` | ADR-0018 pipeline workbench state: stage runner dispatch, busy/output/verdict surfaces, approve checkpoint, decisions/issues/versions/engagement panels | PipelineOrchestrator, EditorialMemoryStore | `PipelineWorkbenchScreen` (tab 10) |
 | `engine/DraftState.kt` | Writer-sovereignty contract: `DraftState` states, `EngineLayer`, `WriterGate` (canon filter + violations) | `data/model/Chapter` | every consumer of chapters |
 | `engine/ManuscriptAst.kt` | AST types: `AnnotationKind`, `Severity`, `AstAnnotation`, `ManuscriptAst`, `ChapterBeat`, `EndingTypes` | — | annotator, VMs, ledgers |
 | `engine/LiveAstAnnotator.kt` | Deterministic annotator of confirmed text: beat coverage, cliché hits, promises, lore, ending signal, continuity flags; `classifyEnding` + `beatCueList` public accessors (P3) | `ClicheCleaner`, ManuscriptAst | VMs, `SixLayerPipeline` |
@@ -95,6 +96,13 @@ flowchart LR
 | `engine/serialization/SerialExportProfiles.kt` | 6 paste-ready platform profiles, package builder, batch export | PreDraftWorksheet, OpeningValidators | dashboard |
 | `engine/serialization/SerialValidatorSuite.kt` | Orchestrator: PASS/INFO/WARN(dismissable)/HARD checks over a serial project; exit-gate predicate; Autonomous draft report | all serialization engines | dashboard, CompilationWorker |
 | `engine/serialization/GoldenSerial.kt` | Deterministic 15-chapter planted corpus + negative variants (withheld, beat-gap, scorecard bands) | all serialization engines | tests, probes |
+| `engine/pipeline/PipelineStages.kt` | ADR-0018: the nine commercial stages (market → concept → architecture → worldbuilding → manuscript → editorial → engagement → QA → publication prep), stage status lifecycle, `GateVerdict`, `StageContext`, `Finding` | — | orchestrator, gates, workbench UI |
+| `engine/pipeline/EditorialMemoryStore.kt` | ADR-0018 editorial intelligence layer: typed façade over `editorial_memory` slots (market findings, positioning, personas, decisions, issues, versions, stage states, engagement, publication package); `@Serializable` DTOs, fail-loud payload drift | EditorialMemoryDao | orchestrator, workbench UI |
+| `engine/pipeline/StagePrompts.kt` | Strict-JSON prompt builders for the LLM stages; every prompt embeds the same persisted context block (bibles, positioning, decisions, open issues) so stages cannot conflict | StageContext | orchestrator |
+| `engine/pipeline/StageGates.kt` | Deterministic per-stage gates (ADR-0004: local code, never an LLM): completeness scoring, retention floor 55 / weak-hook cap 2, QA hard-zero, KDP package shape; `wordCount` helper | models, analyzers | orchestrator |
+| `engine/pipeline/RetentionAnalyzer.kt` | Local retention measurement (stage 7): per-chapter hook/pacing/tension/curiosity/ending scores + composite index; editorial-measurement honesty contract (no reader-behavior claims) | LiveAstAnnotator, ClicheCleaner | orchestrator, gates |
+| `engine/pipeline/ManuscriptQaSuite.kt` | Local manuscript QA (stage 8): Chekhov orphans, cross-chapter 5-gram repetition, POV/echo continuity, cliché density caps, ending fatigue; HARD findings gate the stage | LiveAstAnnotator, ClicheCleaner, ChekhovGun | orchestrator, gates |
+| `engine/pipeline/PipelineOrchestrator.kt` | Stage runners (LLM stages store PROPOSALS; 7/8 local), context assembly from memory, gate recording, `approveStage` writer checkpoint (refuses red gates), `nextUnlockedStage` | store, gates, prompts, LlmOrchestrator, repository | PipelineViewModel |
 | `engine/audio/PronunciationPass.kt` | IPA pass (P4, plan §7.3): candidate scan (lorebook / mid-sentence capitals / coined tokens; possessives & contractions excluded), espeak-ng phonemizer, deterministic IPA→respelling table (maximal-onset syllabification), pre-synthesis normalization (approved rules only) | AuthrContainer rules, Chapter, EspeakLocator | audiobook renderer, tests |
 | `engine/audio/MasteringChain.kt` | Three-layer ffmpeg chain (P4, plan §7.5/Table 25): layer-1 sidechain bed ducking (−12 dB, 400 ms release, skipped bedless), layer-2 loudnorm I=−18 LUFS, layer-3 alimiter −3.1 dBFS; WAV concat; MP3 CBR 192 kbps delivery encode. `open` for test fakes | FfmpegLocator, ProcessBuilder | AudiobookRenderer, tests |
 | `engine/audio/AcxAudit.kt` | Retail audit (P4, plan §7.6): five criteria red/green with measured values — RMS −23..−18 dB (astats), true peak ≤ −3 dBFS (ebur128), noise floor ≤ −60 dB (min per-window RMS via ametadata), 44.1 kHz, MP3 CBR ≥ 192 kbps (ffprobe) | FfmpegLocator | AudiobookRenderer, tests, gate |
@@ -106,9 +114,9 @@ flowchart LR
 | `engine/publishing/VolumeBundler.kt` | Volume bundling (P5, §13/§6.13): serial canon chapters grouped per micro-arc (size fallback), every volume exported through the same EPUB 3 pipeline | Epub3Exporter, model/SerialArc | RetailPackager |
 | `engine/publishing/ShipReport.kt` | Ship report (P5, plan §15): artifacts + gate verdicts + Chekhov waivers with mandatory notes + scorecard notes + cadence + pricing record; clean ⟺ every verdict passed (UNVERIFIED is not clean) | ChekhovLedger constants | RetailPackager |
 | `engine/publishing/RetailPackager.kt` | One-action orchestrator (P5, plan §13): writer gate → workbench resolution (OQ-9 authority) → EPUB(s) → epubcheck (external, blocking; UNVERIFIED ≠ clean) → print interior → pricing → metadata.json + ship-report.md | WriterGate, all engine/publishing, EpubCheckLocator | tests, gate (`PublishingGate.kt`); app UI pending (D-15) |
-| `data/repository/AppRepository.kt` | Single data facade over all DAOs (nullable ledger/arc DAOs keep JVM tests Room-free) | all DAOs | ViewModels, workers |
-| `data/local/AppDatabase.kt` | Room KMP DB, v15, 11 entities, migrations 12→15, `fallbackToDestructiveMigration(true)` | entities | repository |
-| `data/local/*Dao.kt` | DAOs: Story, AudioTrack, Book, Chapter, Lorebook, SerialArc, ChekhovGun, Question, Plugin | models | repository |
+| `data/repository/AppRepository.kt` | Single data facade over all DAOs (nullable ledger/arc/editorial-memory DAOs keep JVM tests Room-free) | all DAOs | ViewModels, workers, pipeline |
+| `data/local/AppDatabase.kt` | Room KMP DB, v16, 12 entities, migrations 12→16 (v16 adds `editorial_memory`, ADR-0018), fail-loud — no destructive fallback | entities | repository |
+| `data/local/*Dao.kt` | DAOs: Story, AudioTrack, Book, Chapter, Lorebook, SerialArc, ChekhovGun, Question, Plugin, EditorialMemory | models | repository |
 | `data/model/*.kt` | Room entities + FTS: Book (serial profile fields), Chapter (engine state + serialization fields), SerialArc, ChekhovGun, QuestionEntry, PluginRecord… | — | DB, container, engine |
 | `data/api/LlmOrchestrator.kt` | 6 agents × 7 providers, per-agent provider prefs, failover sequence, `logitBias` passthrough (P2) | ApiService, BuildConfig, RequestQueueManager | workers, VMs, L4 generator |
 | `data/api/RequestQueueManager.kt` | Global request queue: priority + `Semaphore` concurrency limit, persisted request accounting (failed requests are saved and counted but NEVER replayed — no replay path exists) | ApiService | LlmOrchestrator |

@@ -29,3 +29,10 @@ Shortcuts, fragile code, scaling limits — each with file refs and a blast-radi
 - No LLM-as-judge assertions (ADR-0004).
 - No destructive DB migrations (ADR-0002, invariants #3).
 - Polls never influence the engine (plan §6.10; invariant #12).
+
+## Delivered capability (not debt)
+
+| Item | Status |
+| --- | --- |
+| **ADR-0018 commercial authoring pipeline** (2026-11-14) — the nine-stage book-side pipeline (market research → concept → architecture → worldbuilding → manuscript → editorial → engagement → QA → publication prep) with the persistent editorial intelligence layer (`editorial_memory`, schema v16), deterministic per-stage gates, writer approval checkpoints, local retention analytics and manuscript QA. Pipeline Workbench UI = tab 10. Tests: `PipelineEngineTest` (18) via `scripts/adr0018_direct_test.sh`, wired into `scripts/ci_direct_suite.sh`; full Gradle `:desktop:test` green. | delivered — see `docs/decisions/ADR-0018-commercial-authoring-pipeline.md` |
+| Post-delivery notes: pipeline screen pixel walkthrough under a real display; `publication_package` slot → `KdpWorkbench` seeding (Publishing tab still reads the workbench file); version-list rollback needs a confirm flow in the UI. | follow-up |

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.Epub3ExporterTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:21.802Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.03">
+  <properties/>
+  <testcase name="chapter xhtml escapes markup and splits paragraphs" classname="com.example.Epub3ExporterTest" time="0.007"/>
+  <testcase name="nav document links every chapter and nav sits in the spine" classname="com.example.Epub3ExporterTest" time="0.004"/>
+  <testcase name="cover slot emits cover page image and manifest properties" classname="com.example.Epub3ExporterTest" time="0.002"/>
+  <testcase name="uuid identifier used when isbn absent" classname="com.example.Epub3ExporterTest" time="0.002"/>
+  <testcase name="empty book is rejected" classname="com.example.Epub3ExporterTest" time="0.0"/>
+  <testcase name="every manifest href resolves to a zip entry" classname="com.example.Epub3ExporterTest" time="0.002"/>
+  <testcase name="mimetype is first entry stored and exact" classname="com.example.Epub3ExporterTest" time="0.001"/>
+  <testcase name="package document carries workbench metadata and modified stamp" classname="com.example.Epub3ExporterTest" time="0.002"/>
+  <testcase name="series metadata lands as belongs-to-collection" classname="com.example.Epub3ExporterTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

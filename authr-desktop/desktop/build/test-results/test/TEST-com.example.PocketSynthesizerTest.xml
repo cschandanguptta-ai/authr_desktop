@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.PocketSynthesizerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:22.282Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.005">
+  <properties/>
+  <testcase name="a present pack without the binary still fails loud" classname="com.example.PocketSynthesizerTest" time="0.004"/>
+  <testcase name="a missing voice pack fails loud, never falls back to edge" classname="com.example.PocketSynthesizerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

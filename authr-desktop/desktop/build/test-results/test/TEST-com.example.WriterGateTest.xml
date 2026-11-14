@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.WriterGateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:30:16.372Z" hostname="c-6af1e619-140d72b5-ff5e05e807fc" time="0.001">
+<testsuite name="com.example.WriterGateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-14T07:44:27.114Z" hostname="c-6af7fb4d-140d72b5-31eb46a942f6" time="0.003">
   <properties/>
-  <testcase name="only writer-confirmed chapters are canon" classname="com.example.WriterGateTest" time="0.001"/>
-  <testcase name="unconfirmed text never reaches ledger or export consumers" classname="com.example.WriterGateTest" time="0.0"/>
+  <testcase name="only writer-confirmed chapters are canon" classname="com.example.WriterGateTest" time="0.0"/>
+  <testcase name="unconfirmed text never reaches ledger or export consumers" classname="com.example.WriterGateTest" time="0.003"/>
   <testcase name="proposed drafts queue for review" classname="com.example.WriterGateTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>

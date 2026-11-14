@@ -42,4 +42,7 @@ bash "$BASE/scripts/d15_direct_test.sh" | tail -3
 echo "=== 2026-11-12 audit-fix route (persona registry, honest telemetry) ==="
 bash "$BASE/scripts/audit_direct_test.sh" | tail -3
 
+echo "=== ADR-0018 pipeline route (authoring pipeline, editorial memory, gates) ==="
+bash "$BASE/scripts/adr0018_direct_test.sh" | tail -3
+
 echo "CI DIRECT SUITE GREEN"
