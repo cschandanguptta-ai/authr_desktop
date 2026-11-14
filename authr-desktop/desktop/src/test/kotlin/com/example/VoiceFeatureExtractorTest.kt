@@ -92,11 +92,12 @@ class VoiceFeatureExtractorTest {
         var cumulative = 0.0
         for (text in texts) {
             val current = VoiceFeatureExtractor.extract(text).toMap()
-            val result = VoiceDriftTracker.computeDrift(current, baseline, cumulative)
+            val result = VoiceDriftTracker.computeDrift(measured = current, targetFeatures = baseline, previousCumulative = cumulative)
             cumulative = result.cumulativeDrift
         }
         // The golden serial is one voice throughout; the planted drift this
         // corpus exercises is narrative (beats/endings), not stylistic.
+        // With the spec's ±20% tolerance bands the composite stays near 0.
         assertTrue(
             cumulative < VoiceDriftLog.CUMULATIVE_FLAG,
             "golden serial cumulative drift ${cumulative} must stay under ${VoiceDriftLog.CUMULATIVE_FLAG}"
@@ -107,25 +108,32 @@ class VoiceFeatureExtractorTest {
     fun `monotone stylistic shift crosses the cumulative threshold`() {
         // Plant a voice collapse: same content, sentences progressively
         // flattened into uniform short declaratives.
-        val baselineText = (1..60).joinToString(" ") { n ->
+        val baselineText = (1..60).joinToString { n ->
             if (n % 3 == 0) "The river swallowed the town whole."
             else "Kira watched the dike with a cold, patient attention that her mother had never taught her."
         }
         val baseline = VoiceFeatureExtractor.extract(baselineText).toMap()
         // Drifted text: uniform telegraphic sentences, no subordination.
-        val driftedText = (1..200).joinToString(" ") { "It was dark. She ran fast." }
+        val driftedText = (1..200).joinToString { "It was dark. She ran fast." }
         val drifted = VoiceFeatureExtractor.extract(driftedText).toMap()
 
-        val result = VoiceDriftTracker.computeDrift(drifted, baseline, previousCumulative = 0.0)
+        val result = VoiceDriftTracker.computeDrift(measured = drifted, targetFeatures = baseline, previousCumulative = 0.0)
         assertTrue(
             result.compositeDrift > VoiceDriftLog.COMPOSITE_FLAG,
             "planted collapse composite=${result.compositeDrift} must exceed ${VoiceDriftLog.COMPOSITE_FLAG}"
         )
         assertTrue(result.flagged, "the collapse must flag without an evolution active")
+        assertTrue(result.worstFeatures.isNotEmpty(), "worst_features names the collapsing axes")
+        // tolerance-band unit probe: inside the band is exactly 0.0
+        val inBand = VoiceDriftTracker.computeDrift(
+            measured = mapOf("sentence_len_mean" to 20.0),
+            targetFeatures = mapOf("sentence_len_mean" to 20.0)
+        )
+        assertEquals(0.0, inBand.perFeatureDrift["sentence_len_mean"]!!, "inside the band drift is zero")
     }
 
     @Test
-    fun `voice evolution suppresses the alert but records the movement`() {
+    fun `voice evolution overrides the target and suppresses the alert`() {
         val baseline = mapOf(
             "sentence_len_mean" to 18.0, "sentence_len_sd" to 6.0,
             "ttr_windowed" to 0.45, "avg_word_len" to 5.0,
@@ -150,12 +158,39 @@ class VoiceFeatureExtractorTest {
         assertTrue(evolution.covers(7), "chapter 7 is inside the range")
         assertTrue(!evolution.covers(4), "chapter 4 is before the range")
 
-        val plain = VoiceDriftTracker.computeDrift(drifted, baseline, 0.0, evolutionActive = false)
-        val covered = VoiceDriftTracker.computeDrift(drifted, baseline, 0.0, evolutionActive = true)
+        val plain = VoiceDriftTracker.computeDrift(measured = drifted, targetFeatures = baseline)
         assertTrue(plain.flagged, "without evolution the shift flags")
+
+        // Spec §1.3/§1.4: the evolution's adjusted features REPLACE the
+        // target — drift is measured against the SHIFTED target, so a
+        // chapter that matches the evolution reads as on-voice.
+        val overrides = mapOf(
+            "sentence_len_mean" to 9.0, "dialogue_ratio" to 8.0,
+            "contraction_ratio" to 0.1, "figurative_per1k" to 6.0
+        )
+        val covered = VoiceDriftTracker.computeDrift(
+            measured = drifted, targetFeatures = baseline, evolutionOverrides = overrides
+        )
+        assertTrue(covered.evolutionApplied, "the movement is recorded as an intentional shift")
+        assertTrue(
+            covered.compositeDrift < plain.compositeDrift,
+            "overridden features read as on-voice (composite ${covered.compositeDrift} < ${plain.compositeDrift})"
+        )
         assertTrue(!covered.flagged, "an active evolution suppresses the alert")
-        assertTrue(covered.evolutionApplied, "the suppressed movement is still recorded")
-        assertEquals(plain.compositeDrift, covered.compositeDrift, "the measurement itself is identical")
+    }
+
+    @Test
+    fun `genre weights resolve from the book genre text`() {
+        assertEquals("literary", VoiceDriftTracker.genreKey("Literary Fiction"))
+        assertEquals("thriller", VoiceDriftTracker.genreKey("Domestic Suspense"))
+        assertEquals("romance", VoiceDriftTracker.genreKey("Paranormal Romance"))
+        assertEquals("nonfiction", VoiceDriftTracker.genreKey("Popular Science"))
+        // The golden serial's genre contains "mystery" — thriller weights apply.
+        assertEquals("thriller", VoiceDriftTracker.genreKey("Family drama / light mystery"))
+        assertEquals("default", VoiceDriftTracker.genreKey("Epic fantasy"))
+        // Spec table: literary weights figurative 2.0, romance weights dialogue 1.8.
+        assertEquals(2.0, VoiceDriftTracker.GENRE_WEIGHTS.getValue("literary").getValue("figurative_per1k"))
+        assertEquals(1.8, VoiceDriftTracker.GENRE_WEIGHTS.getValue("romance").getValue("dialogue_ratio"))
     }
 
     @Test

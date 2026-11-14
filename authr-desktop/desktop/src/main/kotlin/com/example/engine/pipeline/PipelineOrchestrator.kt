@@ -6,6 +6,7 @@ import com.example.data.api.LlmOrchestrator
 import com.example.data.model.Book
 import com.example.data.model.Chapter
 import com.example.data.repository.AppRepository
+import com.example.engine.voice.VoiceEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -35,7 +36,9 @@ import kotlinx.serialization.json.jsonObject
 class PipelineOrchestrator(
     private val context: Context,
     private val repository: AppRepository,
-    private val memory: EditorialMemoryStore
+    private val memory: EditorialMemoryStore,
+    /** ADR-0020 voice engine; null keeps stage 7 retention-only (JVM tests). */
+    private val voiceEngine: VoiceEngine? = null
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -265,7 +268,15 @@ class PipelineOrchestrator(
         return StageRunResult(PipelineStage.EDITORIAL, verdict.passed, verdict, raw)
     }
 
-    /** Stage 7 is LOCAL (deterministic) — no LLM in the measurement. */
+    /**
+     * Stage 7 is LOCAL (deterministic) — no LLM in the measurement.
+     * ADR-0020: when a voice engine is wired, the voice-drift sweep runs
+     * BESIDE the retention analysis as a complementary axis (retention
+     * measures craft signals, drift measures voice fidelity — never merged
+     * into one score). Drift findings surface as gate WARNINGS: the wide
+     * ±20% tolerance bands are calibration-stage, so drift never
+     * auto-blocks the stage (writer sovereignty, ADR-0001).
+     */
     suspend fun runEngagement(bookId: Int): StageRunResult {
         val ctx = assembleContext(bookId) ?: return failed(PipelineStage.ENGAGEMENT, "Book not found.")
         val report = RetentionAnalyzer.analyze(ctx.canonChapters)
@@ -280,12 +291,29 @@ class PipelineOrchestrator(
             overallIndex = report.overallIndex,
             computedAt = System.currentTimeMillis()
         ))
-        val verdict = StageGates.engagement(report)
+        // ADR-0020 voice sweep (complementary axis, persisted to voice_drift_log).
+        val voiceVerdicts = voiceEngine?.let { engine ->
+            val evolutions = ctx.memory.voiceEvolutions
+                ?.let { raw -> runCatching { engine.decodeEvolutions(raw) }.getOrDefault(emptyList()) }
+                ?: emptyList()
+            engine.measureBook(bookId, ctx.canonChapters, ctx.book.genre, evolutions = evolutions)
+        } ?: emptyList()
+        val verdict = StageGates.engagement(report, voiceVerdicts)
         memory.recordGate(bookId, PipelineStage.ENGAGEMENT, verdict)
         memory.setStageStatus(bookId, PipelineStage.ENGAGEMENT,
             if (verdict.passed) StageStatus.AWAITING_APPROVAL else StageStatus.BLOCKED)
-        val summary = "Retention index ${"%.1f".format(report.overallIndex)} (${RetentionAnalyzer.RetentionReport.band(report.overallIndex)}).\n" +
-            report.recommendations.joinToString("\n")
+        val summary = buildString {
+            appendLine("Retention index ${"%.1f".format(report.overallIndex)} (${RetentionAnalyzer.RetentionReport.band(report.overallIndex)}).")
+            if (voiceVerdicts.isNotEmpty()) {
+                val flagged = voiceVerdicts.count { it.flagged }
+                val shifts = voiceVerdicts.count { it.evolutionApplied }
+                appendLine("Voice drift axis: ${flagged} warning(s), ${shifts} intentional shift(s), cumulative ${"%.2f".format(voiceVerdicts.last().cumulativeDrift)}.")
+                voiceVerdicts.filter { it.flagged }.forEach {
+                    appendLine("ch. ${it.chapterNumber}: ${it.label} — worst: ${it.worstFeatures.joinToString { (f, d) -> "$f ${"%.2f".format(d)}" }}")
+                }
+            }
+            report.recommendations.forEach { appendLine(it) }
+        }
         return StageRunResult(PipelineStage.ENGAGEMENT, verdict.passed, verdict, summary)
     }
 

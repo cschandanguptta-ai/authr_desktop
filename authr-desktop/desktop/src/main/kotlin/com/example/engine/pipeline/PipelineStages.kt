@@ -132,7 +132,9 @@ data class EditorialMemorySnapshot(
     val characterBible: String,
     val worldBible: String,
     val decisions: List<EditorialDecisionRecord>,
-    val openIssues: List<EditorialIssueRecord>
+    val openIssues: List<EditorialIssueRecord>,
+    /** ADR-0020 voice-evolution entries (JSON payload; VoiceEngine decodes). */
+    val voiceEvolutions: String? = null
 )
 
 data class EditorialDecisionRecord(

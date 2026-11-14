@@ -310,8 +310,21 @@ class EditorialMemoryStore(private val dao: EditorialMemoryDao) {
             },
             openIssues = issues(bookId).filter { it.status == "OPEN" }.map {
                 EditorialIssueRecord(0, it.kind, it.severity, it.description, it.chapterNumber, it.status, it.createdAt)
-            }
+            },
+            voiceEvolutions = readSlotRaw(bookId, EditorialMemory.SLOT_VOICE_EVOLUTION)
         )
+
+    // ------------------------------------------------------------------
+    // ADR-0020 voice evolution (spec §1.4): author-declared intentional
+    // voice shifts, stored in the voice_evolution slot as a JSON list of
+    // VoiceEngine.VoiceEvolutionDto. Slot reads are raw here; the engine
+    // owns (de)serialization so the DTO stays engine-local.
+
+    suspend fun writeVoiceEvolutions(bookId: Int, payloadJson: String) =
+        writeSlot(bookId, EditorialMemory.SLOT_VOICE_EVOLUTION, payloadJson)
+
+    suspend fun voiceEvolutionsRaw(bookId: Int): String? =
+        readSlotRaw(bookId, EditorialMemory.SLOT_VOICE_EVOLUTION)
 
     companion object {
         fun stageByName(name: String): PipelineStage =

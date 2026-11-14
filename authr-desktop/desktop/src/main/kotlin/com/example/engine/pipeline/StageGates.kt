@@ -129,7 +129,16 @@ object StageGates {
         return verdict(PipelineStage.EDITORIAL, hard, warn, score)
     }
 
-    fun engagement(report: RetentionAnalyzer.RetentionReport): GateVerdict {
+    /**
+     * Stage 7 gate: retention floor + weak-hook cap (ADR-0018). The
+     * ADR-0020 voice verdicts ride in as WARNINGS only — drift never
+     * auto-blocks the stage (writer sovereignty; tolerance bands are
+     * calibration-stage per the spec's ±20-30% advice).
+     */
+    fun engagement(
+        report: RetentionAnalyzer.RetentionReport,
+        voiceVerdicts: List<com.example.engine.voice.VoiceEngine.ChapterVoiceVerdict> = emptyList()
+    ): GateVerdict {
         val hard = mutableListOf<String>()
         val warn = mutableListOf<String>()
         if (report.perChapter.isEmpty()) hard += "No chapters to analyze."
@@ -137,6 +146,10 @@ object StageGates {
         val weakHooks = report.perChapter.filter { it.hookScore < 45 }
         if (weakHooks.size > WEAK_HOOK_CAP) hard += "${weakHooks.size} chapters open weakly (cap $WEAK_HOOK_CAP): ${weakHooks.joinToString { "ch. ${it.chapterNumber}" }}"
         else if (weakHooks.isNotEmpty()) warn += "Weak opening hook(s): ${weakHooks.joinToString { "ch. ${it.chapterNumber}" }}"
+        // ADR-0020 complementary axis: voice fidelity warnings.
+        voiceVerdicts.filter { it.flagged }.forEach { v ->
+            warn += "ch. ${v.chapterNumber} ${v.label} (composite ${"%.2f".format(v.compositeDrift)}, cumulative ${"%.2f".format(v.cumulativeDrift)}): ${v.worstFeatures.joinToString { f -> f.first }}"
+        }
         report.recommendations.take(3).forEach { warn += it }
         return verdict(PipelineStage.ENGAGEMENT, hard, warn, report.overallIndex)
     }

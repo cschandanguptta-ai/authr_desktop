@@ -195,7 +195,10 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
     val pipelineViewModel = PipelineViewModel(
         context = app,
         repository = repository,
-        memory = pipelineMemory
+        memory = pipelineMemory,
+        // ADR-0020: the voice drift axis of stage 7, persisted to
+        // voice_drift_log (schema v17).
+        voiceEngine = com.example.engine.voice.VoiceEngine(database.voiceDriftDao())
     )
     // Audiobook workbench (v3.0 D-13, the P4 report handoff): engine
     // picker → pronunciation review → one-action render → ACX report.

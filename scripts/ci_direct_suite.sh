@@ -48,4 +48,7 @@ bash "$BASE/scripts/adr0018_direct_test.sh" | tail -3
 echo "=== v3.0 port S0 route (Room v17 engine tables + voice feature spike) ==="
 bash "$BASE/scripts/s0_direct_test.sh" | tail -3
 
+echo "=== v3.0 port S1 route (voice engine, drift tracking, stage-7 wiring) ==="
+bash "$BASE/scripts/s1_direct_test.sh" | tail -3
+
 echo "CI DIRECT SUITE GREEN"

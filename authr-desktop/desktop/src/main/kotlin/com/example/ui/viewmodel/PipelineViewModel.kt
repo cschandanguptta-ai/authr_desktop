@@ -32,9 +32,11 @@ import kotlinx.coroutines.withContext
 class PipelineViewModel(
     private val context: Context,
     private val repository: AppRepository,
-    private val memory: EditorialMemoryStore
+    private val memory: EditorialMemoryStore,
+    /** ADR-0020 voice engine (stage-7 drift axis); null keeps stage 7 retention-only. */
+    voiceEngine: com.example.engine.voice.VoiceEngine? = null
 ) {
-    private val orchestrator = PipelineOrchestrator(context, repository, memory)
+    private val orchestrator = PipelineOrchestrator(context, repository, memory, voiceEngine)
 
     var bookId by mutableStateOf<Int?>(null)
         private set
