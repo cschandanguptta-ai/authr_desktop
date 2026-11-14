@@ -19,6 +19,11 @@ import com.example.data.model.ChekhovGun
 import com.example.data.model.QuestionEntry
 import com.example.data.model.PluginRecord
 import com.example.data.model.EditorialMemory
+import com.example.data.model.VoiceDriftLog
+import com.example.data.model.SummaryCache
+import com.example.data.model.ResearchSource
+import com.example.data.model.ResearchFact
+import com.example.data.model.ComplianceCheck
 
 /**
  * DESKTOP PORT NOTE (AppDatabase):
@@ -38,15 +43,22 @@ import com.example.data.model.EditorialMemory
  *    state, and the serial_arcs / chekhov_guns / questions / plugins tables.
  *  - v16: ADR-0018 editorial intelligence layer — additive only: the
  *    editorial_memory table (per-book pipeline memory slots).
+ *  - v17: v3.0 engine ports S0 (spec schema v2.2, ADR-0019..0022) —
+ *    additive only: voice_drift_log, summary_cache, research_sources,
+ *    research_facts and compliance_checks tables. Voice evolution and
+ *    token-spend data ride existing editorial_memory slots (no column
+ *    changes to any v16 table).
  */
 @Database(
     entities = [
         Story::class, StoryFts::class, AudioTrack::class, Book::class,
         Chapter::class, ChapterFts::class, Lorebook::class,
         SerialArc::class, ChekhovGun::class, QuestionEntry::class, PluginRecord::class,
-        EditorialMemory::class
+        EditorialMemory::class,
+        VoiceDriftLog::class, SummaryCache::class,
+        ResearchSource::class, ResearchFact::class, ComplianceCheck::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -60,6 +72,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun questionDao(): QuestionDao
     abstract fun pluginDao(): PluginDao
     abstract fun editorialMemoryDao(): EditorialMemoryDao
+    abstract fun voiceDriftDao(): VoiceDriftDao
+    abstract fun summaryCacheDao(): SummaryCacheDao
+    abstract fun researchDao(): ResearchDao
+    abstract fun complianceDao(): ComplianceDao
 
     companion object {
         @Volatile
@@ -195,6 +211,111 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v17 (v3.0 port S0, spec schema v2.2 / ADR-0019..0022): the
+         * engine-enhancement tables — additive only, no column changes to
+         * any existing table. Timestamps use epoch millis (codebase
+         * convention) instead of the spec's datetime('now'); CHECK
+         * constraints are enforced at the Kotlin API surface (the entities
+         * document the allowed values).
+         */
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SQLiteConnection) {
+                // Voice drift log (ADR-0019, spec voice_drift_log)
+                db.exec(
+                    "CREATE TABLE IF NOT EXISTS voice_drift_log (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "bookId INTEGER NOT NULL, " +
+                        "chapterId INTEGER NOT NULL, " +
+                        "beatIndex INTEGER, " +
+                        "profileType TEXT NOT NULL DEFAULT 'author', " +
+                        "profileName TEXT, " +
+                        "measuredFeatures TEXT NOT NULL, " +
+                        "perFeatureDrift TEXT NOT NULL, " +
+                        "compositeDrift REAL NOT NULL, " +
+                        "cumulativeDrift REAL NOT NULL, " +
+                        "flagged INTEGER NOT NULL DEFAULT 0, " +
+                        "evolutionApplied INTEGER NOT NULL DEFAULT 0, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(bookId) REFERENCES books(id) ON DELETE CASCADE, " +
+                        "FOREIGN KEY(chapterId) REFERENCES chapters(id) ON DELETE CASCADE)"
+                )
+                db.exec("CREATE INDEX IF NOT EXISTS index_voice_drift_log_bookId ON voice_drift_log(bookId)")
+                db.exec("CREATE INDEX IF NOT EXISTS index_voice_drift_log_bookId_chapterId ON voice_drift_log(bookId, chapterId)")
+                // Summary cache (ADR-0020, spec summary_cache)
+                db.exec(
+                    "CREATE TABLE IF NOT EXISTS summary_cache (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "bookId INTEGER NOT NULL, " +
+                        "scope TEXT NOT NULL, " +
+                        "level TEXT NOT NULL, " +
+                        "summaryText TEXT NOT NULL, " +
+                        "tokenCount INTEGER NOT NULL, " +
+                        "sourceHash TEXT NOT NULL, " +
+                        "modelUsed TEXT, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(bookId) REFERENCES books(id) ON DELETE CASCADE)"
+                )
+                db.exec("CREATE INDEX IF NOT EXISTS index_summary_cache_bookId ON summary_cache(bookId)")
+                db.exec("CREATE UNIQUE INDEX IF NOT EXISTS index_summary_cache_bookId_scope_level ON summary_cache(bookId, scope, level)")
+                // Research sources (ADR-0021, spec research_sources)
+                db.exec(
+                    "CREATE TABLE IF NOT EXISTS research_sources (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "bookId INTEGER NOT NULL, " +
+                        "sourceType TEXT NOT NULL, " +
+                        "title TEXT NOT NULL, " +
+                        "author TEXT, " +
+                        "url TEXT, " +
+                        "filePath TEXT, " +
+                        "contentSnippet TEXT, " +
+                        "tags TEXT, " +
+                        "citationFormat TEXT, " +
+                        "reliability TEXT NOT NULL DEFAULT 'unverified', " +
+                        "ingestedAt INTEGER NOT NULL, " +
+                        "lastVerifiedAt INTEGER, " +
+                        "FOREIGN KEY(bookId) REFERENCES books(id) ON DELETE CASCADE)"
+                )
+                db.exec("CREATE INDEX IF NOT EXISTS index_research_sources_bookId ON research_sources(bookId)")
+                // Research facts (ADR-0021, spec research_facts)
+                db.exec(
+                    "CREATE TABLE IF NOT EXISTS research_facts (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "bookId INTEGER NOT NULL, " +
+                        "sourceId INTEGER NOT NULL, " +
+                        "factText TEXT NOT NULL, " +
+                        "category TEXT, " +
+                        "chapterRefs TEXT, " +
+                        "verified INTEGER NOT NULL DEFAULT 0, " +
+                        "confidence REAL NOT NULL DEFAULT 0.5, " +
+                        "verificationNote TEXT, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(bookId) REFERENCES books(id) ON DELETE CASCADE, " +
+                        "FOREIGN KEY(sourceId) REFERENCES research_sources(id) ON DELETE CASCADE)"
+                )
+                db.exec("CREATE INDEX IF NOT EXISTS index_research_facts_bookId ON research_facts(bookId)")
+                db.exec("CREATE INDEX IF NOT EXISTS index_research_facts_sourceId ON research_facts(sourceId)")
+                // Compliance checks (ADR-0022, spec compliance_checks)
+                db.exec(
+                    "CREATE TABLE IF NOT EXISTS compliance_checks (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "bookId INTEGER NOT NULL, " +
+                        "checkType TEXT NOT NULL, " +
+                        "scope TEXT, " +
+                        "status TEXT NOT NULL DEFAULT 'pending', " +
+                        "findings TEXT, " +
+                        "recommendedActions TEXT, " +
+                        "resolved INTEGER NOT NULL DEFAULT 0, " +
+                        "resolvedNote TEXT, " +
+                        "checkedAt INTEGER NOT NULL, " +
+                        "resolvedAt INTEGER, " +
+                        "FOREIGN KEY(bookId) REFERENCES books(id) ON DELETE CASCADE)"
+                )
+                db.exec("CREATE INDEX IF NOT EXISTS index_compliance_checks_bookId ON compliance_checks(bookId)")
+                db.exec("CREATE INDEX IF NOT EXISTS index_compliance_checks_bookId_checkType ON compliance_checks(bookId, checkType)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 // v3.0 D-02 RESOLVED (OQ-3 decided, 2026-11-12): NO
@@ -211,7 +332,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder<AppDatabase>(
                     context.getDatabasePath("audio_novel_studio_db").absolutePath
                 )
-                .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 .setDriver(BundledSQLiteDriver())
                 .build()
                 INSTANCE = instance

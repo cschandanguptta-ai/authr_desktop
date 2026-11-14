@@ -34,11 +34,16 @@ data class EditorialMemory(
         const val SLOT_ENGAGEMENT = "engagement"
         /** ADR-0018 stage-9 output: the raw publication package JSON. */
         const val SLOT_PUBLICATION_PACKAGE = "publication_package"
+        /** ADR-0019 (v3 port S1): list of VoiceEvolutionEntry JSON — intentional voice changes. */
+        const val SLOT_VOICE_EVOLUTION = "voice_evolution"
+        /** ADR-0020 (v3 port S2): list of TokenSpendEntry JSON — per-invocation cost ledger. */
+        const val SLOT_TOKEN_SPEND = "token_spend_ledger"
 
         /** All defined slots; new slots must be appended, never reordered. */
         val ALL_SLOTS = listOf(
             SLOT_MARKET, SLOT_POSITIONING, SLOT_PERSONAS, SLOT_DECISIONS,
-            SLOT_ISSUES, SLOT_VERSIONS, SLOT_STAGE_STATE, SLOT_ENGAGEMENT, SLOT_PUBLICATION_PACKAGE
+            SLOT_ISSUES, SLOT_VERSIONS, SLOT_STAGE_STATE, SLOT_ENGAGEMENT, SLOT_PUBLICATION_PACKAGE,
+            SLOT_VOICE_EVOLUTION, SLOT_TOKEN_SPEND
         )
     }
 }
