@@ -41,7 +41,9 @@ class L4LlmDraftGenerator(
     /** ADR-0021: token spend ledger (null = generation untracked). */
     private val spendLedger: TokenSpendLedger? = null,
     /** Context window of the configured provider route. */
-    private val modelSpec: ContextAssembler.ModelSpec? = null
+    private val modelSpec: ContextAssembler.ModelSpec? = null,
+    /** ADR-0022: hybrid RAG retrieval for layer 7 (null = lorebook surface). */
+    private val ragEngine: com.example.engine.rag.RagEngine? = null
 ) : WriterStudioViewModel.L4DraftGenerator {
 
     override suspend fun generate(
@@ -83,7 +85,8 @@ class L4LlmDraftGenerator(
                 stage = ContextAssembler.StageKey.L4_SCENE_COMPOSER,
                 model = modelSpec,
                 personaCard = personaBlock,
-                lorebook = lorebook
+                lorebook = lorebook,
+                ragEngine = ragEngine
             )
             android.util.Log.i("L4LlmDraftGenerator",
                 "ContextAssembler(L4): ${assembled.tokenCount}/${modelSpec.available} tokens " +

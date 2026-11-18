@@ -107,6 +107,12 @@ class ContextAssembler(
      * the target chapter (ascending); [targetChapter] is the chapter
      * being written/checked — its beat sheet is the scene-plan layer and
      * its content never rides the manuscript window.
+     *
+     * v3.0 S3 (ADR-0022): when a [ragEngine] is provided, layer 7 is the
+     * hybrid RAG retrieval over the confirmed corpus (epistemically
+     * isolated: chapter ≤ k AND confirmed, Invariant 12) + research
+     * sources; without one it stays the lorebook keyword surface (the
+     * S2 fallback).
      */
     suspend fun assemble(
         book: Book,
@@ -119,7 +125,9 @@ class ContextAssembler(
         lorebook: List<Lorebook> = emptyList(),
         editorialIssues: List<String> = emptyList(),
         openPromises: List<String> = emptyList(),
-        evolutionNote: String = ""
+        evolutionNote: String = "",
+        ragEngine: com.example.engine.rag.RagEngine? = null,
+        researchSources: List<com.example.data.model.ResearchSource> = emptyList()
     ): AssembledContext {
         val budgets = allocateBudget(stage, model)
         val layers = LinkedHashMap<Layer, String>()
@@ -144,10 +152,21 @@ class ContextAssembler(
             ).joinToString("\n\n"),
             budgets.getValue(Layer.WORLDBIBLE)
         )
-        layers[Layer.RETRIEVED] = truncate(
-            lorebook.joinToString("\n") { "- ${it.key}: ${it.value}" },
-            budgets.getValue(Layer.RETRIEVED)
-        )
+        // Layer 7: RAG retrieval when wired (ADR-0022), lorebook surface
+        // otherwise. The retrieval query is the spec's build_retrieval_query:
+        // beat sheet + lorebook keys + writer instruction.
+        layers[Layer.RETRIEVED] = if (ragEngine != null) {
+            val corpus = ragEngine.buildCorpus(confirmed, researchSources, targetChapter.chapterNumber)
+            val query = ragEngine.buildRetrievalQuery(targetChapter.summary, lorebook)
+            ragEngine.formatRetrieved(
+                ragEngine.retrieve(corpus, query, targetChapter.chapterNumber, budgets.getValue(Layer.RETRIEVED))
+            )
+        } else {
+            truncate(
+                lorebook.joinToString("\n") { "- ${it.key}: ${it.value}" },
+                budgets.getValue(Layer.RETRIEVED)
+            )
+        }
         layers[Layer.EDITORIAL] = truncate(
             editorialIssues.joinToString("\n") { "- $it" },
             budgets.getValue(Layer.EDITORIAL)

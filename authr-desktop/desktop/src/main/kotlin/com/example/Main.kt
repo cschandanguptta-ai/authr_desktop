@@ -176,8 +176,13 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
     // v3.0 S2 (ADR-0021): the nine-layer ContextAssembler with stage
     // budgets and freshness-decayed manuscript summaries feeds the L4
     // prompt; the token spend ledger records every invocation.
+    // v3.0 S3 (ADR-0022): layer 7 is hybrid RAG retrieval (BM25 + hashed
+    // embeddings, RRF-fused) with epistemic isolation — the model only
+    // ever retrieves from confirmed chapters ≤ the one being written.
     val summaryCacheService = com.example.engine.context.SummaryCacheService(database.summaryCacheDao())
     val contextAssembler = com.example.engine.context.ContextAssembler(summaryCacheService, database.summaryCacheDao())
+    val ragEngine = com.example.engine.rag.RagEngine()
+    val citationChecker = com.example.engine.rag.CitationIntegrityChecker()
     val pipelineMemoryEarly = com.example.engine.pipeline.EditorialMemoryStore(
         requireNotNull(database.editorialMemoryDao()) { "editorial_memory DAO missing (schema v16)" }
     )
@@ -196,7 +201,8 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
                 name = "flash-class",
                 maxContext = 128_000,
                 outputReserve = 16_000
-            )
+            ),
+            ragEngine = ragEngine
         )
     )
     // Serial Dashboard (v3.0 P3, plan §6.10/§6.13): buffer, cadence, arcs,

@@ -54,4 +54,7 @@ bash "$BASE/scripts/s1_direct_test.sh" | tail -3
 echo "=== v3.0 port S2 route (context orchestrator, summary cache, spend ledger) ==="
 bash "$BASE/scripts/s2_direct_test.sh" | tail -3
 
+echo "=== v3.0 port S3 route (RAG engine, epistemic isolation, citation integrity) ==="
+bash "$BASE/scripts/s3_direct_test.sh" | tail -3
+
 echo "CI DIRECT SUITE GREEN"
