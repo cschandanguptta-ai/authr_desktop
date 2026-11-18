@@ -173,10 +173,31 @@ private fun AuthrDesktopApp(app: DesktopApplication) {
     // Writer Studio (v3.0 P1, plan §4.1): the PROPOSED/CONFIRMED/ARCHIVED
     // workflow. The L4 generator assembles prompts from confirmed material
     // only; drafts land as proposals until the writer confirms them.
+    // v3.0 S2 (ADR-0021): the nine-layer ContextAssembler with stage
+    // budgets and freshness-decayed manuscript summaries feeds the L4
+    // prompt; the token spend ledger records every invocation.
+    val summaryCacheService = com.example.engine.context.SummaryCacheService(database.summaryCacheDao())
+    val contextAssembler = com.example.engine.context.ContextAssembler(summaryCacheService, database.summaryCacheDao())
+    val pipelineMemoryEarly = com.example.engine.pipeline.EditorialMemoryStore(
+        requireNotNull(database.editorialMemoryDao()) { "editorial_memory DAO missing (schema v16)" }
+    )
+    val spendLedger = com.example.engine.context.TokenSpendLedger(pipelineMemoryEarly)
     val writerStudioViewModel = WriterStudioViewModel(
         repository = repository,
         authrRoot = app.filesDir,
-        draftGenerator = L4LlmDraftGenerator(app)
+        draftGenerator = L4LlmDraftGenerator(
+            app,
+            assembler = contextAssembler,
+            spendLedger = spendLedger,
+            // Gemini 2.0 Flash class window (1M) with a conservative
+            // working slice + output reserve; smaller providers still fit
+            // because every layer truncates to its share.
+            modelSpec = com.example.engine.context.ContextAssembler.ModelSpec(
+                name = "flash-class",
+                maxContext = 128_000,
+                outputReserve = 16_000
+            )
+        )
     )
     // Serial Dashboard (v3.0 P3, plan §6.10/§6.13): buffer, cadence, arcs,
     // validator suite, worksheet + scorecard, paste-ready platform exports.

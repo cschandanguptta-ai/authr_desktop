@@ -51,4 +51,7 @@ bash "$BASE/scripts/s0_direct_test.sh" | tail -3
 echo "=== v3.0 port S1 route (voice engine, drift tracking, stage-7 wiring) ==="
 bash "$BASE/scripts/s1_direct_test.sh" | tail -3
 
+echo "=== v3.0 port S2 route (context orchestrator, summary cache, spend ledger) ==="
+bash "$BASE/scripts/s2_direct_test.sh" | tail -3
+
 echo "CI DIRECT SUITE GREEN"
