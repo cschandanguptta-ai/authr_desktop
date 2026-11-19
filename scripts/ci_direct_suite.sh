@@ -57,4 +57,7 @@ bash "$BASE/scripts/s2_direct_test.sh" | tail -3
 echo "=== v3.0 port S3 route (RAG engine, epistemic isolation, citation integrity) ==="
 bash "$BASE/scripts/s3_direct_test.sh" | tail -3
 
+echo "=== v3.0 port S4 route (scene micro-invariants: pov, tense, dialogue, opener, composite) ==="
+bash "$BASE/scripts/s4_direct_test.sh" | tail -3
+
 echo "CI DIRECT SUITE GREEN"

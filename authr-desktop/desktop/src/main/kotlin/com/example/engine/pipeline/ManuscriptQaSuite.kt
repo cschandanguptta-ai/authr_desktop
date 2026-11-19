@@ -4,6 +4,7 @@ import com.example.data.model.Chapter
 import com.example.data.model.ChekhovGun
 import com.example.engine.ClicheCleaner
 import com.example.engine.LiveAstAnnotator
+import com.example.engine.voice.SceneInvariantsEngine
 
 /**
  * Deterministic manuscript QA suite (ADR-0018, Priority 4 — stage 8's local
@@ -118,6 +119,61 @@ object ManuscriptQaSuite {
                     chapterNumber = ch.chapterNumber,
                     message = "Ending fatigue: $t endings run $runLen chapters (since ch. $runStart).",
                     recommendation = "Vary the ending type — readers disengage from predictable chapter turns."
+                )
+            }
+        }
+
+        // --- 7. Scene micro-invariants (ADR-0023, spec v3 warning gates):
+        // pov_consistency, tense_consistency, dialogue_differentiation,
+        // opener_variety, composite_drift — per confirmed chapter, inside
+        // scene runs only (break cues start a new scene legitimately).
+        canon.forEach { ch ->
+            val paras = SceneInvariantsEngine.paragraphsOf(ch.content ?: "")
+            if (paras.isEmpty()) return@forEach
+
+            SceneInvariantsEngine.povViolations(paras).forEach { v ->
+                findings += Finding(
+                    kind = "POV", severity = Finding.Severity.WARNING,
+                    chapterNumber = ch.chapterNumber,
+                    message = if (v.headHop) {
+                        "Head-hop: viewpoint jumps between characters mid-scene (¶${v.sceneStartParagraph + 1}→¶${v.shiftParagraph + 1})."
+                    } else {
+                        "POV shift inside a scene: ${v.from.label} → ${v.to.label} (¶${v.sceneStartParagraph + 1}→¶${v.shiftParagraph + 1})."
+                    },
+                    recommendation = "Anchor one viewpoint per scene, or insert a scene break (***) at the shift."
+                )
+            }
+            SceneInvariantsEngine.tenseViolations(paras).forEach { v ->
+                findings += Finding(
+                    kind = "TENSE", severity = Finding.Severity.WARNING,
+                    chapterNumber = ch.chapterNumber,
+                    message = "Tense shift inside a scene: ${if (v.fromPastToPresent) "past → present" else "present → past"} (¶${v.sceneStartParagraph + 1}→¶${v.shiftParagraph + 1}).",
+                    recommendation = "Keep narration in one tense per scene; quote speech may differ."
+                )
+            }
+            SceneInvariantsEngine.dialogueDifferentiation(paras).forEach { v ->
+                findings += Finding(
+                    kind = "DIALOGUE", severity = Finding.Severity.WARNING,
+                    chapterNumber = ch.chapterNumber,
+                    message = "Dialogue voice collapse: ${v.characterA} and ${v.characterB} speak with ${v.similarity} similarity (> 0.70).",
+                    recommendation = "Differentiate their lines: sentence-length signature, contractions, diction, verbal tics."
+                )
+            }
+            SceneInvariantsEngine.openerViolations(ch.content ?: "").forEach { v ->
+                findings += Finding(
+                    kind = "OPENER", severity = Finding.Severity.WARNING,
+                    chapterNumber = ch.chapterNumber,
+                    message = "Opener fatigue: \"${v.opener}\" starts ${v.runLength} sentences in a row.",
+                    recommendation = "Vary sentence openers — same-word runs read as monotone narration."
+                )
+            }
+            val drift = SceneInvariantsEngine.compositeDrift(paras)
+            if (drift >= 0.30) {
+                findings += Finding(
+                    kind = "COMPOSITE_DRIFT", severity = Finding.Severity.WARNING,
+                    chapterNumber = ch.chapterNumber,
+                    message = "Composite scene drift ${"%.2f".format(drift)} ≥ 0.30 (POV/tense/opener combined).",
+                    recommendation = "Tighten scene discipline: one POV, one tense, varied openers."
                 )
             }
         }
