@@ -104,10 +104,10 @@ if not key_id:
 print(f"deploy key #{key_id} created (read/write)")
 
 # --- 3. push over ssh.github.com:443 ------------------------------------------
-import paramiko
-
 pushed = False
 try:
+    import paramiko  # imported here so the finally-cleanup below runs even if the module is missing
+
     t = paramiko.Transport(("ssh.github.com", 443))
     t.start_client(timeout=25)
     host_key = t.get_remote_server_key()
